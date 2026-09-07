@@ -15,6 +15,9 @@
 // Imprime N fórmulas fallidas de cada tipo de error, que es lo que dice si el
 // problema es notación reparable o contenido ya roto en el origen.
 
+// El informe es la salida de esta herramienta: `print` es lo correcto aquí.
+// ignore_for_file: avoid_print
+
 import "dart:convert";
 import "dart:io";
 

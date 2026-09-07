@@ -11,6 +11,7 @@
  *     usa la herramienta de autoría en desarrollo. 6,5 MB que no pintan nada
  *     en un móvil.
  *   - `public/teoria-figuras/` — 3 590 archivos, 83 MB. Van a Supabase Storage.
+ *   - `clave` y `explicacion` de cada pregunta — ver `despublicar()`.
  *
  * Correr:  node tool/sincronizar-datos.mjs
  */
@@ -27,6 +28,39 @@ const CARPETAS = ["temario", "teoria", "preguntas"];
 
 let totalArchivos = 0;
 let totalBytes = 0;
+let clavesQuitadas = 0;
+
+/**
+ * Quita `clave` y `explicacion` de cada pregunta antes de escribirla.
+ *
+ * La REGLA CENTRAL de `src/lib/preguntas.ts` es que el tipo que cruza hacia el
+ * cliente no lleva clave: en la web el banco completo se queda en el servidor
+ * y en Postgres la columna `clave` está revocada para `authenticated`, de modo
+ * que la única forma de conocer la respuesta es responder y que el RPC
+ * `responder_pregunta` te la diga.
+ *
+ * Aquí no hay servidor donde esconderla. Un asset de Flutter es un archivo
+ * dentro del APK, y un APK es un ZIP: copiar estos JSON tal cual publicaba las
+ * claves de todo el banco a cualquiera con `unzip`. No es teórico —así estaba
+ * hasta ahora, con 395 claves en `assets/datos/preguntas/`.
+ *
+ * Consecuencia de diseño, no accidente: la app **no puede corregir sola**. Sin
+ * la clave, la corrección pasa siempre por el RPC, igual que en la web con
+ * sesión iniciada. Eso quita la práctica anónima que la web sí ofrece —allí la
+ * resuelve `corregir()` en el servidor— y es el precio de no repartir el banco
+ * resuelto. Ver `lib/datos/preguntas.dart`.
+ */
+function despublicar(json) {
+  if (!Array.isArray(json?.preguntas)) return json;
+
+  for (const pregunta of json.preguntas) {
+    if ("clave" in pregunta) clavesQuitadas++;
+    delete pregunta.clave;
+    delete pregunta.explicacion;
+  }
+
+  return json;
+}
 
 for (const carpeta of CARPETAS) {
   const origen = join(repo, "data", carpeta);
@@ -41,7 +75,21 @@ for (const carpeta of CARPETAS) {
   const indice = [];
 
   for (const archivo of archivos) {
-    const contenido = readFileSync(join(origen, archivo));
+    // El temario y la teoría se copian byte a byte; las preguntas pasan por el
+    // filtro. Se reserializa solo en ese caso para no reformatear archivos que
+    // no hace falta tocar.
+    const contenido =
+      carpeta === "preguntas"
+        ? Buffer.from(
+            JSON.stringify(
+              despublicar(JSON.parse(readFileSync(join(origen, archivo), "utf8"))),
+              null,
+              2,
+            ) + "\n",
+            "utf8",
+          )
+        : readFileSync(join(origen, archivo));
+
     writeFileSync(join(destino, archivo), contenido);
     indice.push(archivo);
     totalArchivos++;
@@ -63,5 +111,8 @@ for (const carpeta of CARPETAS) {
 
 console.log(
   `\n${totalArchivos} archivos · ${(totalBytes / 1024 / 1024).toFixed(1)} MB ` +
-    `→ assets/datos/\n\nRecuerda: las figuras de teoría no están aquí.`,
+    `→ assets/datos/\n` +
+    `${clavesQuitadas} claves y explicaciones retiradas del banco ` +
+    `(las resuelve el RPC, no el APK).\n\n` +
+    `Recuerda: las figuras de teoría no están aquí.`,
 );

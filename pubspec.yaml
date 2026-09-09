@@ -43,6 +43,15 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  # Solo para test/integracion/supabase_real_test.dart. `flutter_test` corre
+  # con `TestWidgetsFlutterBinding`, que intercepta TODO HttpClient y fuerza
+  # 400 en cada petición —protección del framework contra que un widget test
+  # llame a la red por accidente—, así que ese archivo usa `package:test` +
+  # el paquete base `supabase` (sin el wrapper de Flutter) en vez de
+  # `supabase_flutter`: fuera de ese binding, la petición sí sale de verdad.
+  test: ^1.25.0
+  supabase: ^2.16.1
+
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your

@@ -399,10 +399,30 @@ la web no lo pedía tampoco: ni ahí sobrevive a cerrar la pestaña.
 
 ## Lo que falta, y por qué no está en la lista de código
 
-**Verificar los 11 RPC de alumno contra Supabase con una sesión real.**
-Todo lo portado está probado contra la firma SQL y por lógica, no contra una
-respuesta real con datos de un alumno de verdad. El arnés está listo en
-`test/integracion/supabase_real_test.dart`; falta que corra con credenciales.
+**Ya verificado.** El arnés en `test/integracion/supabase_real_test.dart`
+corrió contra Supabase real con una cuenta de prueba (creada por Admin API,
+confirmada sin correo) en modo lectura: los RPC de alumno llegan con
+exactamente los tipos que cada repositorio espera — cero discrepancias.
+Habría fallado con `flutter_test`: ese binding intercepta todo `HttpClient`
+y fuerza 400 en cada petición, protección deliberada contra que un widget
+test dispare red por accidente. Tampoco sirve `Supabase.initialize()` de
+`supabase_flutter` fuera de una app real, porque usa `shared_preferences`
+para persistir sesión y eso necesita un canal de plataforma que no existe
+en un proceso de test. Por eso el archivo usa `package:test` (Dart puro)
+más el paquete base `supabase`, construyendo el `SupabaseClient` a mano sin
+el wrapper de Flutter — los repositorios ya aceptaban ese cliente inyectado,
+mismo tipo en los dos paquetes, así que no hubo que tocarlos.
+
+Único hallazgo: `preguntas_recomendadas` devuelve `motivo` y
+`porcentaje_subtema`, dos campos que `RepositorioRepaso` no usa todavía —
+no es un error, es una mejora futura posible si se quiere explicar al
+alumno por qué se le recomendó cada pregunta.
+
+Los tests de escritura del arnés (`grupo "lo que ESCRIBE en la base"`)
+quedan aparte, con `skip` salvo que se pase `--dart-define=ESCRITURA=1`:
+no se corrieron, porque escribir en la base de un alumno de prueba real
+es una decisión que le toca al usuario, no algo que valga la pena hacer
+sin pedirlo explícitamente cada vez.
 
 **El CAPTCHA**, que sigue sin activarse en el panel de Supabase — y si se
 activa, el registro desde la app se rompe porque no hay widget de Turnstile

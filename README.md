@@ -1,17 +1,10 @@
-# matr_u
+# Matrix U — app móvil
 
-A new Flutter project.
+Porte a Flutter de la plataforma de preparación para el examen de admisión de
+la UNSA. La documentación está en **[LEEME.md](LEEME.md)**.
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+node tool/sincronizar-datos.mjs                      # traer el catálogo
+flutter run --dart-define-from-file=config/dev.json  # correr
+flutter test                                         # 92 tests (más 6 de integración, saltados sin credenciales)
+```

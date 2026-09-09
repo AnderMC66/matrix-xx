@@ -113,11 +113,20 @@ class TextoConFormulas extends StatelessWidget {
   final TextStyle? estilo;
   final void Function(String tex, String error)? alFallar;
 
+  /// Interpreta `**negrita**` y `_cursiva_` en las partes de prosa.
+  ///
+  /// Apagado por defecto porque el banco de preguntas no usa marcado —cero de
+  /// 395 enunciados llevan `**`— y encenderlo ahí solo añadiría el riesgo de
+  /// que un asterisco matemático suelto se coma media frase. La teoría sí lo
+  /// usa (59 % de las secciones) y lo enciende.
+  final bool conMarcado;
+
   const TextoConFormulas(
     this.texto, {
     super.key,
     this.estilo,
     this.alFallar,
+    this.conMarcado = false,
   });
 
   @override
@@ -180,7 +189,11 @@ class TextoConFormulas extends StatelessWidget {
   }
 
   InlineSpan _span(Trozo t, TextStyle estiloBase) {
-    if (t is TrozoTexto) return TextSpan(text: t.texto);
+    if (t is TrozoTexto) {
+      return conMarcado
+          ? TextSpan(children: spansConMarcado(t.texto, estiloBase))
+          : TextSpan(text: t.texto);
+    }
     final f = t as TrozoFormula;
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
@@ -209,3 +222,47 @@ class TextoConFormulas extends StatelessWidget {
     );
   }
 }
+
+/// `**negrita**` y `_cursiva_` dentro de un trozo de prosa.
+///
+/// Se resuelve a mano y no con un motor de markdown porque a esta función solo
+/// llega texto que YA no tiene fórmulas —`partir()` las separó antes—, así que
+/// no hay que preocuparse por un `_` de subíndice ni por un `*` de
+/// multiplicación dentro de una expresión.
+///
+/// Aun así, la cursiva exige que el `_` no esté pegado a letra o número: en la
+/// prosa de este corpus aparecen cosas como `v_1` fuera de fórmula, y sin esa
+/// guarda se comerían media frase en cursiva.
+List<InlineSpan> spansConMarcado(String texto, TextStyle base) {
+  final spans = <InlineSpan>[];
+  var cursor = 0;
+
+  for (final m in _marcado.allMatches(texto)) {
+    if (m.start > cursor) {
+      spans.add(TextSpan(text: texto.substring(cursor, m.start)));
+    }
+    final negrita = m[1];
+    spans.add(
+      negrita != null
+          ? TextSpan(
+              text: negrita,
+              style: base.copyWith(fontWeight: FontWeight.w700),
+            )
+          : TextSpan(
+              text: m[2],
+              style: base.copyWith(fontStyle: FontStyle.italic),
+            ),
+    );
+    cursor = m.end;
+  }
+
+  if (cursor < texto.length) {
+    spans.add(TextSpan(text: texto.substring(cursor)));
+  }
+  return spans;
+}
+
+final _marcado = RegExp(
+  r"\*\*([^*]+)\*\*"
+  r"|(?<![A-Za-z0-9])_([^_\n]+)_(?![A-Za-z0-9])",
+);

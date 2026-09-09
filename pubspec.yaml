@@ -50,6 +50,12 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # Solo se usa una vez, para generar los mipmap desde assets/marca/icono.png
+  # (ver la sección `flutter_launcher_icons` más abajo). No la corre la app en
+  # tiempo de ejecución: se queda como dependencia de desarrollo por si el
+  # ícono cambia y hay que regenerar.
+  flutter_launcher_icons: ^0.14.4
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -61,12 +67,14 @@ flutter:
   # descarga. Son ~6 MB de JSON, el mismo contenido que en la web sirve
   # `data/**/*.json` — pero aquí no hay servidor Node que lo lea del disco.
   #
-  # Las 3 590 figuras de teoría (83 MB) NO están aquí a propósito: eso no entra
-  # en un APK. Van a Supabase Storage — ver LEEME.md.
+  # Las 3 590 figuras de teoría (83 MB) NO están aquí a propósito: eso no
+  # entra en un APK. Se piden por red al mismo sitio que las sirve a la web
+  # —ver LEEME.md, «Las figuras»— así que solo viaja el nombre de archivo.
   #
   # Se refresca con:  node tool/sincronizar-datos.mjs
   assets:
     - assets/formulas_banco.json
+    - assets/figuras_rotas.json
     - assets/datos/temario/
     - assets/datos/teoria/
     - assets/datos/preguntas/
@@ -101,3 +109,19 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# El ícono real de la marca (el mismo `ICONO.png` que usa el repo web, copiado
+# a assets/marca/icono.png porque este proyecto no puede depender de una ruta
+# en otra máquina). Es el lockup completo -M sobre arco, "Matrix U" debajo-,
+# no un glifo aislado: no existe una versión solo-glifo en el repo de origen,
+# y recortar una no es una decisión de diseño que corresponda tomar aquí. Se
+# ve nítido en el selector de apps y en el ícono grande de ajustes; a 48dp
+# (el tamaño real del launcher) el texto se lee como textura, no como palabra
+# — el mismo trato que ya recibe en la pestaña del navegador de la web.
+#
+# Regenerar tras cambiar el archivo:
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  android: true
+  ios: false # no hay build de iOS en este repo todavía — ver LEEME.md
+  image_path: assets/marca/icono.png

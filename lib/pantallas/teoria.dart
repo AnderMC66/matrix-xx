@@ -1,8 +1,11 @@
 import "package:flutter/material.dart";
 
+import "../config.dart";
+import "../datos/markdown_teoria.dart";
 import "../datos/teoria.dart";
 import "../matematicas/formula.dart";
 import "../tema.dart";
+import "figura_red.dart";
 
 /// `/teoria` — los 15 cursos con teoría.
 class PantallaTeoria extends StatefulWidget {
@@ -164,11 +167,8 @@ class PantallaSeccion extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          // TODO: el markdown va crudo. Falta el paso de `markdown-teoria.ts`
-          // que separa líneas, destaca los `**títulos**` y sustituye los
-          // marcadores `![figura]` — las figuras están en Supabase Storage,
-          // no en assets.
-          TextoConFormulas(s.markdown),
+          for (final bloque in analizarTeoria(s.markdown))
+            _Bloque(bloque: bloque),
         ],
       ),
       bottomNavigationBar: SafeArea(
@@ -228,4 +228,74 @@ class _Error extends StatelessWidget {
       ),
     ),
   );
+}
+
+/// Pinta un bloque de teoría según lo que `analizarTeoria` decidió que es.
+///
+/// Cada caso lleva su propio espaciado porque el original es un PDF: sin aire
+/// entre bloques, un título y su párrafo se leen como una sola frase larga.
+class _Bloque extends StatelessWidget {
+  final BloqueTeoria bloque;
+  const _Bloque({required this.bloque});
+
+  static const _cuerpo = TextStyle(
+    fontSize: 15.5,
+    height: 1.6,
+    color: Paleta.texto,
+  );
+
+  @override
+  Widget build(BuildContext context) => switch (bloque) {
+    TituloTeoria(:final texto, :final nivel) => Padding(
+      padding: const EdgeInsets.only(top: 18, bottom: 6),
+      child: TextoConFormulas(
+        texto,
+        conMarcado: true,
+        estilo: TextStyle(
+          fontSize: nivel <= 1 ? 19 : (nivel == 2 ? 16.5 : 15.5),
+          fontWeight: FontWeight.w700,
+          height: 1.35,
+          color: Paleta.texto,
+        ),
+      ),
+    ),
+
+    ParrafoTeoria(:final texto) => Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: TextoConFormulas(texto, conMarcado: true, estilo: _cuerpo),
+    ),
+
+    ItemTeoria(:final texto, :final marca) => Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 26,
+            child: Text(
+              marca,
+              style: const TextStyle(
+                fontSize: 14.5,
+                height: 1.7,
+                color: Paleta.textoTenue,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: TextoConFormulas(texto, conMarcado: true, estilo: _cuerpo),
+          ),
+        ],
+      ),
+    ),
+
+    // Aparecen 3 827 veces en el corpus: en línea, compacta — un recuadro
+    // grande por figura convertiría la lectura en un campo de marcadores.
+    // Carga de verdad desde `Config.urlFiguraTeoria`; si no llega, cae al
+    // mismo aviso pequeño que había antes de esto (ver `figura_red.dart`).
+    FiguraTeoria(:final archivo, :final alt) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: FiguraRed(url: Config.urlFiguraTeoria(archivo), alt: alt),
+    ),
+  };
 }

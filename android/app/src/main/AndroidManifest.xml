@@ -1,6 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Sin esto la app entera se cae en release: en debug este permiso lo
+         añadía src/debug/AndroidManifest.xml para el hot reload, y el
+         manifiesto principal nunca lo declaró. Supabase (auth, RPC, tablas)
+         necesita internet igual en depuración que en producción — el APK de
+         release que se sube a la tienda debe tenerlo aquí. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
-        android:label="matr_u"
+        android:label="Matrix U"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

@@ -13,6 +13,34 @@ class Config {
     "SUPABASE_PUBLISHABLE_KEY",
   );
 
+  /// De dónde se descargan las figuras (`/preguntas/<archivo>` y
+  /// `/teoria-figuras/<archivo>`). NO es Supabase Storage — eso era una
+  /// intención de ESTADO.md que nunca se implementó. Las 3 590 figuras de
+  /// teoría y la de preguntas viven, hoy, como estáticos versionados en
+  /// `public/` del repo web y las sirve el mismo CDN de Vercel que sirve la
+  /// página: se comprobó pidiendo `icon-512.png` contra este dominio (HTTP
+  /// 200) y las rutas de figuras reales (HTTP 404 — están en el repo pero el
+  /// despliegue de producción vigente es anterior a que se subieran; un
+  /// `vercel --prod` desde MATRIX-U las resuelve solo, sin tocar esta app).
+  ///
+  /// Que la app dependa de la web en vez de bajarlas todas al APK es
+  /// deliberado: 83 MB de figuras no caben en un binario móvil razonable, y
+  /// este mismo dominio ya las sirve gratis vía CDN a quien las pida.
+  static const urlSitio = String.fromEnvironment(
+    "URL_SITIO",
+    defaultValue: "https://matrix-u.vercel.app",
+  );
+
+  /// `geo-2027-004-trapecio.svg` → URL completa contra `urlSitio`. Mismo
+  /// prefijo `/preguntas/` que usa `rutaPublicaFigura()` en la web
+  /// (`src/lib/figuras.ts`).
+  static String urlFiguraPregunta(String archivo) => "$urlSitio/preguntas/$archivo";
+
+  /// Igual que arriba, para las figuras de teoría — prefijo `/teoria-figuras/`,
+  /// como `rutaPublicaFiguraTeoria()` en `src/lib/figuras-teoria.ts`.
+  static String urlFiguraTeoria(String archivo) =>
+      "$urlSitio/teoria-figuras/$archivo";
+
   static bool get configurado =>
       urlSupabase.isNotEmpty && clavePublishable.isNotEmpty;
 

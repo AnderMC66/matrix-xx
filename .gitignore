@@ -54,6 +54,11 @@ app.*.map.json
 /config/*.json
 !/config/*.ejemplo.json
 
+# No debería existir —lib/config.dart nunca lo lee, y la app no necesita la
+# secret key en absoluto— pero si alguien lo vuelve a crear, que nunca entre
+# a git: es el directorio que Gradle empaqueta en el APK.
+/android/app/.env
+
 # Catálogo copiado del repo web con `node tool/sincronizar-datos.mjs`.
 # Su fuente de verdad es MATRIX-U/data/, versionarlo aquí lo duplicaría (5,8 MB)
 # y abriría la puerta a que las dos copias se separen.

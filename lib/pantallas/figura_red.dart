@@ -1,4 +1,5 @@
 import "package:flutter/material.dart";
+import "package:flutter_svg/flutter_svg.dart";
 
 import "../datos/figuras_rotas.dart";
 import "../tema.dart";
@@ -7,11 +8,17 @@ import "../tema.dart";
 /// (`Config.urlSitio` — ver el porqué ahí: es el CDN estático de la web, no
 /// Supabase Storage).
 ///
-/// Nunca deja un hueco roto ni el ícono de error del sistema. Cuatro casos
-/// caen todos al mismo aviso «no disponible»:
+/// Un `.svg` se pinta con `flutter_svg`, no con `Image.network`: el decoder
+/// de Flutter solo entiende imágenes rasterizadas, así que le daría bytes que
+/// no sabe leer y caería al aviso tras el viaje de red. Hoy es una sola figura
+/// del banco —el trapecio de `GEO-06-01`—, y hasta el 2026-09-10 esa pregunta
+/// se mostraba sin su figura. Se sumó la librería igualmente porque la
+/// herramienta de autoría del repo web emite SVG: cada figura nueva que se
+/// dibuje ahí llega en ese formato, así que el caso crece, no se queda en uno.
 ///
-///  - la URL es un `.svg` — Flutter no lo pinta sin una librería aparte, y no
-///    vale la pena sumarla por la única figura de pregunta que la usa;
+/// Fuera de eso nunca deja un hueco roto ni el ícono de error del sistema.
+/// Tres casos caen al mismo aviso «no disponible»:
+///
 ///  - el archivo está en `RepositorioFigurasRotas` — decodifica bien pero es
 ///    un rectángulo de un solo color, casi siempre negro puro. No es un
 ///    problema de red: viene roto desde la extracción del PDF de origen, y
@@ -48,9 +55,17 @@ class FiguraRed extends StatelessWidget {
 
   bool get _esRota => RepositorioFigurasRotas.instancia.esta(_nombreArchivo);
 
+  /// El `alt` que vale la pena anunciar. La teoría trae casi siempre el
+  /// literal "figura", que no describe nada: leerlo en voz alta es ruido, y
+  /// Flutter ya anuncia que hay una imagen. Las de preguntas sí describen.
+  String? get _etiqueta {
+    final limpio = alt.trim();
+    if (limpio.isEmpty || limpio.toLowerCase() == "figura") return null;
+    return limpio;
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_esSvg) return _Ausente(alt: alt, proporcion: proporcion, grande: grande);
     if (_esRota) {
       return _Ausente(
         alt: alt,
@@ -66,28 +81,47 @@ class FiguraRed extends StatelessWidget {
   /// Preguntas: el hueco se reserva desde el primer instante con la
   /// proporción real —para que el enunciado no salte al resolver la carga—,
   /// e igual de grande si la imagen no llega.
-  Widget _grande(BuildContext context) => AspectRatio(
-    aspectRatio: proporcion,
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: Image.network(
-        url,
-        fit: BoxFit.contain,
-        loadingBuilder: (context, child, progreso) {
-          if (progreso == null) return child;
-          return Container(
-            color: Paleta.superficie,
-            alignment: Alignment.center,
-            child: const SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          );
-        },
-        errorBuilder: (context, error, stack) =>
-            _Ausente(alt: alt, proporcion: proporcion, grande: true),
+  Widget _grande(BuildContext context) {
+    final ausente = _Ausente(alt: alt, proporcion: proporcion, grande: true);
+
+    return AspectRatio(
+      aspectRatio: proporcion,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: _esSvg
+            ? SvgPicture.network(
+                url,
+                fit: BoxFit.contain,
+                semanticsLabel: _etiqueta,
+                placeholderBuilder: (_) => _girando(),
+                errorBuilder: (context, error, stack) => ausente,
+              )
+            : Image.network(
+                url,
+                fit: BoxFit.contain,
+                // El `alt` del banco no es decorativo: describe la figura
+                // entera («Trapecio ABCD con la base menor AB de 6 cm
+                // arriba…»), que en una pregunta de geometría es la mitad del
+                // enunciado. Sin esto, un lector de pantalla anuncia la imagen
+                // y no dice nada de ella — y solo cuando la figura FALLA
+                // aparecía el texto, que es justo al revés de lo que hace
+                // falta.
+                semanticLabel: _etiqueta,
+                loadingBuilder: (context, child, progreso) =>
+                    progreso == null ? child : _girando(),
+                errorBuilder: (context, error, stack) => ausente,
+              ),
       ),
+    );
+  }
+
+  Widget _girando() => Container(
+    color: Paleta.superficie,
+    alignment: Alignment.center,
+    child: const SizedBox(
+      width: 22,
+      height: 22,
+      child: CircularProgressIndicator(strokeWidth: 2),
     ),
   );
 
@@ -97,14 +131,27 @@ class FiguraRed extends StatelessWidget {
   /// primer segundo de cada sección en una pared de recuadros vacíos.
   Widget _compacta(BuildContext context) => ConstrainedBox(
     constraints: const BoxConstraints(maxHeight: 320),
-    child: Image.network(
-      url,
-      fit: BoxFit.contain,
-      alignment: Alignment.centerLeft,
-      loadingBuilder: (context, child, progreso) =>
-          progreso == null ? child : _Ausente(alt: alt, cargando: true),
-      errorBuilder: (context, error, stack) => _Ausente(alt: alt),
-    ),
+    child: _esSvg
+        // Hoy ninguna figura de teoría es SVG (3 498 `.webp` y 92 `.png`),
+        // pero el widget lo sirve igual: si mañana entra una, se pinta en vez
+        // de caer al aviso por una rama que nadie recordaba actualizar.
+        ? SvgPicture.network(
+            url,
+            fit: BoxFit.contain,
+            alignment: Alignment.centerLeft,
+            semanticsLabel: _etiqueta,
+            placeholderBuilder: (_) => _Ausente(alt: alt, cargando: true),
+            errorBuilder: (context, error, stack) => _Ausente(alt: alt),
+          )
+        : Image.network(
+            url,
+            fit: BoxFit.contain,
+            alignment: Alignment.centerLeft,
+            semanticLabel: _etiqueta,
+            loadingBuilder: (context, child, progreso) =>
+                progreso == null ? child : _Ausente(alt: alt, cargando: true),
+            errorBuilder: (context, error, stack) => _Ausente(alt: alt),
+          ),
   );
 }
 
@@ -134,7 +181,9 @@ class _Ausente extends StatelessWidget {
     final texto = cargando
         ? "Cargando figura…"
         : sinContenido
-        ? (descriptivo ? "$alt (sin contenido en el original)" : "Figura sin contenido en el original")
+        ? (descriptivo
+              ? "$alt (sin contenido en el original)"
+              : "Figura sin contenido en el original")
         : descriptivo
         ? alt
         : "Figura (no disponible todavía)";

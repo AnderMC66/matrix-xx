@@ -6,8 +6,9 @@
  * ESTADO.md § 8), y `flutter_math_fork` cubre menos LaTeX que KaTeX. ¿Cuánto
  * menos, sobre ESTAS fórmulas y no sobre un ejemplo de juguete?
  *
- * El resultado lo consumen dos cosas: `tool/medir_formulas.dart`, que lo mide
- * sin abrir la app, y la pantalla de prueba, que deja verlo.
+ * El resultado lo consume `test/medir_formulas_test.dart`, que lo mide sin
+ * abrir la app. Y solo él: el archivo NO se declara en `pubspec.yaml`, así que
+ * no viaja en el APK — el test lo lee del disco con `File(...)`.
  *
  * Correr:  node tool/extraer-formulas.mjs
  */

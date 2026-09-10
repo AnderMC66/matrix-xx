@@ -1,11 +1,18 @@
-// Cómo se arma la URL de una figura, y por qué un `.svg` nunca intenta
-// cargarse por red.
+// Cómo se arma la URL de una figura, y por qué la extensión decide con qué
+// widget se pinta.
 //
-// `Image.network` no distingue: si le das una URL de SVG, intenta decodificar
-// bytes de imagen rasterizada y falla — cae a `errorBuilder` igual que un 404,
-// pero solo tras el viaje de red. Comprobar la extensión antes evita ese viaje
-// inútil, que en el único caso real de hoy (`geo-2027-004-trapecio.svg`)
-// pasaría en cada apertura de esa pregunta.
+// `Image.network` no distingue: si le das una URL de SVG intenta decodificar
+// bytes de imagen rasterizada y falla, cayendo a `errorBuilder` igual que un
+// 404 — y solo tras el viaje de red. Hasta el 2026-09-10 eso era justo lo que
+// pasaba con `geo-2027-004-trapecio.svg`, la única figura de pregunta del
+// banco: el alumno veía el aviso «no disponible» en vez del trapecio. Ahora
+// esa rama va a `SvgPicture.network`, y lo que se fija aquí es la decisión
+// que las separa.
+//
+// Que `flutter_svg` dibuje ESE archivo se comprobó aparte, pasándolo por
+// `SvgPicture.string`: sale un lienzo de 420×260 sin excepciones. No queda
+// como test permanente porque el archivo vive en `MATRIX-U/public/preguntas/`
+// y esta suite no depende del repo web.
 import "package:flutter_test/flutter_test.dart";
 import "package:matr_u/config.dart";
 
@@ -35,11 +42,14 @@ void main() {
   group("detección de SVG", () {
     bool esSvg(String url) => url.toLowerCase().endsWith(".svg");
 
-    test("un .svg no intenta cargarse por red", () {
-      expect(esSvg(Config.urlFiguraPregunta("geo-2027-004-trapecio.svg")), isTrue);
+    test("un .svg se reconoce y va por SvgPicture", () {
+      expect(
+        esSvg(Config.urlFiguraPregunta("geo-2027-004-trapecio.svg")),
+        isTrue,
+      );
     });
 
-    test("webp y png sí", () {
+    test("webp y png no: esos los pinta Image.network", () {
       expect(esSvg(Config.urlFiguraTeoria("8fc119d04b59a8e6.webp")), isFalse);
       expect(esSvg(Config.urlFiguraTeoria("x.png")), isFalse);
     });

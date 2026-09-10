@@ -31,13 +31,28 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
   supabase_flutter: ^2.17.2
+
+  # El único motor de fórmulas. Cubre 12 662 de las 13 720 del banco; las
+  # 1 058 que fallan ya están rotas en el origen — ver LEEME.md, «Las
+  # fórmulas».
   flutter_math_fork: ^0.7.4
-  flutter_markdown_plus: ^1.0.12
-  go_router: ^18.0.1
+  flutter_svg: ^2.3.0
+
+  # Tres dependencias del andamiaje inicial se quitaron el 2026-09-10 porque
+  # ningún archivo las importaba, comprobado con
+  # `grep -rn "package:<nombre>" lib test`:
+  #
+  #   cupertino_icons        del `flutter create`; la app usa Material entero
+  #   flutter_markdown_plus  el markdown de teoría lo analiza
+  #                          `lib/datos/markdown_teoria.dart`, que existe
+  #                          justo porque un motor genérico partía las
+  #                          fórmulas multilínea
+  #   go_router              la navegación es `Navigator.push` y una
+  #                          `NavigationBar`; nunca hubo rutas con nombre
+  #
+  # Si alguna vuelve a hacer falta, vuelve con el archivo que la usa en el
+  # mismo commit.
 
 dev_dependencies:
   flutter_test:
@@ -81,8 +96,15 @@ flutter:
   # —ver LEEME.md, «Las figuras»— así que solo viaja el nombre de archivo.
   #
   # Se refresca con:  node tool/sincronizar-datos.mjs
+  # `assets/formulas_banco.json` NO está en esta lista, y es a propósito. Es
+  # la salida de `tool/extraer-formulas.mjs`: 1,4 MB con las 13 720 fórmulas
+  # del banco, que solo lee `test/medir_formulas_test.dart` —y lo hace con
+  # `File(...)`, del disco, no con `rootBundle`—. Declararlo aquí lo metía en
+  # cada APK sin que ninguna línea de `lib/` lo abriera, y de paso rompía el
+  # arranque en una copia recién clonada: el archivo está en .gitignore y
+  # `sincronizar-datos.mjs` no lo genera, así que Flutter fallaba con «unable
+  # to find asset» hasta que alguien corriera la herramienta de medición.
   assets:
-    - assets/formulas_banco.json
     - assets/figuras_rotas.json
     - assets/datos/temario/
     - assets/datos/teoria/

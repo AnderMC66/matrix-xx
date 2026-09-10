@@ -67,3 +67,10 @@ app.*.map.json
 # Salida de `node tool/extraer-formulas.mjs`: 1,4 MB derivados del banco,
 # regenerables en un segundo.
 /assets/formulas_banco.json
+
+# La firma de release: rutas y contraseñas del almacén de claves. El almacén
+# mismo (.jks) tampoco va aquí — se guarda fuera del repo, porque perderlo
+# significa no poder actualizar nunca más la app publicada.
+/android/key.properties
+*.jks
+*.keystore

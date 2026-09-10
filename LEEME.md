@@ -16,14 +16,23 @@ cp config/dev.ejemplo.json config/dev.json   # y rellenar los dos valores
 flutter run --dart-define-from-file=config/dev.json
 ```
 
-Sin el paso 1 la app arranca pero no encuentra contenido. Sin el 2 arranca sin
-sesión y avisa por pantalla.
+Sin el paso 1 la app arranca pero no encuentra contenido, y las cuatro
+pantallas que leen el catálogo —Teoría, Práctica, Curso y Temario— lo dicen
+con el nombre del archivo que faltó y la herramienta que lo trae, en vez de
+quedarse girando (`Aviso.contenidoLocal`). Sin el 2 arranca sin sesión y avisa
+por pantalla.
+
+Para saber cuánto del sílabo tiene preguntas con las que practicar:
+
+```bash
+node tool/cobertura.mjs
+```
 
 ## Cómo se reparte el trabajo con la web
 
 | Pieza | Dónde vive | Se toca aquí |
 |---|---|---|
-| Esquema, RLS, 28 funciones RPC | `MATRIX-U/supabase/` | **No.** `supabase_flutter` llama las mismas funciones |
+| Esquema, RLS, 19 funciones RPC | `MATRIX-U/supabase/` | **No.** `supabase_flutter` llama las mismas funciones |
 | Catálogo (temario, teoría, preguntas) | `MATRIX-U/data/**/*.json` | **No.** Se copia a `assets/datos/` con `sincronizar-datos` |
 | 3 590 figuras de teoría + 1 de preguntas (83 MB) | `MATRIX-U/public/{teoria-figuras,preguntas}/` | **No.** Se piden por red al CDN de la web — ver «Las figuras» |
 | Interfaz | — | **Todo.** Es lo único que se reescribe |
@@ -71,6 +80,14 @@ que cubre menos que KaTeX. Cuánto menos, medido sobre el banco real:
 node tool/extraer-formulas.mjs
 flutter test test/medir_formulas_test.dart
 ```
+
+Ese `assets/formulas_banco.json` (1,4 MB) **no viaja en el APK**: lo declaraba
+`pubspec.yaml` hasta el 2026-09-10, pero nadie en `lib/` lo abre — solo el
+test, y con `File(...)` del disco, no con `rootBundle`. Se iba entero en cada
+instalación sin que ninguna pantalla lo tocara, y de paso rompía una copia
+recién clonada, porque el archivo está en `.gitignore` y `sincronizar-datos`
+no lo genera: Flutter fallaba con «unable to find asset» hasta que alguien
+corriera esta herramienta.
 
 Resultado del 2026-09-07, sobre 13 720 fórmulas únicas:
 
@@ -130,7 +147,16 @@ cuando entre contenido nuevo.
 (herramienta de autoría de contenido, uso interno de quien mantiene el banco,
 no de un alumno ni de un docente) y `/offline` (página de respaldo de un PWA
 sin conexión; una app nativa no la necesita — el manejo de "sin red" ya está
-en cada pantalla). **Los 18 RPC del esquema están en uso.**
+en cada pantalla).
+
+**Los 18 RPC del esquema que un cliente puede llamar están en uso.** El
+esquema declara 19; la que falta es `inscritos_confirmados`, que cuenta
+inscritos pagados de una clase para la vitrina de matrículas — una parte del
+producto que no existe ni aquí ni en la web (`limpieza_permisos.sql` le
+revocó el acceso anónimo justamente por eso). No es un hueco del porte.
+Aparte quedan `manejar_nuevo_usuario` y `private.programar_repaso`, que las
+invoca Postgres desde un disparador y tienen el `execute` revocado a todo el
+mundo.
 
 Buscar y Temario no tienen hueco en la barra de 5 pestañas —la barra ya tiene
 sus cinco, igual que en la web, que tampoco las pone en el nav móvil
@@ -287,11 +313,16 @@ restaure (ESTADO.md § 1, el workflow que se cayó por falta de scope).
 ### 149 de esas figuras son un rectángulo negro, y no es un problema de red
 
 Verificado bajando las 3 590 contra el sitio real: **las 3 590 responden HTTP
-200 con `image/webp` válido.** Ninguna está rota en el sentido de un enlace
-muerto. Pero 149 (4,2 %) decodifican correctamente a un solo color —siempre
-negro puro, `stdev` 0.00 en los tres canales, medido con `sharp`— y eso
-mostrado en pantalla es peor que un aviso: un rectángulo negro sin ningún
-texto que diga qué falta.
+200 con una imagen válida.** Ninguna está rota en el sentido de un enlace
+muerto. (3 498 son `.webp` y 92 siguen siendo `.png` — el lote que
+`optimizar-figuras.mjs` no convirtió. Existen las dos en `public/`, las dos se
+piden igual y `Image.network` decodifica las dos, así que la mezcla no es un
+problema; pero el `image/webp` que decía aquí antes no valía para las 92.)
+
+Pero 149 (4,2 %) decodifican correctamente a un solo color —siempre negro
+puro, `stdev` 0.00 en los tres canales, medido con `sharp`— y eso mostrado en
+pantalla es peor que un aviso: un rectángulo negro sin ningún texto que diga
+qué falta.
 
 **Tampoco es una regresión de la conversión a WebP.** Se comprobó el PNG
 original de una de ellas en
@@ -314,6 +345,23 @@ fija tres nombres verificados a mano viendo el píxel.
 Vuelve a correr la herramienta si el banco trae figuras nuevas —una figura
 nueva no entra sola en la lista— o si quieres confirmar que la cifra sigue
 en 149.
+
+### El SVG de pregunta se veía sin figura, y ya no
+
+Hasta el 2026-09-10, `FiguraRed` detectaba un `.svg` por la extensión y caía
+directo al aviso «no disponible» — `Image.network` no decodifica SVG, es un
+formato vectorial, no una imagen rasterizada, y dárselo igual habría gastado
+un viaje de red para terminar en el mismo error que un 404. Con una sola
+figura de pregunta usando ese formato (`geo-2027-004-trapecio.svg`, en
+`GEO-06-01`), esa pregunta se resolvía sin ver el trapecio que describe.
+
+Se sumó `flutter_svg` y ahora esa rama pinta con `SvgPicture.network` en vez
+de degradarse. No es una dependencia por un caso de hoy: la herramienta de
+autoría del repo web (`/autoria`, la que no se portó — ver «Estado del
+porte») emite figuras nuevas en SVG, así que cada trapecio, círculo o gráfico
+vectorial que se dibuje ahí de ahora en más llega en ese formato. Comprobado
+contra el archivo real (no solo que compile): pasado por
+`SvgPicture.string`, produce un lienzo de 420×260 sin excepciones.
 
 ## El APK de release no tenía permiso de internet
 
@@ -428,6 +476,96 @@ sin pedirlo explícitamente cada vez.
 activa, el registro desde la app se rompe porque no hay widget de Turnstile
 nativo (ver «Turnstile no está», arriba). Es una decisión y una acción del
 usuario, no algo que el código pueda resolver solo.
+
+## Lo que de verdad falta no es código: es banco de preguntas
+
+El porte está completo y los tests pasan, y eso hace fácil leer «terminado»
+donde solo dice «funciona». La app está terminada; **el contenido no**:
+
+```bash
+node tool/cobertura.mjs                    # el cuadro completo
+node tool/cobertura.mjs --subtemas ALG     # los huecos de un curso, uno a uno
+```
+
+Medido el 2026-09-10 sobre el catálogo sincronizado:
+
+```
+Banco: 392 preguntas
+Sílabo: 206 de 956 subtemas tienen al menos una (21,5 %)
+```
+
+Y el reparto es lo que importa, más que el total:
+
+| Curso | Preguntas | Subtemas cubiertos |
+|---|---|---|
+| Historia | 60 | 26/36 (72 %) |
+| Biología | 67 | 54/88 (61 %) |
+| Lenguaje | 24 | 18/39 (46 %) |
+| … | | |
+| Geometría | 5 | 4/54 (7 %) |
+| Educación Cívica | 26 | 3/46 (7 %) |
+| Álgebra | 6 | 3/60 (5 %) |
+
+Un postulante al área de Ingenierías abre Práctica y encuentra **6 preguntas
+de Álgebra y 5 de Geometría** — los dos cursos que más pesan en su examen.
+Ninguna pantalla miente sobre esto (Curso dice «N de M subtemas tienen
+preguntas», Práctica ordena los cursos por cuántas tienen), pero tampoco lo
+resuelve: las preguntas se escriben en el repo web, `data/preguntas/*.json`,
+y de ahí llegan aquí con `sincronizar-datos`.
+
+Consecuencias en la app, ninguna de ellas un fallo del código:
+
+- **La práctica adaptativa se queda sin qué recomendar** en un curso flojo
+  mucho antes de que el alumno deje de estar flojo: no hay preguntas nuevas
+  que servirle.
+- **El repaso espaciado** solo puede reprogramar lo que ya se respondió, así
+  que en esos cursos se agota en una tanda.
+- **El diagnóstico por subtema** deja en blanco 750 de los 956 subtemas: no
+  es que el alumno no los domine, es que no hay con qué medirlo.
+
+Los cursos de arriba de la lista (Historia, Biología) muestran cómo se ve la
+app llena; los de abajo, cuánto queda. Es el trabajo pendiente más grande del
+proyecto y no se arregla programando.
+
+## Firmar el APK de release
+
+Hasta el 2026-09-10 el build de release iba firmado con la **clave de
+depuración** —lo que dejó el `flutter create`, con su `TODO` intacto—. Un APK
+así se instala y se ve idéntico al bueno, así que el problema no aparece hasta
+que se intenta publicar: Play lo rechaza, y aunque no lo hiciera, la clave de
+debug es la misma en todas las máquinas del mundo, así que cualquiera podría
+firmar una «actualización» de esta app.
+
+Ahora `android/app/build.gradle.kts` lee `android/key.properties`:
+
+```bash
+cp android/key.ejemplo.properties android/key.properties   # y rellenar
+
+# El almacén se crea UNA vez y se guarda fuera del repo. Si se pierde, no hay
+# forma de actualizar la app publicada: hay que empezar con otro
+# applicationId y los ya instalados se quedan atrás.
+keytool -genkey -v -keystore ~/matrix-u-release.jks \
+  -keyalg RSA -keysize 2048 -validity 10000 -alias matrix-u
+```
+
+Sin ese archivo el build **sigue funcionando** —firma con la de debug, para
+que `flutter run --release` no exija montar un keystore— y Gradle emite un
+aviso diciendo que ese APK no es publicable. Comprobado que el aviso sale, con
+la salvedad de que el `flutter` CLI filtra los avisos de Gradle: se ve con
+`flutter build apk --release --verbose`, o llamando a `gradlew` directamente,
+no en la salida normal. `key.properties`, `*.jks` y `*.keystore` están en
+`.gitignore`.
+
+Para publicar conviene además `--split-per-abi`. El APK único pesa 58,2 MB
+porque lleva las tres ABI, y `x86_64` solo la usan los emuladores. Medido el
+2026-09-10:
+
+```
+app-release.apk             58,2 MB   ← las tres juntas
+app-arm64-v8a-release.apk   21,6 MB   ← casi cualquier teléfono de hoy
+app-armeabi-v7a-release.apk 19,3 MB
+app-x86_64-release.apk      23,1 MB   ← emuladores
+```
 
 ## Plataformas
 

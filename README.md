@@ -6,5 +6,6 @@ la UNSA. La documentación está en **[LEEME.md](LEEME.md)**.
 ```bash
 node tool/sincronizar-datos.mjs                      # traer el catálogo
 flutter run --dart-define-from-file=config/dev.json  # correr
-flutter test                                         # 92 tests (más 6 de integración, saltados sin credenciales)
+flutter test                                         # 98 tests (más 6 de integración, saltados sin credenciales)
+node tool/cobertura.mjs                              # cuánto del sílabo tiene preguntas
 ```

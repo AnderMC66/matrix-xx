@@ -55,7 +55,9 @@ class ItemTeoria extends BloqueTeoria {
 /// `![alt](assets/<hash>.<ext>)`.
 ///
 /// [archivo] es el nombre suelto, sin el prefijo `assets/`: las figuras no
-/// viajan en el APK y se resolverán contra Supabase Storage.
+/// viajan en el APK y se piden por red con `Config.urlFiguraTeoria()`, contra
+/// el mismo sitio estático que las sirve a la web — no contra Supabase
+/// Storage, que es lo que decía aquí y nunca fue verdad (ver `config.dart`).
 class FiguraTeoria extends BloqueTeoria {
   final String archivo;
   final String alt;
@@ -156,9 +158,7 @@ void _clasificarSimple(
   String texto(String s) => _restaurar(s.trim(), formulas);
 
   if (_encabezado.firstMatch(linea) case final m?) {
-    destino.add(
-      TituloTeoria(texto(m[2]!), nivel: m[1]!.length.clamp(1, 3)),
-    );
+    destino.add(TituloTeoria(texto(m[2]!), nivel: m[1]!.length.clamp(1, 3)));
     return;
   }
 

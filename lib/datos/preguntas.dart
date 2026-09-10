@@ -56,7 +56,11 @@ Dificultad _dificultadDesde(String? texto) => switch (texto) {
 /// atributo de un `<img>`.
 ///
 /// `src` es el nombre del archivo, no una ruta: las figuras no viajan en el
-/// APK (ver `pubspec.yaml`), se resuelven contra Supabase Storage.
+/// APK (ver `pubspec.yaml`), se resuelven con `Config.urlFiguraPregunta()`
+/// contra el mismo sitio estático que las sirve a la web. **No es Supabase
+/// Storage** —esa fue una intención que nunca se implementó, y `figuras.ts`
+/// documenta la decisión contraria— así que este comentario decía lo que no
+/// era hasta el 2026-09-10.
 class Figura {
   final String src;
   final String alt;
@@ -89,8 +93,7 @@ class Figura {
 /// `path traversal` en un servidor, pero sí impide construir una URL de
 /// Storage apuntando a otro sitio con un banco manipulado.
 bool _nombreValido(String nombre) =>
-    RegExp(r"^[a-zA-Z0-9._-]+$").hasMatch(nombre) &&
-    !nombre.contains("..");
+    RegExp(r"^[a-zA-Z0-9._-]+$").hasMatch(nombre) && !nombre.contains("..");
 
 class Alternativa {
   final Letra letra;
@@ -243,7 +246,8 @@ class RepositorioPreguntas {
       final prefijo = doc["prefijo"] as String;
       final ano = doc["anoExamen"] as int;
 
-      for (final crudo in (doc["preguntas"] as List).cast<Map<String, dynamic>>()) {
+      for (final crudo
+          in (doc["preguntas"] as List).cast<Map<String, dynamic>>()) {
         final subtema = crudo["subtema"] as String;
         final ubicacion = temario.ubicacion(subtema);
         // El generador del repo web ya reporta esto como error; aquí basta
@@ -258,7 +262,8 @@ class RepositorioPreguntas {
             imagen: Figura.desde(crudo["imagen"] as Map<String, dynamic>?),
             dificultad: _dificultadDesde(crudo["dificultad"] as String?),
             alternativas: _alternativas(
-              (crudo["alternativas"] as Map?)?.cast<String, dynamic>() ?? const {},
+              (crudo["alternativas"] as Map?)?.cast<String, dynamic>() ??
+                  const {},
             ),
             subtemaCodigo: subtema,
             subtemaNombre: ubicacion.subtema.nombre,
@@ -270,11 +275,9 @@ class RepositorioPreguntas {
       }
     }
 
-    return _cargado = Banco._(
-      preguntas,
-      {for (final p in preguntas) p.codigo: p},
-      sonEjemplos,
-    );
+    return _cargado = Banco._(preguntas, {
+      for (final p in preguntas) p.codigo: p,
+    }, sonEjemplos);
   }
 
   /// Una alternativa admite dos formas en el JSON, como en la web:

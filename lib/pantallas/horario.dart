@@ -6,6 +6,7 @@ import "../datos/horario.dart";
 import "../datos/sesion.dart";
 import "../datos/temario.dart";
 import "../tema.dart";
+import "../widgets/aviso.dart";
 
 const _duraciones = [30, 45, 60, 90, 120];
 
@@ -122,23 +123,24 @@ class _PantallaHorarioState extends State<PantallaHorario> {
       final curso = _cursos.firstWhere((c) => c.codigo == codigo);
       if (!mounted) return;
       setState(() {
-        _horario = [
-          ..._horario,
-          BloqueHorario(
-            // Provisional hasta la próxima recarga, igual que en la web.
-            id: -DateTime.now().millisecondsSinceEpoch,
-            cursoCodigo: curso.codigo,
-            cursoNombre: curso.nombre,
-            cursoSlug: curso.slug,
-            diaSemana: _dia,
-            horaInicio: horaTexto,
-            duracionMinutos: _duracion,
-          ),
-        ]..sort(
-          (a, b) => a.diaSemana != b.diaSemana
-              ? a.diaSemana.compareTo(b.diaSemana)
-              : a.horaInicio.compareTo(b.horaInicio),
-        );
+        _horario =
+            [
+              ..._horario,
+              BloqueHorario(
+                // Provisional hasta la próxima recarga, igual que en la web.
+                id: -DateTime.now().millisecondsSinceEpoch,
+                cursoCodigo: curso.codigo,
+                cursoNombre: curso.nombre,
+                cursoSlug: curso.slug,
+                diaSemana: _dia,
+                horaInicio: horaTexto,
+                duracionMinutos: _duracion,
+              ),
+            ]..sort(
+              (a, b) => a.diaSemana != b.diaSemana
+                  ? a.diaSemana.compareTo(b.diaSemana)
+                  : a.horaInicio.compareTo(b.horaInicio),
+            );
       });
     } on ErrorHorario catch (e) {
       if (mounted) setState(() => _error = e.mensaje);
@@ -156,7 +158,9 @@ class _PantallaHorarioState extends State<PantallaHorario> {
     });
     try {
       await _repo.eliminar(b.id);
-      if (mounted) setState(() => _horario = _horario.where((x) => x.id != b.id).toList());
+      if (mounted) {
+        setState(() => _horario = _horario.where((x) => x.id != b.id).toList());
+      }
     } catch (e) {
       if (mounted) setState(() => _error = "No se pudo eliminar el bloque. $e");
     } finally {
@@ -167,7 +171,7 @@ class _PantallaHorarioState extends State<PantallaHorario> {
   @override
   Widget build(BuildContext context) {
     if (!_sesion.hayCuenta) {
-      return const _Aviso(
+      return const Aviso(
         icono: Icons.lock_outline,
         titulo: "El horario necesita tu cuenta",
         detalle:
@@ -176,7 +180,7 @@ class _PantallaHorarioState extends State<PantallaHorario> {
       );
     }
     if (_errorCarga != null) {
-      return _Aviso(
+      return Aviso(
         icono: Icons.cloud_off_outlined,
         titulo: "No se pudo cargar el horario",
         detalle: _errorCarga!,
@@ -196,7 +200,11 @@ class _PantallaHorarioState extends State<PantallaHorario> {
       children: [
         const Text(
           "Cuándo estudias cada curso",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Paleta.texto),
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Paleta.texto,
+          ),
         ),
         const SizedBox(height: 6),
         const Text(
@@ -225,16 +233,20 @@ class _PantallaHorarioState extends State<PantallaHorario> {
         ),
         const SizedBox(height: 26),
         if (_horario.isEmpty)
-          const _Aviso(
+          const Aviso(
             icono: Icons.calendar_month_outlined,
             titulo: "Todavía no programaste ningún bloque",
-            detalle: "",
             compacto: true,
           )
         else
           for (final (dia, nombre) in diasSemana.indexed)
             if (porDia[dia] case final bloques? when bloques.isNotEmpty)
-              _BloqueDia(nombre: nombre, bloques: bloques, eliminandoId: _eliminandoId, onEliminar: _eliminar),
+              _BloqueDia(
+                nombre: nombre,
+                bloques: bloques,
+                eliminandoId: _eliminandoId,
+                onEliminar: _eliminar,
+              ),
       ],
     );
   }
@@ -261,12 +273,19 @@ class _AvisoProximo extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.notifications_active_outlined, color: Paleta.acento, size: 20),
+          const Icon(
+            Icons.notifications_active_outlined,
+            color: Paleta.acento,
+            size: 20,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               texto,
-              style: const TextStyle(fontWeight: FontWeight.w600, color: Paleta.acento),
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Paleta.acento,
+              ),
             ),
           ),
         ],
@@ -315,7 +334,10 @@ class _FormularioBloque extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Agregar bloque", style: TextStyle(fontWeight: FontWeight.w700)),
+        const Text(
+          "Agregar bloque",
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
           initialValue: cursoElegido,
@@ -327,7 +349,10 @@ class _FormularioBloque extends StatelessWidget {
           ),
           items: [
             for (final c in cursos)
-              DropdownMenuItem(value: c.codigo, child: Text(c.nombre, overflow: TextOverflow.ellipsis)),
+              DropdownMenuItem(
+                value: c.codigo,
+                child: Text(c.nombre, overflow: TextOverflow.ellipsis),
+              ),
           ],
           onChanged: onCurso,
         ),
@@ -353,7 +378,10 @@ class _FormularioBloque extends StatelessWidget {
             Expanded(
               child: InkWell(
                 onTap: () async {
-                  final elegida = await showTimePicker(context: context, initialTime: hora);
+                  final elegida = await showTimePicker(
+                    context: context,
+                    initialTime: hora,
+                  );
                   if (elegida != null) onHora(elegida);
                 },
                 child: InputDecorator(
@@ -445,20 +473,32 @@ class _BloqueDia extends StatelessWidget {
                           children: [
                             Text(
                               b.cursoNombre,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               "${formatearHora(b.horaInicio)} · ${b.duracionMinutos} min",
-                              style: const TextStyle(fontSize: 12, color: Paleta.textoTenue),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Paleta.textoTenue,
+                              ),
                             ),
                           ],
                         ),
                       ),
                       TextButton(
-                        onPressed: eliminandoId == b.id ? null : () => onEliminar(b),
-                        style: TextButton.styleFrom(foregroundColor: Paleta.aviso),
-                        child: Text(eliminandoId == b.id ? "Quitando…" : "Quitar"),
+                        onPressed: eliminandoId == b.id
+                            ? null
+                            : () => onEliminar(b),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Paleta.aviso,
+                        ),
+                        child: Text(
+                          eliminandoId == b.id ? "Quitando…" : "Quitar",
+                        ),
                       ),
                     ],
                   ),
@@ -470,55 +510,4 @@ class _BloqueDia extends StatelessWidget {
       ],
     ),
   );
-}
-
-class _Aviso extends StatelessWidget {
-  final IconData icono;
-  final String titulo;
-  final String detalle;
-  final bool compacto;
-
-  const _Aviso({
-    required this.icono,
-    required this.titulo,
-    required this.detalle,
-    this.compacto = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final contenido = Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icono, size: compacto ? 26 : 34, color: Paleta.textoTenue),
-        SizedBox(height: compacto ? 10 : 14),
-        Text(
-          titulo,
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Paleta.texto),
-        ),
-        if (detalle.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          Text(
-            detalle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Paleta.textoSuave, fontSize: 13, height: 1.55),
-          ),
-        ],
-      ],
-    );
-
-    if (compacto) {
-      return Container(
-        padding: const EdgeInsets.symmetric(vertical: 28),
-        decoration: BoxDecoration(
-          border: Border.all(color: Paleta.borde),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: contenido,
-      );
-    }
-
-    return Center(child: Padding(padding: const EdgeInsets.all(28), child: contenido));
-  }
 }

@@ -3,6 +3,7 @@ import "package:flutter/material.dart";
 import "../datos/preguntas.dart";
 import "../datos/temario.dart";
 import "../tema.dart";
+import "../widgets/aviso.dart";
 import "curso.dart";
 
 /// `/temario` — el sílabo oficial, curso por curso.
@@ -36,6 +37,12 @@ class _PantallaTemarioState extends State<PantallaTemario> {
       body: FutureBuilder<(Temario, int)>(
         future: _carga,
         builder: (context, snap) {
+          if (snap.hasError) {
+            return Aviso.contenidoLocal(
+              titulo: "No se pudo cargar el temario",
+              error: snap.error!,
+            );
+          }
           if (!snap.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -160,7 +167,11 @@ class _AvisoPendientes extends StatelessWidget {
           child: Text(
             "$cantidad temas siguen sin desglose de subtemas en el "
             "sílabo. Aparecen marcados como pendientes.",
-            style: const TextStyle(fontSize: 12, color: Paleta.aviso, height: 1.45),
+            style: const TextStyle(
+              fontSize: 12,
+              color: Paleta.aviso,
+              height: 1.45,
+            ),
           ),
         ),
       ],
@@ -210,9 +221,9 @@ class _TarjetaCurso extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => PantallaCurso(curso: curso)),
-        ),
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => PantallaCurso(curso: curso))),
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
@@ -251,12 +262,19 @@ class _TarjetaCurso extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       "${curso.temas.length} temas · ${curso.totalSubtemas} subtemas",
-                      style: const TextStyle(fontSize: 11.5, color: Paleta.textoTenue),
+                      style: const TextStyle(
+                        fontSize: 11.5,
+                        color: Paleta.textoTenue,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, size: 18, color: Paleta.textoTenue),
+              const Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: Paleta.textoTenue,
+              ),
             ],
           ),
         ),

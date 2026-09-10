@@ -7,6 +7,7 @@ import "../datos/repaso.dart";
 import "../datos/sesion.dart";
 import "../datos/temario.dart";
 import "../tema.dart";
+import "../widgets/aviso.dart";
 import "practica.dart";
 
 /// `/practica/adaptativa` — práctica que elige las preguntas por ti.
@@ -56,13 +57,17 @@ class _PantallaPracticaAdaptativaState
         ? await _progreso.cursosDesatendidos()
         : const <CursoDesatendido>[];
 
-    return _Datos(curso: curso, preguntas: preguntas, desatendidos: desatendidos);
+    return _Datos(
+      curso: curso,
+      preguntas: preguntas,
+      desatendidos: desatendidos,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     if (!_sesion.hayCuenta) {
-      return const _Aviso(
+      return const Aviso(
         icono: Icons.lock_outline,
         titulo: "La práctica adaptativa necesita tu cuenta",
         detalle:
@@ -75,7 +80,7 @@ class _PantallaPracticaAdaptativaState
       future: _carga,
       builder: (context, snap) {
         if (snap.hasError) {
-          return _Aviso(
+          return Aviso(
             icono: Icons.cloud_off_outlined,
             titulo: "No se pudo cargar",
             detalle: "${snap.error}",
@@ -92,7 +97,9 @@ class _PantallaPracticaAdaptativaState
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           children: [
             Text(
-              curso != null ? "${curso.nombre}, a tu medida" : "Lo que más te conviene ahora",
+              curso != null
+                  ? "${curso.nombre}, a tu medida"
+                  : "Lo que más te conviene ahora",
               style: const TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -103,7 +110,11 @@ class _PantallaPracticaAdaptativaState
             const Text(
               "Elegimos las preguntas por ti: empiezan por los subtemas "
               "donde peor vas, y lo que ya dominas no vuelve a salir.",
-              style: TextStyle(fontSize: 13, color: Paleta.textoSuave, height: 1.5),
+              style: TextStyle(
+                fontSize: 13,
+                color: Paleta.textoSuave,
+                height: 1.5,
+              ),
             ),
             if (curso == null && datos.desatendidos.isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -225,7 +236,9 @@ class _NadaPendiente extends StatelessWidget {
     child: Column(
       children: [
         Text(
-          curso != null ? "Nada pendiente en ${curso!.nombre}" : "Nada pendiente por ahora",
+          curso != null
+              ? "Nada pendiente en ${curso!.nombre}"
+              : "Nada pendiente por ahora",
           style: const TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 15,
@@ -239,42 +252,13 @@ class _NadaPendiente extends StatelessWidget {
           "${curso != null ? " de este curso" : ""}. Vuelve por los "
           "repasos programados para no olvidarlo.",
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 13, color: Paleta.textoSuave, height: 1.5),
+          style: const TextStyle(
+            fontSize: 13,
+            color: Paleta.textoSuave,
+            height: 1.5,
+          ),
         ),
       ],
-    ),
-  );
-}
-
-class _Aviso extends StatelessWidget {
-  final IconData icono;
-  final String titulo;
-  final String detalle;
-
-  const _Aviso({required this.icono, required this.titulo, required this.detalle});
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icono, size: 34, color: Paleta.textoTenue),
-          const SizedBox(height: 14),
-          Text(
-            titulo,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Paleta.texto),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            detalle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Paleta.textoSuave, fontSize: 13, height: 1.55),
-          ),
-        ],
-      ),
     ),
   );
 }

@@ -5,6 +5,7 @@ import "../datos/preguntas.dart" show EtiquetaLetra;
 import "../datos/sesion.dart";
 import "../matematicas/formula.dart";
 import "../tema.dart";
+import "../widgets/aviso.dart";
 import "figura_red.dart";
 
 /// `/panel` — portada del panel de docente/admin.
@@ -53,17 +54,16 @@ class _PantallaPanelState extends State<PantallaPanel> {
           if (!esStaff(rol)) {
             // Igual que `exigirStaff()`: sin sesión o sin rol de staff, no
             // hay panel que enseñar.
-            return const _Aviso(
+            return const Aviso(
               icono: Icons.block,
               titulo: "No tienes acceso al panel",
               detalle: "Esta sección es solo para docentes y administradores.",
             );
           }
           if (resumen == null) {
-            return _Aviso(
+            return Aviso(
               icono: Icons.cloud_off_outlined,
               titulo: "No se pudo leer el resumen",
-              detalle: "",
               accion: ("Reintentar", _recargar),
             );
           }
@@ -75,7 +75,11 @@ class _PantallaPanelState extends State<PantallaPanel> {
               children: [
                 const Text(
                   "Revisión y soporte",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Paleta.texto),
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Paleta.texto,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 const Text(
@@ -126,7 +130,9 @@ class _PantallaPanelState extends State<PantallaPanel> {
                     cifra: resumen.personas,
                     detalle: "Cuentas registradas y sus roles",
                     onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const PantallaPanelUsuarios()),
+                      MaterialPageRoute(
+                        builder: (_) => const PantallaPanelUsuarios(),
+                      ),
                     ),
                   ),
                 ],
@@ -140,12 +146,13 @@ class _PantallaPanelState extends State<PantallaPanel> {
 
   void _abrirRevision(BuildContext context, String filtro) =>
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => PantallaPanelRevision(filtroInicial: filtro)),
+        MaterialPageRoute(
+          builder: (_) => PantallaPanelRevision(filtroInicial: filtro),
+        ),
       );
 
-  void _abrirReportes(BuildContext context) => Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => const PantallaPanelReportes()),
-  );
+  void _abrirReportes(BuildContext context) => Navigator.of(context)
+      .push(MaterialPageRoute(builder: (_) => const PantallaPanelReportes()));
 }
 
 class _TarjetaPanel extends StatelessWidget {
@@ -182,14 +189,30 @@ class _TarjetaPanel extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(titulo, style: const TextStyle(fontSize: 13, color: Paleta.textoSuave)),
+                  Text(
+                    titulo,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Paleta.textoSuave,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   Text(
                     "$cifra",
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Paleta.texto),
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                      color: Paleta.texto,
+                    ),
                   ),
                   const SizedBox(height: 2),
-                  Text(detalle, style: const TextStyle(fontSize: 11.5, color: Paleta.textoTenue)),
+                  Text(
+                    detalle,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: Paleta.textoTenue,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -271,10 +294,12 @@ class _PantallaPanelRevisionState extends State<PantallaPanelRevision> {
           child: FutureBuilder<List<PreguntaRevision>>(
             future: _carga,
             builder: (context, snap) {
-              if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+              if (!snap.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
               final preguntas = snap.data!;
               if (preguntas.isEmpty) {
-                return const _Aviso(
+                return const Aviso(
                   icono: Icons.check_circle_outline,
                   titulo: "Nada por aquí",
                   detalle: "No hay preguntas con este filtro.",
@@ -317,7 +342,10 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
       _mensaje = null;
     });
     try {
-      await _repo.dictaminarPregunta(preguntaId: widget.pregunta.id, estado: estado);
+      await _repo.dictaminarPregunta(
+        preguntaId: widget.pregunta.id,
+        estado: estado,
+      );
       if (mounted) {
         setState(() => _mensaje = "Marcada como ${_etiquetaEstado(estado)}.");
       }
@@ -351,19 +379,28 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
                   children: [
                     Text(
                       "${p.curso} · ${p.subtema}",
-                      style: const TextStyle(fontSize: 11, color: Paleta.textoTenue),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Paleta.textoTenue,
+                      ),
                     ),
                     Text(
                       "${p.codigo ?? "#${p.id}"} · ${p.dificultad} · ${p.estado}"
                       "${p.auditada ? " · ya auditada" : ""}",
-                      style: const TextStyle(fontSize: 11, color: Paleta.textoTenue),
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Paleta.textoTenue,
+                      ),
                     ),
                   ],
                 ),
               ),
               if (p.reportesAbiertos > 0)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Paleta.avisoSuave,
                     border: Border.all(color: Paleta.aviso),
@@ -389,7 +426,9 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
               child: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: a.letra == p.clave ? Paleta.exitoSuave : Paleta.superficieAlta,
+                  color: a.letra == p.clave
+                      ? Paleta.exitoSuave
+                      : Paleta.superficieAlta,
                   border: Border.all(
                     color: a.letra == p.clave ? Paleta.exito : Paleta.borde,
                   ),
@@ -402,7 +441,9 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
                       a.letra.etiqueta,
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: a.letra == p.clave ? Paleta.exito : Paleta.textoTenue,
+                        color: a.letra == p.clave
+                            ? Paleta.exito
+                            : Paleta.textoTenue,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -410,13 +451,20 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
                       child: TextoConFormulas(
                         a.textoMd,
                         conMarcado: true,
-                        estilo: const TextStyle(fontSize: 13.5, color: Paleta.texto, height: 1.4),
+                        estilo: const TextStyle(
+                          fontSize: 13.5,
+                          color: Paleta.texto,
+                          height: 1.4,
+                        ),
                       ),
                     ),
                     if (a.letra == p.clave)
                       const Padding(
                         padding: EdgeInsets.only(left: 6),
-                        child: Text("clave", style: TextStyle(fontSize: 10.5, color: Paleta.exito)),
+                        child: Text(
+                          "clave",
+                          style: TextStyle(fontSize: 10.5, color: Paleta.exito),
+                        ),
                       ),
                   ],
                 ),
@@ -426,14 +474,21 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
             const SizedBox(height: 6),
             ExpansionTile(
               tilePadding: EdgeInsets.zero,
-              title: const Text("Explicación", style: TextStyle(fontSize: 13, color: Paleta.textoSuave)),
+              title: const Text(
+                "Explicación",
+                style: TextStyle(fontSize: 13, color: Paleta.textoSuave),
+              ),
               children: [
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextoConFormulas(
                     exp,
                     conMarcado: true,
-                    estilo: const TextStyle(fontSize: 13, color: Paleta.texto, height: 1.5),
+                    estilo: const TextStyle(
+                      fontSize: 13,
+                      color: Paleta.texto,
+                      height: 1.5,
+                    ),
                   ),
                 ),
               ],
@@ -469,7 +524,10 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
           ),
           if (_mensaje case final m?) ...[
             const SizedBox(height: 6),
-            Text(m, style: const TextStyle(fontSize: 11.5, color: Paleta.textoSuave)),
+            Text(
+              m,
+              style: const TextStyle(fontSize: 11.5, color: Paleta.textoSuave),
+            ),
           ],
         ],
       ),
@@ -578,17 +636,24 @@ class _PantallaPanelReportesState extends State<PantallaPanelReportes> {
           child: FutureBuilder<List<ReporteStaff>>(
             future: _carga,
             builder: (context, snap) {
-              if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+              if (!snap.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
               final reportes = snap.data!;
               if (reportes.isEmpty) {
-                return const _Aviso(icono: Icons.inbox_outlined, titulo: "Nada por aquí", detalle: "");
+                return const Aviso(
+                  icono: Icons.inbox_outlined,
+                  titulo: "Nada por aquí",
+                );
               }
               return ListView.separated(
                 padding: const EdgeInsets.all(16),
                 itemCount: reportes.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, i) =>
-                    _FichaReporte(reporte: reportes[i], onDictaminado: _recargar),
+                itemBuilder: (context, i) => _FichaReporte(
+                  reporte: reportes[i],
+                  onDictaminado: _recargar,
+                ),
               );
             },
           ),
@@ -599,8 +664,18 @@ class _PantallaPanelReportesState extends State<PantallaPanelReportes> {
 }
 
 const _mesesCortosPanel = [
-  "ene", "feb", "mar", "abr", "may", "jun",
-  "jul", "ago", "sep", "oct", "nov", "dic",
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sep",
+  "oct",
+  "nov",
+  "dic",
 ];
 
 class _FichaReporte extends StatefulWidget {
@@ -623,7 +698,10 @@ class _FichaReporteState extends State<_FichaReporte> {
       _mensaje = null;
     });
     try {
-      await _repo.dictaminarReporte(reporteId: widget.reporte.id, estado: estado);
+      await _repo.dictaminarReporte(
+        reporteId: widget.reporte.id,
+        estado: estado,
+      );
       if (mounted) setState(() => _mensaje = "Reporte actualizado.");
       widget.onDictaminado();
     } catch (e) {
@@ -652,10 +730,16 @@ class _FichaReporteState extends State<_FichaReporte> {
             style: const TextStyle(fontSize: 11, color: Paleta.textoTenue),
           ),
           const SizedBox(height: 4),
-          Text(r.motivo, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+          Text(
+            r.motivo,
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+          ),
           if (r.detalle case final d? when d.isNotEmpty) ...[
             const SizedBox(height: 4),
-            Text(d, style: const TextStyle(fontSize: 13, color: Paleta.textoSuave)),
+            Text(
+              d,
+              style: const TextStyle(fontSize: 13, color: Paleta.textoSuave),
+            ),
           ],
           if (r.preguntaEnunciado case final e? when e.isNotEmpty) ...[
             const SizedBox(height: 8),
@@ -670,7 +754,10 @@ class _FichaReporteState extends State<_FichaReporte> {
                 e,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 12.5, color: Paleta.textoSuave),
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: Paleta.textoSuave,
+                ),
               ),
             ),
           ],
@@ -704,7 +791,10 @@ class _FichaReporteState extends State<_FichaReporte> {
           ),
           if (_mensaje case final m?) ...[
             const SizedBox(height: 6),
-            Text(m, style: const TextStyle(fontSize: 11.5, color: Paleta.textoSuave)),
+            Text(
+              m,
+              style: const TextStyle(fontSize: 11.5, color: Paleta.textoSuave),
+            ),
           ],
         ],
       ),
@@ -736,13 +826,14 @@ class _PantallaPanelUsuariosState extends State<PantallaPanelUsuarios> {
     body: FutureBuilder<List<Persona>>(
       future: _carga,
       builder: (context, snap) {
-        if (!snap.hasData) return const Center(child: CircularProgressIndicator());
+        if (!snap.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
         final personas = snap.data!;
         if (personas.isEmpty) {
-          return const _Aviso(
+          return const Aviso(
             icono: Icons.people_outline,
             titulo: "No hay cuentas registradas",
-            detalle: "",
           );
         }
         return ListView.separated(
@@ -757,7 +848,11 @@ class _PantallaPanelUsuariosState extends State<PantallaPanelUsuarios> {
                   "Un docente puede revisar preguntas y resolver reportes. Un "
                   "admin puede además cambiar roles. El último administrador "
                   "no se puede degradar.",
-                  style: TextStyle(fontSize: 12.5, color: Paleta.textoSuave, height: 1.5),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Paleta.textoSuave,
+                    height: 1.5,
+                  ),
                 ),
               );
             }
@@ -824,12 +919,33 @@ class _FilaPersonaState extends State<_FilaPersona> {
               children: [
                 Text(
                   p.nombre.isEmpty ? "—" : p.nombre,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
                 ),
-                Text(p.correo, style: const TextStyle(fontSize: 12, color: Paleta.textoSuave)),
-                Text(p.plan, style: const TextStyle(fontSize: 11.5, color: Paleta.textoTenue)),
+                Text(
+                  p.correo,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Paleta.textoSuave,
+                  ),
+                ),
+                Text(
+                  p.plan,
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Paleta.textoTenue,
+                  ),
+                ),
                 if (_mensaje case final m?)
-                  Text(m, style: const TextStyle(fontSize: 11, color: Paleta.textoSuave)),
+                  Text(
+                    m,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: Paleta.textoSuave,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -839,7 +955,9 @@ class _FilaPersonaState extends State<_FilaPersona> {
               DropdownButton<Rol>(
                 value: _rol,
                 underline: const SizedBox.shrink(),
-                onChanged: _guardando ? null : (v) => v == null ? null : _cambiar(v),
+                onChanged: _guardando
+                    ? null
+                    : (v) => v == null ? null : _cambiar(v),
                 items: const [
                   DropdownMenuItem(value: Rol.alumno, child: Text("alumno")),
                   DropdownMenuItem(value: Rol.docente, child: Text("docente")),
@@ -847,7 +965,10 @@ class _FilaPersonaState extends State<_FilaPersona> {
                 ],
               ),
               if (widget.esUnoMismo)
-                const Text("(eres tú)", style: TextStyle(fontSize: 10.5, color: Paleta.textoTenue)),
+                const Text(
+                  "(eres tú)",
+                  style: TextStyle(fontSize: 10.5, color: Paleta.textoTenue),
+                ),
             ],
           ),
         ],
@@ -857,43 +978,3 @@ class _FilaPersonaState extends State<_FilaPersona> {
 }
 
 // ============================================================================
-
-class _Aviso extends StatelessWidget {
-  final IconData icono;
-  final String titulo;
-  final String detalle;
-  final (String, VoidCallback)? accion;
-
-  const _Aviso({required this.icono, required this.titulo, required this.detalle, this.accion});
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icono, size: 32, color: Paleta.textoTenue),
-          const SizedBox(height: 12),
-          Text(
-            titulo,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15, color: Paleta.texto),
-          ),
-          if (detalle.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              detalle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Paleta.textoSuave, fontSize: 13, height: 1.5),
-            ),
-          ],
-          if (accion case final a?) ...[
-            const SizedBox(height: 16),
-            OutlinedButton(onPressed: a.$2, child: Text(a.$1)),
-          ],
-        ],
-      ),
-    ),
-  );
-}

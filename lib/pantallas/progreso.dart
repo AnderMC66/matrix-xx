@@ -5,6 +5,7 @@ import "../datos/progreso.dart";
 import "../datos/repaso.dart";
 import "../datos/sesion.dart";
 import "../tema.dart";
+import "../widgets/aviso.dart";
 import "horario.dart";
 import "panel.dart";
 
@@ -62,7 +63,7 @@ class _PantallaProgresoState extends State<PantallaProgreso> {
   @override
   Widget build(BuildContext context) {
     if (!_sesion.hayCuenta) {
-      return const _Aviso(
+      return const Aviso(
         icono: Icons.lock_outline,
         titulo: "Tu progreso necesita tu cuenta",
         detalle:
@@ -76,7 +77,7 @@ class _PantallaProgresoState extends State<PantallaProgreso> {
       future: _carga,
       builder: (context, snap) {
         if (snap.hasError) {
-          return _Aviso(
+          return Aviso(
             icono: Icons.cloud_off_outlined,
             titulo: "No se pudo cargar tu progreso",
             detalle: "${snap.error}",
@@ -87,7 +88,8 @@ class _PantallaProgresoState extends State<PantallaProgreso> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final (perfil, racha, repasos, horario, diagnostico, reportes) = snap.data!;
+        final (perfil, racha, repasos, horario, diagnostico, reportes) =
+            snap.data!;
 
         return RefreshIndicator(
           onRefresh: () async => _recargar(),
@@ -183,8 +185,18 @@ class _Cabecera extends StatelessWidget {
 }
 
 const _mesesCortos = [
-  "ene", "feb", "mar", "abr", "may", "jun",
-  "jul", "ago", "sep", "oct", "nov", "dic",
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sep",
+  "oct",
+  "nov",
+  "dic",
 ];
 
 String _mesAno(DateTime d) => "${_mesesCortos[d.month - 1]} ${d.year}";
@@ -233,9 +245,9 @@ class _PanelStaff extends StatelessWidget {
     borderRadius: BorderRadius.circular(12),
     child: InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const PantallaPanel()),
-      ),
+      onTap: () =>
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const PantallaPanel())),
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
@@ -470,7 +482,11 @@ class _ProximoBloque extends StatelessWidget {
             const Text(
               "No tienes ningún bloque programado todavía. Programa un "
               "horario semanal por curso y te avisamos cuando toca.",
-              style: TextStyle(fontSize: 12.5, color: Paleta.textoSuave, height: 1.45),
+              style: TextStyle(
+                fontSize: 12.5,
+                color: Paleta.textoSuave,
+                height: 1.45,
+              ),
             )
           else
             RichText(
@@ -773,8 +789,9 @@ class _BloqueCurso extends StatelessWidget {
   Widget build(BuildContext context) {
     final respondidas = subtemas.fold(0, (n, s) => n + s.respondidas);
     final correctas = subtemas.fold(0, (n, s) => n + s.correctas);
-    final promedio =
-        respondidas == 0 ? 0 : (correctas * 100 / respondidas).round();
+    final promedio = respondidas == 0
+        ? 0
+        : (correctas * 100 / respondidas).round();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -895,57 +912,6 @@ class _Nota extends StatelessWidget {
     child: Text(
       texto,
       style: const TextStyle(fontSize: 12.5, color: Paleta.aviso, height: 1.45),
-    ),
-  );
-}
-
-class _Aviso extends StatelessWidget {
-  final IconData icono;
-  final String titulo;
-  final String detalle;
-  final (String, VoidCallback)? accion;
-
-  const _Aviso({
-    required this.icono,
-    required this.titulo,
-    required this.detalle,
-    this.accion,
-  });
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icono, size: 34, color: Paleta.textoTenue),
-          const SizedBox(height: 14),
-          Text(
-            titulo,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-              color: Paleta.texto,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            detalle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Paleta.textoSuave,
-              fontSize: 13,
-              height: 1.55,
-            ),
-          ),
-          if (accion case final a?) ...[
-            const SizedBox(height: 20),
-            OutlinedButton(onPressed: a.$2, child: Text(a.$1)),
-          ],
-        ],
-      ),
     ),
   );
 }

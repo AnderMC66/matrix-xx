@@ -6,6 +6,7 @@ import "../datos/preguntas.dart";
 import "../datos/sesion.dart";
 import "../matematicas/formula.dart";
 import "../tema.dart";
+import "../widgets/aviso.dart";
 import "figura_red.dart";
 import "practica_adaptativa.dart";
 
@@ -27,10 +28,9 @@ class _PantallaPracticaState extends State<PantallaPractica> {
       future: _banco,
       builder: (context, snap) {
         if (snap.hasError) {
-          return _Aviso(
-            icono: Icons.error_outline,
+          return Aviso.contenidoLocal(
             titulo: "No se pudo cargar el banco",
-            detalle: "${snap.error}\n\n¿Corriste `node tool/sincronizar-datos.mjs`?",
+            error: snap.error!,
           );
         }
         if (!snap.hasData) {
@@ -99,9 +99,9 @@ class _TarjetaAdaptativa extends StatelessWidget {
     borderRadius: BorderRadius.circular(12),
     child: InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const _AdaptativaConAppBar()),
-      ),
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const _AdaptativaConAppBar())),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -246,7 +246,9 @@ class _SesionPracticaState extends State<SesionPractica> {
     } on ErrorPractica catch (e) {
       if (mounted) setState(() => _error = e.mensaje);
     } catch (e) {
-      if (mounted) setState(() => _error = "No se pudo enviar la respuesta. $e");
+      if (mounted) {
+        setState(() => _error = "No se pudo enviar la respuesta. $e");
+      }
     } finally {
       if (mounted) setState(() => _enviando = false);
     }
@@ -276,7 +278,7 @@ class _SesionPracticaState extends State<SesionPractica> {
     if (widget.preguntas.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: Text(widget.titulo)),
-        body: const _Aviso(
+        body: const Aviso(
           icono: Icons.inbox_outlined,
           titulo: "Todavía no hay preguntas de este curso",
           detalle: "La cobertura del banco crece curso a curso.",
@@ -354,7 +356,11 @@ class _SesionPracticaState extends State<SesionPractica> {
 
           if (_error != null) ...[
             const SizedBox(height: 12),
-            _Nota(texto: _error!, color: Paleta.acento, fondo: Paleta.acentoSuave),
+            _Nota(
+              texto: _error!,
+              color: Paleta.acento,
+              fondo: Paleta.acentoSuave,
+            ),
             if (!_sesion.hayCuenta) ...[
               const SizedBox(height: 8),
               Text(
@@ -437,9 +443,10 @@ class _Alternativa extends StatelessWidget {
     // pasa a significar "cuál era". El verde marca siempre la clave, la marque
     // el alumno o no, para que aprenda algo aunque haya fallado.
     final (borde, fondo) = switch ((correccion, esClave, falloAqui)) {
-      (null, _, _) => marcada
-          ? (Paleta.acento, Paleta.acentoSuave)
-          : (Paleta.borde, Paleta.superficieAlta),
+      (null, _, _) =>
+        marcada
+            ? (Paleta.acento, Paleta.acentoSuave)
+            : (Paleta.borde, Paleta.superficieAlta),
       (_, true, _) => (Paleta.exito, Paleta.exitoSuave),
       (_, _, true) => (Paleta.acento, Paleta.acentoSuave),
       _ => (Paleta.borde, Paleta.superficieAlta),
@@ -454,7 +461,10 @@ class _Alternativa extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            border: Border.all(color: borde, width: marcada || esClave ? 1.6 : 1),
+            border: Border.all(
+              color: borde,
+              width: marcada || esClave ? 1.6 : 1,
+            ),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
@@ -589,9 +599,7 @@ class _Resumen extends StatelessWidget {
             const SizedBox(height: 28),
             FilledButton(
               onPressed: alSalir,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(200, 46),
-              ),
+              style: FilledButton.styleFrom(minimumSize: const Size(200, 46)),
               child: Text(etiquetaSalida),
             ),
           ],
@@ -635,46 +643,6 @@ class _Nota extends StatelessWidget {
     child: Text(
       texto,
       style: TextStyle(fontSize: 13, height: 1.45, color: color),
-    ),
-  );
-}
-
-class _Aviso extends StatelessWidget {
-  final IconData icono;
-  final String titulo;
-  final String detalle;
-
-  const _Aviso({
-    required this.icono,
-    required this.titulo,
-    required this.detalle,
-  });
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icono, size: 34, color: Paleta.textoTenue),
-          const SizedBox(height: 14),
-          Text(
-            titulo,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Paleta.texto,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            detalle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Paleta.textoSuave, fontSize: 13, height: 1.5),
-          ),
-        ],
-      ),
     ),
   );
 }
@@ -731,14 +699,15 @@ class _ReporteState extends State<_Reporte> {
       );
       if (!mounted) return;
       setState(
-        () => _fase =
-            yaExistia ? _FaseReporte.yaExistia : _FaseReporte.enviado,
+        () => _fase = yaExistia ? _FaseReporte.yaExistia : _FaseReporte.enviado,
       );
     } catch (_) {
       // Mismo mensaje que la web: al alumno no le sirve el detalle técnico,
       // le sirve saber que puede reintentar.
       if (mounted) {
-        setState(() => _error = "No se pudo enviar el reporte. Inténtalo de nuevo.");
+        setState(
+          () => _error = "No se pudo enviar el reporte. Inténtalo de nuevo.",
+        );
       }
     } finally {
       if (mounted) setState(() => _enviando = false);

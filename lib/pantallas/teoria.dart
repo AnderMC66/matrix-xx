@@ -5,6 +5,7 @@ import "../datos/markdown_teoria.dart";
 import "../datos/teoria.dart";
 import "../matematicas/formula.dart";
 import "../tema.dart";
+import "../widgets/aviso.dart";
 import "figura_red.dart";
 
 /// `/teoria` — los 15 cursos con teoría.
@@ -24,7 +25,12 @@ class _PantallaTeoriaState extends State<PantallaTeoria> {
     return FutureBuilder<List<CursoTeoria>>(
       future: _cursos,
       builder: (context, snap) {
-        if (snap.hasError) return _Error(error: snap.error!);
+        if (snap.hasError) {
+          return Aviso.contenidoLocal(
+            titulo: "No se pudo cargar la teoría",
+            error: snap.error!,
+          );
+        }
         if (!snap.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
@@ -76,8 +82,9 @@ class PantallaCursoTeoria extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final conContenido =
-        curso.secciones.where((s) => s.tieneContenido).toList();
+    final conContenido = curso.secciones
+        .where((s) => s.tieneContenido)
+        .toList();
 
     return Scaffold(
       appBar: AppBar(title: Text(curso.nombre)),
@@ -135,11 +142,8 @@ class PantallaSeccion extends StatelessWidget {
   void _ir(BuildContext context, int nuevo) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => PantallaSeccion(
-          curso: curso,
-          secciones: secciones,
-          indice: nuevo,
-        ),
+        builder: (_) =>
+            PantallaSeccion(curso: curso, secciones: secciones, indice: nuevo),
       ),
     );
   }
@@ -178,7 +182,9 @@ class PantallaSeccion extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: hayAnterior ? () => _ir(context, indice - 1) : null,
+                  onPressed: hayAnterior
+                      ? () => _ir(context, indice - 1)
+                      : null,
                   icon: const Icon(Icons.chevron_left, size: 18),
                   label: const Text("Anterior"),
                 ),
@@ -186,8 +192,9 @@ class PantallaSeccion extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: FilledButton.icon(
-                  onPressed:
-                      haySiguiente ? () => _ir(context, indice + 1) : null,
+                  onPressed: haySiguiente
+                      ? () => _ir(context, indice + 1)
+                      : null,
                   iconAlignment: IconAlignment.end,
                   icon: const Icon(Icons.chevron_right, size: 18),
                   label: const Text("Siguiente"),
@@ -199,35 +206,6 @@ class PantallaSeccion extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Error extends StatelessWidget {
-  final Object error;
-  const _Error({required this.error});
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, color: Paleta.acento, size: 32),
-          const SizedBox(height: 12),
-          const Text(
-            "No se pudo cargar la teoría",
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "$error\n\n¿Corriste `node tool/sincronizar-datos.mjs`?",
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Paleta.textoSuave, fontSize: 13),
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 /// Pinta un bloque de teoría según lo que `analizarTeoria` decidió que es.

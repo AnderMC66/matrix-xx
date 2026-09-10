@@ -4,6 +4,7 @@ import "../datos/preguntas.dart";
 import "../datos/temario.dart";
 import "../datos/vinculos.dart";
 import "../tema.dart";
+import "../widgets/aviso.dart";
 import "practica.dart";
 import "teoria.dart";
 
@@ -57,10 +58,18 @@ class _PantallaCursoState extends State<PantallaCurso> {
     final curso = widget.curso;
 
     return Scaffold(
-      appBar: AppBar(title: Text(curso.nombre, style: const TextStyle(fontSize: 16))),
+      appBar: AppBar(
+        title: Text(curso.nombre, style: const TextStyle(fontSize: 16)),
+      ),
       body: FutureBuilder<(ResumenCurso, Map<String, int>)>(
         future: _carga,
         builder: (context, snap) {
+          if (snap.hasError) {
+            return Aviso.contenidoLocal(
+              titulo: "No se pudo cargar el curso",
+              error: snap.error!,
+            );
+          }
           if (!snap.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -90,7 +99,10 @@ class _PantallaCursoState extends State<PantallaCurso> {
               const SizedBox(height: 4),
               Text(
                 "${curso.temas.length} temas · ${curso.totalSubtemas} subtemas · ${curso.codigo}",
-                style: const TextStyle(fontSize: 12.5, color: Paleta.textoSuave),
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: Paleta.textoSuave,
+                ),
               ),
               if (curso.nota case final nota? when nota.isNotEmpty) ...[
                 const SizedBox(height: 12),
@@ -121,12 +133,14 @@ class _PantallaCursoState extends State<PantallaCurso> {
                 const SizedBox(height: 8),
                 Text(
                   "${resumen.subtemasConPreguntas} de ${curso.totalSubtemas} subtemas tienen preguntas.",
-                  style: const TextStyle(fontSize: 11.5, color: Paleta.textoTenue),
+                  style: const TextStyle(
+                    fontSize: 11.5,
+                    color: Paleta.textoTenue,
+                  ),
                 ),
               ],
               const SizedBox(height: 26),
-              for (final tema in curso.temas)
-                _Tema(tema: tema, conteo: conteo),
+              for (final tema in curso.temas) _Tema(tema: tema, conteo: conteo),
             ],
           );
         },
@@ -242,7 +256,10 @@ class _Tema extends StatelessWidget {
                           ),
                           child: const Text(
                             "sin desglose en el sílabo",
-                            style: TextStyle(fontSize: 10.5, color: Paleta.aviso),
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: Paleta.aviso,
+                            ),
                           ),
                         ),
                       ],
@@ -251,7 +268,10 @@ class _Tema extends StatelessWidget {
                 ),
                 Text(
                   tema.codigo,
-                  style: const TextStyle(fontSize: 10, color: Paleta.textoTenue),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Paleta.textoTenue,
+                  ),
                 ),
               ],
             ),
@@ -344,7 +364,11 @@ class _FilaSubtema extends StatelessWidget {
           Expanded(
             child: Text(
               subtema.nombre,
-              style: const TextStyle(fontSize: 13.5, height: 1.35, color: Paleta.texto),
+              style: const TextStyle(
+                fontSize: 13.5,
+                height: 1.35,
+                color: Paleta.texto,
+              ),
             ),
           ),
           const SizedBox(width: 8),

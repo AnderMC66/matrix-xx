@@ -6,6 +6,7 @@ import "../datos/repaso.dart";
 import "../datos/sesion.dart";
 import "../main.dart" show Armazon;
 import "../tema.dart";
+import "../widgets/aviso.dart";
 import "buscar.dart";
 import "entrar.dart";
 import "horario.dart";
@@ -36,6 +37,8 @@ class _PantallaInicioState extends State<PantallaInicio> {
     if (_sesion.hayCuenta) _carga = _pedir();
   }
 
+  void _recargarPanel() => setState(() => _carga = _pedir());
+
   Future<_PanelPersonal> _pedir() async {
     final progreso = RepositorioProgreso();
     final repasos = RepositorioRepaso();
@@ -52,7 +55,9 @@ class _PantallaInicioState extends State<PantallaInicio> {
     // evita llamar «flojo» a un curso que va bien. Mismos números que la web.
     CursoDesatendido? descuidado;
     for (final c in desatendidos) {
-      if (c.porcentaje != null && c.porcentaje! < 70 && c.diasSinPracticar >= 2) {
+      if (c.porcentaje != null &&
+          c.porcentaje! < 70 &&
+          c.diasSinPracticar >= 2) {
         descuidado = c;
         break;
       }
@@ -99,7 +104,11 @@ class _PantallaInicioState extends State<PantallaInicio> {
               const SizedBox(width: 10),
               const Text(
                 "Matrix U",
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: Paleta.texto),
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: Paleta.texto,
+                ),
               ),
             ],
           ),
@@ -157,6 +166,25 @@ class _PantallaInicioState extends State<PantallaInicio> {
             FutureBuilder<_PanelPersonal>(
               future: _carga,
               builder: (context, snap) {
+                // Callarse aquí sería lo peor: el alumno con sesión sabe que
+                // su panel existe —lo vio ayer— y verlo desaparecer sin una
+                // palabra se lee como que perdió la racha, no como que el
+                // servidor no contestó. Con Reintentar, además, no hace falta
+                // salir de Inicio y volver a entrar.
+                if (snap.hasError) {
+                  return Aviso(
+                    icono: Icons.cloud_off_outlined,
+                    titulo: "No se pudo cargar tu panel",
+                    detalle:
+                        "Tu racha, tus repasos y tu diagnóstico se calculan "
+                        "en el servidor, y ahora mismo no responde.",
+                    accion: ("Reintentar", _recargarPanel),
+                    compacto: true,
+                  );
+                }
+                // Mientras carga no va un spinner: el panel entra debajo de
+                // la portada, que ya es contenido, y un giro de dos líneas
+                // ahí solo hace saltar todo lo de abajo cuando resuelve.
                 if (!snap.hasData) return const SizedBox.shrink();
                 return _PanelPersonalVista(datos: snap.data!);
               },
@@ -309,7 +337,8 @@ class _PanelPersonalVista extends StatelessWidget {
   Widget build(BuildContext context) {
     final racha = datos.racha;
     final repasos = datos.repasos;
-    final mostrarConstancia = (racha?.diasActual ?? 0) > 0 || (repasos?.pendientesHoy ?? 0) > 0;
+    final mostrarConstancia =
+        (racha?.diasActual ?? 0) > 0 || (repasos?.pendientesHoy ?? 0) > 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -330,7 +359,10 @@ class _PanelPersonalVista extends StatelessWidget {
                 if (racha != null && racha.diasActual > 0)
                   RichText(
                     text: TextSpan(
-                      style: const TextStyle(fontSize: 13.5, color: Paleta.textoSuave),
+                      style: const TextStyle(
+                        fontSize: 13.5,
+                        color: Paleta.textoSuave,
+                      ),
                       children: [
                         TextSpan(
                           text: "${racha.diasActual} ",
@@ -341,7 +373,9 @@ class _PanelPersonalVista extends StatelessWidget {
                           ),
                         ),
                         TextSpan(
-                          text: racha.diasActual == 1 ? "día seguido" : "días seguidos",
+                          text: racha.diasActual == 1
+                              ? "día seguido"
+                              : "días seguidos",
                         ),
                         // Sin esto la racha parece ya asegurada y no invita a
                         // estudiar hoy también.
@@ -380,7 +414,11 @@ class _PanelPersonalVista extends StatelessWidget {
               children: [
                 RichText(
                   text: TextSpan(
-                    style: const TextStyle(fontSize: 13, color: Paleta.aviso, height: 1.45),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Paleta.aviso,
+                      height: 1.45,
+                    ),
                     children: [
                       const TextSpan(text: "Llevas "),
                       TextSpan(
@@ -392,7 +430,9 @@ class _PanelPersonalVista extends StatelessWidget {
                         text: d.nombre,
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
-                      TextSpan(text: ", tu curso más flojo (${d.porcentaje} %)."),
+                      TextSpan(
+                        text: ", tu curso más flojo (${d.porcentaje} %).",
+                      ),
                     ],
                   ),
                 ),
@@ -401,7 +441,9 @@ class _PanelPersonalVista extends StatelessWidget {
                   onPressed: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => Scaffold(
-                        appBar: AppBar(title: const Text("Práctica adaptativa")),
+                        appBar: AppBar(
+                          title: const Text("Práctica adaptativa"),
+                        ),
                         body: PantallaPracticaAdaptativa(cursoSlug: d.slug),
                       ),
                     ),
@@ -447,13 +489,21 @@ class _TarjetaProgreso extends StatelessWidget {
       children: [
         const Text(
           "TU PROGRESO",
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Paleta.textoSuave),
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w700,
+            color: Paleta.textoSuave,
+          ),
         ),
         const SizedBox(height: 8),
         if (diagnostico.vacio)
           const Text(
             "Responde algunas preguntas y aquí verás tu acierto.",
-            style: TextStyle(fontSize: 11.5, color: Paleta.textoSuave, height: 1.4),
+            style: TextStyle(
+              fontSize: 11.5,
+              color: Paleta.textoSuave,
+              height: 1.4,
+            ),
           )
         else
           RichText(
@@ -468,7 +518,9 @@ class _TarjetaProgreso extends StatelessWidget {
                     color: Paleta.texto,
                   ),
                 ),
-                TextSpan(text: "de acierto en ${diagnostico.respondidas} preguntas"),
+                TextSpan(
+                  text: "de acierto en ${diagnostico.respondidas} preguntas",
+                ),
               ],
             ),
           ),
@@ -496,27 +548,45 @@ class _TarjetaProximoBloque extends StatelessWidget {
         children: [
           const Text(
             "PRÓXIMO BLOQUE",
-            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Paleta.textoSuave),
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: Paleta.textoSuave,
+            ),
           ),
           const SizedBox(height: 8),
           if (p == null)
             const Text(
               "No tienes ningún bloque programado todavía.",
-              style: TextStyle(fontSize: 11.5, color: Paleta.textoSuave, height: 1.4),
+              style: TextStyle(
+                fontSize: 11.5,
+                color: Paleta.textoSuave,
+                height: 1.4,
+              ),
             )
           else
             Text(
               "${p.bloque.cursoNombre}\n"
               "${diasSemana[p.bloque.diaSemana]} ${formatearHora(p.bloque.horaInicio)}",
-              style: const TextStyle(fontSize: 12, color: Paleta.texto, height: 1.4),
+              style: const TextStyle(
+                fontSize: 12,
+                color: Paleta.texto,
+                height: 1.4,
+              ),
             ),
           const SizedBox(height: 8),
           TextButton(
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const _HorarioConAppBar()),
             ),
-            style: TextButton.styleFrom(padding: EdgeInsets.zero, visualDensity: VisualDensity.compact),
-            child: Text(p != null ? "Editar horario →" : "Programar →", style: const TextStyle(fontSize: 12)),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
+            child: Text(
+              p != null ? "Editar horario →" : "Programar →",
+              style: const TextStyle(fontSize: 12),
+            ),
           ),
         ],
       ),
@@ -569,11 +639,18 @@ class _AccesoDirecto extends StatelessWidget {
               children: [
                 Text(
                   titulo,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: Paleta.texto),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13.5,
+                    color: Paleta.texto,
+                  ),
                 ),
                 Text(
                   descripcion,
-                  style: const TextStyle(fontSize: 10.5, color: Paleta.textoTenue),
+                  style: const TextStyle(
+                    fontSize: 10.5,
+                    color: Paleta.textoTenue,
+                  ),
                 ),
               ],
             ),

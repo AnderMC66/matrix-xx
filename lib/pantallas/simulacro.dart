@@ -7,6 +7,7 @@ import "../datos/sesion.dart";
 import "../datos/simulacro.dart";
 import "../matematicas/formula.dart";
 import "../tema.dart";
+import "../widgets/aviso.dart";
 import "practica.dart" show FiguraPregunta;
 
 /// `/simulacros` — los simulacros publicados, y el intento a medias si lo hay.
@@ -40,7 +41,7 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
   @override
   Widget build(BuildContext context) {
     if (!_sesion.hayCuenta) {
-      return const _Aviso(
+      return const Aviso(
         icono: Icons.lock_outline,
         titulo: "El simulacro necesita tu cuenta",
         detalle:
@@ -54,7 +55,7 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
       future: _carga,
       builder: (context, snap) {
         if (snap.hasError) {
-          return _Aviso(
+          return Aviso(
             icono: Icons.cloud_off_outlined,
             titulo: "No se pudieron cargar los simulacros",
             detalle: "${snap.error}",
@@ -67,7 +68,7 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
 
         final (simulacros, enCurso) = snap.data!;
         if (simulacros.isEmpty) {
-          return const _Aviso(
+          return const Aviso(
             icono: Icons.inbox_outlined,
             titulo: "Todavía no hay simulacros publicados",
             detalle: "Aparecerán aquí en cuanto se publiquen.",
@@ -126,7 +127,10 @@ class _IntentoEnCurso extends StatelessWidget {
             SizedBox(width: 8),
             Text(
               "Tienes un simulacro a medias",
-              style: TextStyle(fontWeight: FontWeight.w700, color: Paleta.aviso),
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                color: Paleta.aviso,
+              ),
             ),
           ],
         ),
@@ -174,9 +178,8 @@ class _TarjetaSimulacroState extends State<_TarjetaSimulacro> {
       await _abrirSesion(context, intentoId, widget.alVolver);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("No se pudo empezar: $e")),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("No se pudo empezar: $e")));
     } finally {
       if (mounted) setState(() => _iniciando = false);
     }
@@ -359,7 +362,9 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
       final limite = _limite;
       if (limite == null) return;
       final restante = limite.difference(DateTime.now().toUtc());
-      setState(() => _restante = restante.isNegative ? Duration.zero : restante);
+      setState(
+        () => _restante = restante.isNegative ? Duration.zero : restante,
+      );
       if (restante.isNegative || restante == Duration.zero) {
         _reloj?.cancel();
         _finalizar();
@@ -396,7 +401,9 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
         return;
       } catch (_) {
         if (intento < 2) {
-          await Future<void>.delayed(Duration(milliseconds: 800 * (intento + 1)));
+          await Future<void>.delayed(
+            Duration(milliseconds: 800 * (intento + 1)),
+          );
         }
       }
     }
@@ -477,7 +484,7 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
     if (_errorCarga != null) {
       return Scaffold(
         appBar: AppBar(title: const Text("Simulacro")),
-        body: _Aviso(
+        body: Aviso(
           icono: Icons.error_outline,
           titulo: "No se pudo abrir el simulacro",
           detalle: _errorCarga!,
@@ -495,7 +502,7 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
     if (preguntas.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: const Text("Simulacro")),
-        body: const _Aviso(
+        body: const Aviso(
           icono: Icons.inbox_outlined,
           titulo: "Este simulacro no tiene preguntas",
           detalle: "Ninguna de sus preguntas está en esta versión de la app.",
@@ -524,7 +531,10 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
             Center(
               child: Container(
                 margin: const EdgeInsets.only(right: 12),
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
                 decoration: BoxDecoration(
                   color: pocoTiempo ? Paleta.avisoSuave : Paleta.superficie,
                   borderRadius: BorderRadius.circular(8),
@@ -569,7 +579,10 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
                 ),
                 Text(
                   "${_respuestas.length} respondidas",
-                  style: const TextStyle(fontSize: 12, color: Paleta.textoTenue),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Paleta.textoTenue,
+                  ),
                 ),
               ],
             ),
@@ -698,11 +711,7 @@ class _Linea extends StatelessWidget {
   final IconData icono;
   final String texto;
   final Color color;
-  const _Linea({
-    required this.icono,
-    required this.texto,
-    required this.color,
-  });
+  const _Linea({required this.icono, required this.texto, required this.color});
 
   @override
   Widget build(BuildContext context) => Row(
@@ -897,13 +906,11 @@ class _PantallaResultadoState extends State<PantallaResultado> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Resultado")),
-      body: FutureBuilder<
-        (Intento, List<ResultadoPregunta>, PercentilSimulacro?)
-      >(
+      body: FutureBuilder<(Intento, List<ResultadoPregunta>, PercentilSimulacro?)>(
         future: _carga,
         builder: (context, snap) {
           if (snap.hasError) {
-            return _Aviso(
+            return Aviso(
               icono: Icons.error_outline,
               titulo: "No se pudo cargar el resultado",
               detalle: "${snap.error}",
@@ -1100,55 +1107,4 @@ class _FilaCurso extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Aviso extends StatelessWidget {
-  final IconData icono;
-  final String titulo;
-  final String detalle;
-  final (String, VoidCallback)? accion;
-
-  const _Aviso({
-    required this.icono,
-    required this.titulo,
-    required this.detalle,
-    this.accion,
-  });
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icono, size: 34, color: Paleta.textoTenue),
-          const SizedBox(height: 14),
-          Text(
-            titulo,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-              color: Paleta.texto,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            detalle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Paleta.textoSuave,
-              fontSize: 13,
-              height: 1.55,
-            ),
-          ),
-          if (accion case final a?) ...[
-            const SizedBox(height: 20),
-            OutlinedButton(onPressed: a.$2, child: Text(a.$1)),
-          ],
-        ],
-      ),
-    ),
-  );
 }

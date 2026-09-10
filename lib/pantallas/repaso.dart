@@ -4,6 +4,7 @@ import "../datos/preguntas.dart";
 import "../datos/repaso.dart";
 import "../datos/sesion.dart";
 import "../tema.dart";
+import "../widgets/aviso.dart";
 import "practica.dart";
 
 /// `/repaso` — dos formas de repasar en una pantalla.
@@ -92,7 +93,7 @@ class _PantallaRepasoState extends State<PantallaRepaso> {
             future: _carga,
             builder: (context, snap) {
               if (snap.hasError) {
-                return _Aviso(
+                return Aviso(
                   icono: Icons.cloud_off_outlined,
                   titulo: "No se pudo cargar el repaso",
                   detalle: "${snap.error}",
@@ -262,7 +263,7 @@ class _Vacio extends StatelessWidget {
         ? "El próximo repaso te toca el ${_fecha(resumen!.proximaFecha!)}."
         : "No hay repasos programados para hoy.";
 
-    return _Aviso(
+    return Aviso(
       icono: sinHistorial ? Icons.inbox_outlined : Icons.check_circle_outline,
       titulo: titulo,
       detalle: detalle,
@@ -271,8 +272,18 @@ class _Vacio extends StatelessWidget {
 }
 
 const _meses = [
-  "enero", "febrero", "marzo", "abril", "mayo", "junio",
-  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
 ];
 
 /// «14 de septiembre». Se formatea a mano en vez de con `intl`: es el único
@@ -286,60 +297,9 @@ class _SinCuenta extends StatelessWidget {
   const _SinCuenta({required this.titulo, required this.detalle});
 
   @override
-  Widget build(BuildContext context) => _Aviso(
+  Widget build(BuildContext context) => Aviso(
     icono: Icons.lock_outline,
     titulo: titulo,
     detalle: "$detalle\n\nUsa el botón de entrar, arriba a la derecha.",
-  );
-}
-
-class _Aviso extends StatelessWidget {
-  final IconData icono;
-  final String titulo;
-  final String detalle;
-  final (String, VoidCallback)? accion;
-
-  const _Aviso({
-    required this.icono,
-    required this.titulo,
-    required this.detalle,
-    this.accion,
-  });
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icono, size: 34, color: Paleta.textoTenue),
-          const SizedBox(height: 14),
-          Text(
-            titulo,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              fontSize: 15,
-              color: Paleta.texto,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            detalle,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Paleta.textoSuave,
-              fontSize: 13,
-              height: 1.55,
-            ),
-          ),
-          if (accion case final a?) ...[
-            const SizedBox(height: 20),
-            OutlinedButton(onPressed: a.$2, child: Text(a.$1)),
-          ],
-        ],
-      ),
-    ),
   );
 }

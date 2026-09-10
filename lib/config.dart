@@ -34,7 +34,8 @@ class Config {
   /// `geo-2027-004-trapecio.svg` → URL completa contra `urlSitio`. Mismo
   /// prefijo `/preguntas/` que usa `rutaPublicaFigura()` en la web
   /// (`src/lib/figuras.ts`).
-  static String urlFiguraPregunta(String archivo) => "$urlSitio/preguntas/$archivo";
+  static String urlFiguraPregunta(String archivo) =>
+      "$urlSitio/preguntas/$archivo";
 
   /// Igual que arriba, para las figuras de teoría — prefijo `/teoria-figuras/`,
   /// como `rutaPublicaFiguraTeoria()` en `src/lib/figuras-teoria.ts`.

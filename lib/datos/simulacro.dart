@@ -141,16 +141,18 @@ class ErrorSimulacro implements Exception {
 /// Ante la duda se interpreta como UTC, que es lo que Postgres guarda.
 DateTime instanteUtc(String texto) {
   final fecha = DateTime.parse(texto);
-  return fecha.isUtc ? fecha : DateTime.utc(
-    fecha.year,
-    fecha.month,
-    fecha.day,
-    fecha.hour,
-    fecha.minute,
-    fecha.second,
-    fecha.millisecond,
-    fecha.microsecond,
-  );
+  return fecha.isUtc
+      ? fecha
+      : DateTime.utc(
+          fecha.year,
+          fecha.month,
+          fecha.day,
+          fecha.hour,
+          fecha.minute,
+          fecha.second,
+          fecha.millisecond,
+          fecha.microsecond,
+        );
 }
 
 class RepositorioSimulacro {
@@ -297,15 +299,16 @@ class RepositorioSimulacro {
 
     final marcadaPor = {
       for (final r in respuestas)
-        r["pregunta_id"] as int: letraDesde(r["letra_marcada"] as String? ?? ""),
+        r["pregunta_id"] as int: letraDesde(
+          r["letra_marcada"] as String? ?? "",
+        ),
     };
 
     final banco = await _preguntas.cargar();
     final lista = <PreguntaSimulacro>[];
 
     for (final fila in orden) {
-      final codigo =
-          (fila["preguntas"] as Map?)?["codigo_externo"] as String?;
+      final codigo = (fila["preguntas"] as Map?)?["codigo_externo"] as String?;
       if (codigo == null) continue;
       final pregunta = banco.porCodigo(codigo);
       // Se ignora en vez de romper la sesión entera: una pregunta que la base
@@ -344,8 +347,10 @@ class RepositorioSimulacro {
         },
       );
     } on PostgrestException catch (e) {
-      if (RegExp("tiempo del simulacro", caseSensitive: false)
-          .hasMatch(e.message)) {
+      if (RegExp(
+        "tiempo del simulacro",
+        caseSensitive: false,
+      ).hasMatch(e.message)) {
         throw const TiempoAgotado();
       }
       rethrow;
@@ -407,8 +412,7 @@ class RepositorioSimulacro {
     final lista = <ResultadoPregunta>[];
 
     for (final fila in orden) {
-      final codigo =
-          (fila["preguntas"] as Map?)?["codigo_externo"] as String?;
+      final codigo = (fila["preguntas"] as Map?)?["codigo_externo"] as String?;
       if (codigo == null) continue;
       final pregunta = banco.porCodigo(codigo);
       if (pregunta == null) continue;

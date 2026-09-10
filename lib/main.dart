@@ -129,7 +129,8 @@ class Armazon extends StatefulWidget {
 }
 
 class _ArmazonState extends State<Armazon> {
-  late int _destino = widget.destinoInicial; // por defecto Teoría: se lee sin cuenta
+  late int _destino =
+      widget.destinoInicial; // por defecto Teoría: se lee sin cuenta
 
   final _sesion = Sesion();
   StreamSubscription<AuthState>? _escucha;
@@ -179,9 +180,9 @@ class _ArmazonState extends State<Armazon> {
           IconButton(
             tooltip: "Inicio",
             icon: const Icon(Icons.home_outlined, color: Paleta.textoSuave),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PantallaInicio()),
-            ),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const PantallaInicio())),
           ),
           // En la web, Temario y Buscar viven en el nav de escritorio, no en
           // la barra móvil (que ya tiene sus cinco huecos, sin sitio para
@@ -191,9 +192,9 @@ class _ArmazonState extends State<Armazon> {
           IconButton(
             tooltip: "Buscar en el temario",
             icon: const Icon(Icons.search, color: Paleta.textoSuave),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PantallaBuscar()),
-            ),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const PantallaBuscar())),
           ),
           if (Config.configurado)
             IconButton(

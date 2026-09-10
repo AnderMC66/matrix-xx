@@ -19,13 +19,21 @@ void main() {
     });
 
     test("el mismo día, más tarde hoy: cae hoy, no la semana que viene", () {
-      final r = proximaOcurrencia(3, "18:00:00", miercoles); // miércoles, más tarde
+      final r = proximaOcurrencia(
+        3,
+        "18:00:00",
+        miercoles,
+      ); // miércoles, más tarde
       expect(r.day, 9);
       expect(r.hour, 18);
     });
 
     test("el mismo día, pero la hora ya pasó: salta a la semana siguiente", () {
-      final r = proximaOcurrencia(3, "09:00:00", miercoles); // miércoles, ya pasó
+      final r = proximaOcurrencia(
+        3,
+        "09:00:00",
+        miercoles,
+      ); // miércoles, ya pasó
       expect(r.day, 16); // el miércoles siguiente, no hoy
     });
 
@@ -81,13 +89,16 @@ void main() {
   });
 }
 
-BloqueHorario _bloque({required int id, required int dia, required String hora}) =>
-    BloqueHorario(
-      id: id,
-      cursoCodigo: "FIS",
-      cursoNombre: "Física",
-      cursoSlug: "fisica",
-      diaSemana: dia,
-      horaInicio: hora,
-      duracionMinutos: 60,
-    );
+BloqueHorario _bloque({
+  required int id,
+  required int dia,
+  required String hora,
+}) => BloqueHorario(
+  id: id,
+  cursoCodigo: "FIS",
+  cursoNombre: "Física",
+  cursoSlug: "fisica",
+  diaSemana: dia,
+  horaInicio: hora,
+  duracionMinutos: 60,
+);

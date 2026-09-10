@@ -118,4 +118,3 @@ String _recortar(String tex) {
   final limpio = tex.replaceAll("\n", " ");
   return limpio.length <= 72 ? limpio : "${limpio.substring(0, 69)}...";
 }
-

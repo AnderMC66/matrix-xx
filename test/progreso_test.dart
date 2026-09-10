@@ -41,13 +41,16 @@ void main() {
       _s(id: 2, pct: 50, respondidas: 10), // 5 correctas
     ]);
 
-    test("el acierto global sale del crudo, no del promedio de porcentajes", () {
-      // Promediar 100 % y 50 % daría 75 %. Lo correcto es 15/20 = 75 % aquí,
-      // pero el test que lo distingue es el de abajo, con pesos distintos.
-      expect(d.respondidas, 20);
-      expect(d.correctas, 15);
-      expect(d.aciertoGlobal, 75);
-    });
+    test(
+      "el acierto global sale del crudo, no del promedio de porcentajes",
+      () {
+        // Promediar 100 % y 50 % daría 75 %. Lo correcto es 15/20 = 75 % aquí,
+        // pero el test que lo distingue es el de abajo, con pesos distintos.
+        expect(d.respondidas, 20);
+        expect(d.correctas, 15);
+        expect(d.aciertoGlobal, 75);
+      },
+    );
 
     test("un subtema con más volumen pesa más", () {
       final pesado = Diagnostico([

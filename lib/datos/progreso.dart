@@ -88,8 +88,7 @@ class Diagnostico {
 
   bool get vacio => subtemas.isEmpty;
 
-  int get respondidas =>
-      subtemas.fold(0, (n, s) => n + s.respondidas);
+  int get respondidas => subtemas.fold(0, (n, s) => n + s.respondidas);
 
   int get correctas => subtemas.fold(0, (n, s) => n + s.correctas);
 

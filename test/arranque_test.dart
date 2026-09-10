@@ -21,33 +21,31 @@ import "package:matr_u/config.dart";
 import "package:matr_u/main.dart";
 
 void main() {
-  testWidgets(
-    "sin configuración, arranca sin excepciones y muestra la ayuda",
-    (tester) async {
-      expect(
-        Config.configurado,
-        isFalse,
-        reason: "este test asume que corre sin --dart-define-from-file",
-      );
+  testWidgets("sin configuración, arranca sin excepciones y muestra la ayuda", (
+    tester,
+  ) async {
+    expect(
+      Config.configurado,
+      isFalse,
+      reason: "este test asume que corre sin --dart-define-from-file",
+    );
 
-      await tester.pumpWidget(const AppMatrixU());
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(const AppMatrixU());
+    await tester.pumpAndSettle();
 
-      // Ninguna excepción llegó a la consola de errores del widget tree.
-      expect(tester.takeException(), isNull);
-      expect(find.textContaining(Config.ayuda), findsOneWidget);
-    },
-  );
+    // Ninguna excepción llegó a la consola de errores del widget tree.
+    expect(tester.takeException(), isNull);
+    expect(find.textContaining(Config.ayuda), findsOneWidget);
+  });
 
-  testWidgets(
-    "el primer build no depende de que Supabase ya esté listo",
-    (tester) async {
-      // `pumpWidget` solo hace UN frame — el primer build, el mismo que un
-      // warm-up-frame prematuro dispararía en un hot restart real. Si
-      // `Arranque.build()` tocara `Supabase.instance` aquí, esto fallaría
-      // igual que fallaba antes de separar el arranque de `main()`.
-      await tester.pumpWidget(const AppMatrixU());
-      expect(tester.takeException(), isNull);
-    },
-  );
+  testWidgets("el primer build no depende de que Supabase ya esté listo", (
+    tester,
+  ) async {
+    // `pumpWidget` solo hace UN frame — el primer build, el mismo que un
+    // warm-up-frame prematuro dispararía en un hot restart real. Si
+    // `Arranque.build()` tocara `Supabase.instance` aquí, esto fallaría
+    // igual que fallaba antes de separar el arranque de `main()`.
+    await tester.pumpWidget(const AppMatrixU());
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -135,8 +135,10 @@ void main() {
       final repo = RepositorioProgreso(cliente: cliente);
 
       final perfil = await repo.perfil();
-      print("  perfil: ${perfil?.nombre} · rol ${perfil?.rol} "
-          "· área ${perfil?.areaNombre} · staff ${perfil?.esStaff}");
+      print(
+        "  perfil: ${perfil?.nombre} · rol ${perfil?.rol} "
+        "· área ${perfil?.areaNombre} · staff ${perfil?.esStaff}",
+      );
       expect(
         perfil,
         isNotNull,
@@ -144,13 +146,17 @@ void main() {
       );
 
       final racha = await repo.racha();
-      print("  racha: ${racha?.diasActual} días "
-          "(máx ${racha?.diasMaxima}, hoy ${racha?.estudiadoHoy})");
+      print(
+        "  racha: ${racha?.diasActual} días "
+        "(máx ${racha?.diasMaxima}, hoy ${racha?.estudiadoHoy})",
+      );
 
       final d = await repo.diagnostico();
-      print("  diagnóstico: ${d.subtemas.length} subtemas · "
-          "${d.aciertoGlobal} % global · ${d.respondidas} respondidas · "
-          "${d.consolidados} dominados");
+      print(
+        "  diagnóstico: ${d.subtemas.length} subtemas · "
+        "${d.aciertoGlobal} % global · ${d.respondidas} respondidas · "
+        "${d.consolidados} dominados",
+      );
       // Si hay datos, los agregados tienen que ser coherentes entre sí.
       if (!d.vacio) {
         expect(d.correctas, lessThanOrEqualTo(d.respondidas));
@@ -166,8 +172,10 @@ void main() {
       final repo = RepositorioRepaso(cliente: cliente);
 
       final resumen = await repo.resumen();
-      print("  resumen: ${resumen?.pendientesHoy} para hoy de "
-          "${resumen?.totalProgramados} · próxima ${resumen?.proximaFecha}");
+      print(
+        "  resumen: ${resumen?.pendientesHoy} para hoy de "
+        "${resumen?.totalProgramados} · próxima ${resumen?.proximaFecha}",
+      );
 
       // Sin `rootBundle` en este entorno, `RepositorioRepaso` no puede cruzar
       // los códigos contra `RepositorioPreguntas` (necesita leer assets, y
@@ -200,8 +208,10 @@ void main() {
       // `iniciado_en` es lo que alimenta el cronómetro: comprobar que llega en
       // UTC es el punto del ejercicio.
       if (enCurso != null) {
-        print("      iniciado_en UTC: ${enCurso.iniciadoEn.isUtc} "
-            "(${enCurso.iniciadoEn})");
+        print(
+          "      iniciado_en UTC: ${enCurso.iniciadoEn.isUtc} "
+          "(${enCurso.iniciadoEn})",
+        );
         expect(enCurso.iniciadoEn.isUtc, isTrue);
         // `preguntasDe` también cruza contra el banco local — se omite aquí
         // por el mismo motivo que en Repaso, y queda cubierto por los tests
@@ -230,9 +240,11 @@ void main() {
             marcada: Letra.a,
             segundos: 7,
           );
-          print("  $codigoConocido: correcta=${c.esCorrecta} "
-              "clave=${c.clave.etiqueta} "
-              "explicación=${c.explicacion == null ? "no" : "sí"}");
+          print(
+            "  $codigoConocido: correcta=${c.esCorrecta} "
+            "clave=${c.clave.etiqueta} "
+            "explicación=${c.explicacion == null ? "no" : "sí"}",
+          );
           print("  intento creado: ${repo.intentoId}");
 
           expect(repo.intentoId, isNotNull);
@@ -277,13 +289,19 @@ void main() {
         expect(orden, isNotEmpty);
         final preguntaId = orden.first["pregunta_id"] as int;
 
-        await repo.responder(intentoId: id, preguntaId: preguntaId, letra: Letra.a);
+        await repo.responder(
+          intentoId: id,
+          preguntaId: preguntaId,
+          letra: Letra.a,
+        );
         print("  respuesta guardada");
 
         await repo.finalizar(id);
         final cerrado = await repo.intento(id);
-        print("  cerrado · puntaje ${cerrado?.puntaje} "
-            "· ${cerrado?.correctas}/${cerrado?.totalPreguntas}");
+        print(
+          "  cerrado · puntaje ${cerrado?.puntaje} "
+          "· ${cerrado?.correctas}/${cerrado?.totalPreguntas}",
+        );
         expect(cerrado!.enCurso, isFalse);
 
         final p = await repo.percentil(id);

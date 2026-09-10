@@ -34,69 +34,73 @@ final _formula = RegExp(r"\$\$([\s\S]+?)\$\$|\$([^\n$]+?)\$");
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test("la teoría real se parte sin dejar marcado crudo ni romper fórmulas", () async {
-    final cursos = await RepositorioTeoria().cursos();
+  test(
+    "la teoría real se parte sin dejar marcado crudo ni romper fórmulas",
+    () async {
+      final cursos = await RepositorioTeoria().cursos();
 
-    var secciones = 0;
-    var marcadorCrudo = 0;
-    var tituloCrudo = 0;
-    var formulasAntes = 0;
-    var formulasDespues = 0;
-    final tipos = <String, int>{};
+      var secciones = 0;
+      var marcadorCrudo = 0;
+      var tituloCrudo = 0;
+      var formulasAntes = 0;
+      var formulasDespues = 0;
+      final tipos = <String, int>{};
 
-    for (final curso in cursos) {
-      for (final seccion in curso.secciones) {
-        if (!seccion.tieneContenido) continue;
-        secciones++;
-        formulasAntes += _formula.allMatches(seccion.markdown).length;
+      for (final curso in cursos) {
+        for (final seccion in curso.secciones) {
+          if (!seccion.tieneContenido) continue;
+          secciones++;
+          formulasAntes += _formula.allMatches(seccion.markdown).length;
 
-        for (final bloque in analizarTeoria(seccion.markdown)) {
-          final tipo = bloque.runtimeType.toString();
-          tipos[tipo] = (tipos[tipo] ?? 0) + 1;
+          for (final bloque in analizarTeoria(seccion.markdown)) {
+            final tipo = bloque.runtimeType.toString();
+            tipos[tipo] = (tipos[tipo] ?? 0) + 1;
 
-          final texto = switch (bloque) {
-            ParrafoTeoria(:final texto) => texto,
-            TituloTeoria(:final texto) => texto,
-            ItemTeoria(:final texto) => texto,
-            // La figura ya no es texto: ese es justo el arreglo.
-            FiguraTeoria() => "",
-          };
+            final texto = switch (bloque) {
+              ParrafoTeoria(:final texto) => texto,
+              TituloTeoria(:final texto) => texto,
+              ItemTeoria(:final texto) => texto,
+              // La figura ya no es texto: ese es justo el arreglo.
+              FiguraTeoria() => "",
+            };
 
-          formulasDespues += _formula.allMatches(texto).length;
-          if (_figura.hasMatch(texto)) marcadorCrudo++;
-          if (_tituloSinClasificar.hasMatch(texto.trim())) tituloCrudo++;
+            formulasDespues += _formula.allMatches(texto).length;
+            if (_figura.hasMatch(texto)) marcadorCrudo++;
+            if (_tituloSinClasificar.hasMatch(texto.trim())) tituloCrudo++;
+          }
         }
       }
-    }
 
-    print("");
-    print("Secciones procesadas: $secciones");
-    print("Bloques por tipo:     $tipos");
-    print("Fórmulas: $formulasAntes antes · $formulasDespues después");
-    print("");
+      print("");
+      print("Secciones procesadas: $secciones");
+      print("Bloques por tipo:     $tipos");
+      print("Fórmulas: $formulasAntes antes · $formulasDespues después");
+      print("");
 
-    expect(
-      secciones,
-      greaterThan(0),
-      reason: "¿corriste `node tool/sincronizar-datos.mjs`?",
-    );
-    expect(
-      marcadorCrudo,
-      0,
-      reason: "$marcadorCrudo bloques siguen mostrando el marcador ![…] crudo",
-    );
-    expect(
-      tituloCrudo,
-      0,
-      reason: "$tituloCrudo bloques siguen mostrando los ** de un título",
-    );
-    expect(
-      formulasDespues,
-      formulasAntes,
-      reason:
-          "Se perdieron o partieron fórmulas al separar líneas: "
-          "$formulasAntes antes, $formulasDespues después. Revisa el paso de "
-          "protección con centinelas en analizarTeoria().",
-    );
-  });
+      expect(
+        secciones,
+        greaterThan(0),
+        reason: "¿corriste `node tool/sincronizar-datos.mjs`?",
+      );
+      expect(
+        marcadorCrudo,
+        0,
+        reason:
+            "$marcadorCrudo bloques siguen mostrando el marcador ![…] crudo",
+      );
+      expect(
+        tituloCrudo,
+        0,
+        reason: "$tituloCrudo bloques siguen mostrando los ** de un título",
+      );
+      expect(
+        formulasDespues,
+        formulasAntes,
+        reason:
+            "Se perdieron o partieron fórmulas al separar líneas: "
+            "$formulasAntes antes, $formulasDespues después. Revisa el paso de "
+            "protección con centinelas en analizarTeoria().",
+      );
+    },
+  );
 }

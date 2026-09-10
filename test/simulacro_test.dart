@@ -39,7 +39,10 @@ void main() {
 
   group("cuenta atrás", () {
     test("muestra mm:ss con ceros a la izquierda", () {
-      expect(formatearRestante(const Duration(minutes: 7, seconds: 5)), "07:05");
+      expect(
+        formatearRestante(const Duration(minutes: 7, seconds: 5)),
+        "07:05",
+      );
     });
 
     test("pasa de 60 minutos sin saltar a horas", () {

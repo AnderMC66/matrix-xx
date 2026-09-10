@@ -91,8 +91,8 @@ class RepositorioPractica {
 
     // El RPC devuelve `setof`, así que llega una lista de una fila; según la
     // versión del cliente puede llegar ya desenvuelta.
-    final resultado = (datos is List ? datos.firstOrNull : datos)
-        as Map<String, dynamic>?;
+    final resultado =
+        (datos is List ? datos.firstOrNull : datos) as Map<String, dynamic>?;
     if (resultado == null) {
       throw const ErrorPractica("El servidor no devolvió una corrección.");
     }

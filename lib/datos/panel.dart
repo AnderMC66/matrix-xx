@@ -210,8 +210,9 @@ class RepositorioPanel {
           subtema: p["subtema_nombre"] as String? ?? "",
           reportesAbiertos: p["reportes_abiertos"] as int? ?? 0,
           alternativas: [
-            for (final a in (p["alternativas"] as List? ?? const [])
-                .cast<Map<String, dynamic>>())
+            for (final a
+                in (p["alternativas"] as List? ?? const [])
+                    .cast<Map<String, dynamic>>())
               if (letraDesde(a["letra"] as String? ?? "") case final l?)
                 AlternativaRevision(
                   letra: l,
@@ -252,11 +253,10 @@ class RepositorioPanel {
           "id, motivo, detalle, estado, creado_en, pregunta_id, "
           "preguntas(codigo_externo, enunciado_md)",
         );
-    final filas = await (estado == "todos"
-            ? consulta
-            : consulta.eq("estado", estado))
-        .order("creado_en", ascending: false)
-        .limit(50);
+    final filas =
+        await (estado == "todos" ? consulta : consulta.eq("estado", estado))
+            .order("creado_en", ascending: false)
+            .limit(50);
 
     return [
       for (final r in filas)

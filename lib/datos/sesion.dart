@@ -61,7 +61,9 @@ class Sesion {
     // (`password_min_length`). Se comprueba aquí para dar el aviso en español
     // antes de gastar una petición.
     if (contrasena.length < 8) {
-      throw const ErrorSesion("La contraseña debe tener al menos 8 caracteres.");
+      throw const ErrorSesion(
+        "La contraseña debe tener al menos 8 caracteres.",
+      );
     }
 
     try {

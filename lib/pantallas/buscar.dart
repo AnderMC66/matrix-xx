@@ -104,7 +104,10 @@ class _PantallaBuscarState extends State<PantallaBuscar> {
                       ? "Más de $_limite resultados. Afina la búsqueda."
                       : "${_resultados.length} "
                             "${_resultados.length == 1 ? "resultado" : "resultados"}.",
-                  style: const TextStyle(fontSize: 12.5, color: Paleta.textoSuave),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    color: Paleta.textoSuave,
+                  ),
                 ),
               ),
             ),
@@ -117,9 +120,8 @@ class _PantallaBuscarState extends State<PantallaBuscar> {
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                     itemCount: _resultados.length,
                     separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, i) => _FilaResultado(
-                      resultado: _resultados[i],
-                    ),
+                    itemBuilder: (context, i) =>
+                        _FilaResultado(resultado: _resultados[i]),
                   ),
           ),
         ],
@@ -148,9 +150,16 @@ class _FilaResultado extends StatelessWidget {
           color: Paleta.acentoSuave,
           borderRadius: BorderRadius.circular(9),
         ),
-        child: const Icon(Icons.menu_book_outlined, size: 17, color: Paleta.acento),
+        child: const Icon(
+          Icons.menu_book_outlined,
+          size: 17,
+          color: Paleta.acento,
+        ),
       ),
-      title: Text(subtema.nombre, style: const TextStyle(fontSize: 14, height: 1.3)),
+      title: Text(
+        subtema.nombre,
+        style: const TextStyle(fontSize: 14, height: 1.3),
+      ),
       subtitle: Text(
         "${curso.nombre} · ${tema.romano}. ${tema.nombre}"
         "${subtema.grupo != null ? " · ${subtema.grupo}" : ""}",
@@ -160,9 +169,8 @@ class _FilaResultado extends StatelessWidget {
         subtema.codigo,
         style: const TextStyle(fontSize: 10, color: Paleta.textoTenue),
       ),
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => PantallaCurso(curso: curso)),
-      ),
+      onTap: () => Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => PantallaCurso(curso: curso))),
     );
   }
 }
@@ -187,7 +195,11 @@ class _EstadoVacio extends StatelessWidget {
                       "${temario!.totalSubtemas} subtemas del sílabo, "
                       "por su nombre o su código.",
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: Paleta.textoSuave, height: 1.55),
+            style: const TextStyle(
+              fontSize: 13,
+              color: Paleta.textoSuave,
+              height: 1.55,
+            ),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -200,9 +212,9 @@ class _EstadoVacio extends StatelessWidget {
           ),
           const SizedBox(height: 22),
           OutlinedButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PantallaTemario()),
-            ),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const PantallaTemario())),
             icon: const Icon(Icons.list_alt, size: 17),
             label: const Text("Ver el temario completo"),
           ),

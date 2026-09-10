@@ -35,9 +35,12 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
     // Las áreas solo hacen falta al registrarse; se piden una vez y en
     // segundo plano, para que un fallo de red no bloquee el formulario de
     // entrar, que es el camino del 90 % de las visitas.
-    _sesion.areas().then((a) {
-      if (mounted) setState(() => _areas = a);
-    }).catchError((_) {});
+    _sesion
+        .areas()
+        .then((a) {
+          if (mounted) setState(() => _areas = a);
+        })
+        .catchError((_) {});
   }
 
   @override
@@ -104,7 +107,11 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
               ? "Tu progreso, tus repasos y tus simulacros quedan guardados."
               : "Necesitas cuenta para practicar: la respuesta correcta la "
                     "resuelve el servidor.",
-          style: const TextStyle(color: Paleta.textoSuave, fontSize: 13.5, height: 1.5),
+          style: const TextStyle(
+            color: Paleta.textoSuave,
+            fontSize: 13.5,
+            height: 1.5,
+          ),
         ),
         const SizedBox(height: 24),
 
@@ -162,9 +169,7 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
         const SizedBox(height: 20),
         FilledButton(
           onPressed: _enviando ? null : _enviar,
-          style: FilledButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
-          ),
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
           child: _enviando
               ? const SizedBox(
                   width: 18,
@@ -221,10 +226,12 @@ class _Campo extends StatelessWidget {
     obscureText: oculto,
     keyboardType: teclado,
     autocorrect: false,
-    textCapitalization:
-        capitalizar ? TextCapitalization.words : TextCapitalization.none,
-    textInputAction:
-        alEnviar != null ? TextInputAction.done : TextInputAction.next,
+    textCapitalization: capitalizar
+        ? TextCapitalization.words
+        : TextCapitalization.none,
+    textInputAction: alEnviar != null
+        ? TextInputAction.done
+        : TextInputAction.next,
     onSubmitted: alEnviar == null ? null : (_) => alEnviar!(),
     decoration: InputDecoration(
       labelText: etiqueta,

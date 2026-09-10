@@ -24,13 +24,7 @@ DateTime proximaOcurrencia(int diaSemana, String horaInicio, DateTime desde) {
   final horas = int.parse(partes[0]);
   final minutos = int.parse(partes[1]);
 
-  var objetivo = DateTime(
-    desde.year,
-    desde.month,
-    desde.day,
-    horas,
-    minutos,
-  );
+  var objetivo = DateTime(desde.year, desde.month, desde.day, horas, minutos);
   // `DateTime.weekday` es 1 (lunes) .. 7 (domingo); `% 7` lo convierte a la
   // misma convención 0 (domingo) .. 6 (sábado) que usa Postgres y la web.
   final diaActual = desde.weekday % 7;

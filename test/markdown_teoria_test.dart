@@ -88,10 +88,7 @@ void main() {
     test("una figura sola es su propio bloque", () {
       final b = analizarTeoria("![figura](assets/8fc119d04b59a8e6.webp)");
       expect(b.single, isA<FiguraTeoria>());
-      expect(
-        (b.single as FiguraTeoria).archivo,
-        "8fc119d04b59a8e6.webp",
-      );
+      expect((b.single as FiguraTeoria).archivo, "8fc119d04b59a8e6.webp");
     });
 
     test("una figura incrustada se separa del texto que la rodea", () {

@@ -68,15 +68,13 @@ class RepositorioRepaso {
 
   /// Práctica adaptativa: prioriza los subtemas más flojos y, dentro de ellos,
   /// lo que el alumno no ha visto o falló.
-  Future<List<Pregunta>> recomendadas({
-    String? cursoCodigo,
-    int limite = 20,
-  }) => _porCodigos(
-    () => _cliente.rpc(
-      "preguntas_recomendadas",
-      params: {"p_curso_codigo": ?cursoCodigo, "p_limite": limite},
-    ),
-  );
+  Future<List<Pregunta>> recomendadas({String? cursoCodigo, int limite = 20}) =>
+      _porCodigos(
+        () => _cliente.rpc(
+          "preguntas_recomendadas",
+          params: {"p_curso_codigo": ?cursoCodigo, "p_limite": limite},
+        ),
+      );
 
   /// La llamada llega como función, no como `Future` ya construido: así el
   /// guard de sesión se evalúa ANTES de armar la petición. Con un `Future` de

@@ -37,8 +37,7 @@ class SeccionTeoria {
   /// Una sección sin markdown es un encabezado del índice, no contenido.
   bool get tieneContenido => markdown.trim().isNotEmpty;
 
-  String get tituloConNumero =>
-      numero == null ? titulo : "$numero  $titulo";
+  String get tituloConNumero => numero == null ? titulo : "$numero  $titulo";
 }
 
 class CursoTeoria {

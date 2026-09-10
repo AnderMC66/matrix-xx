@@ -71,8 +71,7 @@ class Curso {
     required this.temas,
   });
 
-  int get totalSubtemas =>
-      temas.fold(0, (n, t) => n + t.subtemas.length);
+  int get totalSubtemas => temas.fold(0, (n, t) => n + t.subtemas.length);
 }
 
 class AreaTematica {
@@ -129,8 +128,7 @@ class Temario {
 
   int get totalSubtemas => _porSubtema.length;
 
-  int get temasPendientes =>
-      temas.where((t) => t.pendienteDesglose).length;
+  int get temasPendientes => temas.where((t) => t.pendienteDesglose).length;
 
   /// Búsqueda por subtema, insensible a tildes y a mayúsculas: escribir
   /// "quimica" tiene que encontrar "Química". Todos los términos deben
@@ -167,8 +165,18 @@ class Temario {
 /// lista cubre lo que aparece en un temario en español; añadir una letra es
 /// una entrada más.
 const _sinTilde = {
-  "á": "a", "é": "e", "í": "i", "ó": "o", "ú": "u", "ü": "u",
-  "ñ": "n", "à": "a", "è": "e", "ì": "i", "ò": "o", "ù": "u",
+  "á": "a",
+  "é": "e",
+  "í": "i",
+  "ó": "o",
+  "ú": "u",
+  "ü": "u",
+  "ñ": "n",
+  "à": "a",
+  "è": "e",
+  "ì": "i",
+  "ò": "o",
+  "ù": "u",
 };
 
 String _normalizar(String texto) {
@@ -191,10 +199,9 @@ class RepositorioTemario {
     if (yaEsta != null) return yaEsta;
 
     final crudos = await _catalogo.todos("temario");
-    final areas = crudos
-        .map((j) => _areaDesde(j as Map<String, dynamic>))
-        .toList()
-      ..sort((a, b) => a.orden.compareTo(b.orden));
+    final areas =
+        crudos.map((j) => _areaDesde(j as Map<String, dynamic>)).toList()
+          ..sort((a, b) => a.orden.compareTo(b.orden));
 
     final porSubtema = <String, Ubicacion>{};
     final porSlug = <String, Curso>{};
@@ -203,8 +210,11 @@ class RepositorioTemario {
         porSlug[curso.slug] = curso;
         for (final tema in curso.temas) {
           for (final subtema in tema.subtemas) {
-            porSubtema[subtema.codigo] =
-                Ubicacion(subtema: subtema, tema: tema, curso: curso);
+            porSubtema[subtema.codigo] = Ubicacion(
+              subtema: subtema,
+              tema: tema,
+              curso: curso,
+            );
           }
         }
       }

@@ -133,11 +133,8 @@ class TextoConFormulas extends StatelessWidget {
   Widget build(BuildContext context) {
     final estiloBase =
         estilo ??
-        DefaultTextStyle.of(context).style.copyWith(
-          fontSize: 16,
-          height: 1.6,
-          color: Paleta.texto,
-        );
+        DefaultTextStyle.of(context).style
+            .copyWith(fontSize: 16, height: 1.6, color: Paleta.texto);
 
     final trozos = partir(texto);
     final hayBloque = trozos.any((t) => t is TrozoFormula && t.enBloque);

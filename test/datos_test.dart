@@ -112,8 +112,9 @@ void main() {
 
     test("un tema sin desglosar recibe el subtema -00", () async {
       final temario = await RepositorioTemario().cargar();
-      final pendientes =
-          temario.temas.where((t) => t.pendienteDesglose).toList();
+      final pendientes = temario.temas
+          .where((t) => t.pendienteDesglose)
+          .toList();
 
       for (final t in pendientes) {
         expect(t.subtemas, hasLength(1));
@@ -123,9 +124,7 @@ void main() {
 
     test("los números de tema se pasan a romano", () async {
       final temario = await RepositorioTemario().cargar();
-      final porNumero = {
-        for (final t in temario.temas) t.numero: t.romano,
-      };
+      final porNumero = {for (final t in temario.temas) t.numero: t.romano};
 
       expect(porNumero[1], "I");
       expect(porNumero[4], "IV");
@@ -221,7 +220,12 @@ void main() {
 
     test("las figuras rechazan nombres que no son un archivo llano", () {
       expect(
-        Figura.desde({"src": "../secreto.svg", "alt": "", "ancho": 1, "alto": 1}),
+        Figura.desde({
+          "src": "../secreto.svg",
+          "alt": "",
+          "ancho": 1,
+          "alto": 1,
+        }),
         isNull,
       );
       expect(
@@ -229,7 +233,12 @@ void main() {
         isNull,
       );
       expect(
-        Figura.desde({"src": "geo-2027-004.svg", "alt": "x", "ancho": 4, "alto": 2}),
+        Figura.desde({
+          "src": "geo-2027-004.svg",
+          "alt": "x",
+          "ancho": 4,
+          "alto": 2,
+        }),
         isNotNull,
       );
     });

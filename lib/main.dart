@@ -15,6 +15,7 @@ import "pantallas/repaso.dart";
 import "pantallas/simulacro.dart";
 import "pantallas/teoria.dart";
 import "tema.dart";
+import "widgets/aviso.dart";
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,16 +53,41 @@ class AppMatrixU extends StatelessWidget {
 /// `initState()` — que el framework garantiza que corre DESPUÉS del primer
 /// build, nunca antes, warm-up-frame incluido.
 class Arranque extends StatefulWidget {
-  const Arranque({super.key});
+  /// Sustituye la inicialización real. Existe para los tests: la suite corre
+  /// sin `--dart-define-from-file`, así que `Config.configurado` es `false` y
+  /// sin esta costura el camino del fallo de inicialización es inalcanzable —
+  /// `build` sale antes por `_SinConfigurar`. Pasarlo también salta esa salida,
+  /// porque quien inyecta una inicialización está diciendo que hay algo que
+  /// inicializar. En producción nadie lo pasa.
+  final Future<void> Function()? inicializador;
+
+  const Arranque({super.key, this.inicializador});
 
   @override
   State<Arranque> createState() => _ArranqueState();
 }
 
 class _ArranqueState extends State<Arranque> {
-  late final Future<void> _inicializacion = _inicializar();
+  // No es `late final`: «Reintentar» tiene que poder rehacer el intento. No
+  // hace falta ninguna guarda contra inicializar dos veces — `initialize()`
+  // devuelve la instancia existente si ya está inicializada.
+  Future<void>? _inicializacion;
+
+  @override
+  void initState() {
+    super.initState();
+    _reintentar();
+  }
+
+  void _reintentar() {
+    setState(() {
+      _inicializacion = _inicializar();
+    });
+  }
 
   Future<void> _inicializar() async {
+    if (widget.inicializador case final propio?) return propio();
+
     // Teoría (y sus figuras) funciona sin sesión ni Supabase configurado, así
     // que esta carga no puede depender de `Config.configurado`.
     await RepositorioFigurasRotas.instancia.cargar();
@@ -78,7 +104,7 @@ class _ArranqueState extends State<Arranque> {
     // Sin configuración no hay nada que inicializar: el fallo es una
     // pantalla que explica qué falta, y no una excepción opaca dentro de
     // Supabase la primera vez que alguien pulsa "Entrar".
-    if (!Config.configurado) {
+    if (!Config.configurado && widget.inicializador == null) {
       return const _SinConfigurar();
     }
 
@@ -90,10 +116,40 @@ class _ArranqueState extends State<Arranque> {
             body: Center(child: CircularProgressIndicator()),
           );
         }
+        // Si la inicialización lanzó, `connectionState` llega a `done` igual.
+        // Seguir adelante montaba `PantallaInicio`, cuyo estado construye
+        // `Sesion()` como campo de instancia, y `Sesion()` toca
+        // `Supabase.instance.client` — que sin inicializar lanza la misma
+        // excepción que toda la coreografía de esta clase evita en el hot
+        // restart. El resultado era una pantalla roja en el arranque en vez
+        // del fallo explicado que ya existe para la configuración ausente.
+        if (snapshot.hasError) {
+          return _NoArranco(error: snapshot.error!, alReintentar: _reintentar);
+        }
         return const PantallaInicio();
       },
     );
   }
+}
+
+class _NoArranco extends StatelessWidget {
+  final Object error;
+  final VoidCallback alReintentar;
+
+  const _NoArranco({required this.error, required this.alReintentar});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: Aviso(
+      icono: Icons.error_outline,
+      titulo: "La app no pudo arrancar",
+      detalle:
+          "No se pudo inicializar la conexión con el servidor.\n\n"
+          "$error",
+      accion: ("Reintentar", alReintentar),
+      esError: true,
+    ),
+  );
 }
 
 class _SinConfigurar extends StatelessWidget {

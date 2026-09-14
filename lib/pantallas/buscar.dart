@@ -175,13 +175,26 @@ class _FilaResultado extends StatelessWidget {
   }
 }
 
+/// El estado vacío de Buscar: qué se puede escribir aquí, y una salida al
+/// temario completo para quien no sabe qué buscar.
+///
+/// **Va dentro de un `SingleChildScrollView` por la misma razón que [Aviso].**
+/// Este widget es, de hecho, una novena copia a mano del que aquella
+/// consolidación reunió en `widgets/aviso.dart`: se quedó fuera porque tiene
+/// una línea de ejemplos en monoespaciada que `Aviso` no sabe pintar, y con
+/// ella se quedó fuera también el arreglo. Un `Center` con un `Column` dentro
+/// no puede encoger: con el tipo de letra del sistema al máximo, el icono más
+/// el párrafo más los ejemplos más el botón pasaban de lo que mide una
+/// pantalla de 568 px y desbordaban 118 px por abajo —el botón «Ver el temario
+/// completo» quedaba fuera y era inalcanzable—. Medido con Roboto, no con la
+/// fuente de prueba.
 class _EstadoVacio extends StatelessWidget {
   final Temario? temario;
   const _EstadoVacio({required this.temario});
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
+    child: SingleChildScrollView(
       padding: const EdgeInsets.all(28),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

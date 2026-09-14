@@ -37,7 +37,11 @@ class _PantallaInicioState extends State<PantallaInicio> {
     if (_sesion.hayCuenta) _carga = _pedir();
   }
 
-  void _recargarPanel() => setState(() => _carga = _pedir());
+  void _recargarPanel() {
+    setState(() {
+      _carga = _pedir();
+    });
+  }
 
   Future<_PanelPersonal> _pedir() async {
     final progreso = RepositorioProgreso();
@@ -76,186 +80,220 @@ class _PantallaInicioState extends State<PantallaInicio> {
     MaterialPageRoute(builder: (_) => Armazon(destinoInicial: destino)),
   );
 
+  /// Los seis accesos de la portada, en el orden en que se leen.
+  List<Widget> _accesos() => [
+    _AccesoDirecto(
+      icono: Icons.edit_outlined,
+      titulo: "Practicar",
+      descripcion: "Preguntas resueltas",
+      onTap: () => _irAPestana(2),
+    ),
+    _AccesoDirecto(
+      icono: Icons.replay_outlined,
+      titulo: "Repaso",
+      descripcion: "Lo que toca hoy",
+      onTap: () => _irAPestana(0),
+    ),
+    _AccesoDirecto(
+      icono: Icons.adjust_outlined,
+      titulo: "Adaptativa",
+      descripcion: "Tus puntos flojos",
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const _AdaptativaConAppBar())),
+    ),
+    _AccesoDirecto(
+      icono: Icons.menu_book_outlined,
+      titulo: "Teoría",
+      descripcion: "Curso por curso",
+      onTap: () => _irAPestana(1),
+    ),
+    _AccesoDirecto(
+      icono: Icons.timer_outlined,
+      titulo: "Simulacros",
+      descripcion: "Cronometrados",
+      onTap: () => _irAPestana(3),
+    ),
+    _AccesoDirecto(
+      icono: Icons.search,
+      titulo: "Buscar",
+      descripcion: "Por nombre o código",
+      onTap: () =>
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const PantallaBuscar())),
+    ),
+  ];
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: Paleta.acento,
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: const Text(
-                  "M",
-                  style: TextStyle(
-                    color: Paleta.acentoContraste,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 17,
+  Widget build(BuildContext context) {
+    final accesos = _accesos();
+
+    return Scaffold(
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Paleta.acento,
+                    borderRadius: BorderRadius.circular(9),
                   ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                "Matrix U",
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 15,
-                  color: Paleta.texto,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          const Text(
-            "El examen de la UNSA,",
-            style: TextStyle(
-              fontSize: 27,
-              fontWeight: FontWeight.w800,
-              height: 1.15,
-              color: Paleta.texto,
-            ),
-          ),
-          const Text(
-            "entero y ordenado.",
-            style: TextStyle(
-              fontSize: 27,
-              fontWeight: FontWeight.w800,
-              height: 1.15,
-              color: Paleta.acento,
-            ),
-          ),
-          const SizedBox(height: 18),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              FilledButton(
-                onPressed: () => _irAPestana(2),
-                child: const Text("Empezar a practicar"),
-              ),
-              OutlinedButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const PantallaBuscar()),
-                ),
-                child: const Text("Buscar un subtema"),
-              ),
-            ],
-          ),
-          const SizedBox(height: 22),
-          if (!_sesion.hayCuenta)
-            _AvisoSinCuenta(
-              onEntrar: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (contextoRuta) => Scaffold(
-                    appBar: AppBar(title: const Text("Acceso")),
-                    body: PantallaEntrar(
-                      alEntrar: () => Navigator.of(contextoRuta).pop(),
+                  child: const Text(
+                    "M",
+                    style: TextStyle(
+                      color: Paleta.acentoContraste,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 17,
                     ),
                   ),
                 ),
-              ),
-            )
-          else
-            FutureBuilder<_PanelPersonal>(
-              future: _carga,
-              builder: (context, snap) {
-                // Callarse aquí sería lo peor: el alumno con sesión sabe que
-                // su panel existe —lo vio ayer— y verlo desaparecer sin una
-                // palabra se lee como que perdió la racha, no como que el
-                // servidor no contestó. Con Reintentar, además, no hace falta
-                // salir de Inicio y volver a entrar.
-                if (snap.hasError) {
-                  return Aviso(
-                    icono: Icons.cloud_off_outlined,
-                    titulo: "No se pudo cargar tu panel",
-                    detalle:
-                        "Tu racha, tus repasos y tu diagnóstico se calculan "
-                        "en el servidor, y ahora mismo no responde.",
-                    accion: ("Reintentar", _recargarPanel),
-                    compacto: true,
-                  );
-                }
-                // Mientras carga no va un spinner: el panel entra debajo de
-                // la portada, que ya es contenido, y un giro de dos líneas
-                // ahí solo hace saltar todo lo de abajo cuando resuelve.
-                if (!snap.hasData) return const SizedBox.shrink();
-                return _PanelPersonalVista(datos: snap.data!);
-              },
+                const SizedBox(width: 10),
+                const Text(
+                  "Matrix U",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: Paleta.texto,
+                  ),
+                ),
+              ],
             ),
-          const SizedBox(height: 26),
-          const Text(
-            "ACCESOS DIRECTOS",
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
-              color: Paleta.textoTenue,
+            const SizedBox(height: 22),
+            const Text(
+              "El examen de la UNSA,",
+              style: TextStyle(
+                fontSize: 27,
+                fontWeight: FontWeight.w800,
+                height: 1.15,
+                color: Paleta.texto,
+              ),
             ),
-          ),
-          const SizedBox(height: 10),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-            childAspectRatio: 1.35,
-            children: [
-              _AccesoDirecto(
-                icono: Icons.edit_outlined,
-                titulo: "Practicar",
-                descripcion: "Preguntas resueltas",
-                onTap: () => _irAPestana(2),
+            const Text(
+              "entero y ordenado.",
+              style: TextStyle(
+                fontSize: 27,
+                fontWeight: FontWeight.w800,
+                height: 1.15,
+                color: Paleta.acento,
               ),
-              _AccesoDirecto(
-                icono: Icons.replay_outlined,
-                titulo: "Repaso",
-                descripcion: "Lo que toca hoy",
-                onTap: () => _irAPestana(0),
-              ),
-              _AccesoDirecto(
-                icono: Icons.adjust_outlined,
-                titulo: "Adaptativa",
-                descripcion: "Tus puntos flojos",
-                onTap: () => Navigator.of(context).push(
+            ),
+            const SizedBox(height: 18),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: [
+                FilledButton(
+                  onPressed: () => _irAPestana(2),
+                  child: const Text("Empezar a practicar"),
+                ),
+                OutlinedButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PantallaBuscar()),
+                  ),
+                  child: const Text("Buscar un subtema"),
+                ),
+              ],
+            ),
+            const SizedBox(height: 22),
+            if (!_sesion.hayCuenta)
+              _AvisoSinCuenta(
+                onEntrar: () => Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => const _AdaptativaConAppBar(),
+                    builder: (contextoRuta) => Scaffold(
+                      appBar: AppBar(title: const Text("Acceso")),
+                      body: PantallaEntrar(
+                        alEntrar: () => Navigator.of(contextoRuta).pop(),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              FutureBuilder<_PanelPersonal>(
+                future: _carga,
+                builder: (context, snap) {
+                  // Callarse aquí sería lo peor: el alumno con sesión sabe que
+                  // su panel existe —lo vio ayer— y verlo desaparecer sin una
+                  // palabra se lee como que perdió la racha, no como que el
+                  // servidor no contestó. Con Reintentar, además, no hace falta
+                  // salir de Inicio y volver a entrar.
+                  if (snap.hasError) {
+                    return Aviso(
+                      icono: Icons.cloud_off_outlined,
+                      titulo: "No se pudo cargar tu panel",
+                      detalle:
+                          "Tu racha, tus repasos y tu diagnóstico se calculan "
+                          "en el servidor, y ahora mismo no responde.",
+                      accion: ("Reintentar", _recargarPanel),
+                      compacto: true,
+                    );
+                  }
+                  // Mientras carga no va un spinner: el panel entra debajo de
+                  // la portada, que ya es contenido, y un giro de dos líneas
+                  // ahí solo hace saltar todo lo de abajo cuando resuelve.
+                  if (!snap.hasData) return const SizedBox.shrink();
+                  return _PanelPersonalVista(datos: snap.data!);
+                },
+              ),
+            const SizedBox(height: 26),
+            const Text(
+              "ACCESOS DIRECTOS",
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.6,
+                color: Paleta.textoTenue,
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Dos por fila, y **sin fijar la altura**.
+            //
+            // Esto era un `GridView.count(childAspectRatio: 1.35)`, y ese número
+            // decide la ALTURA de cada baldosa a partir de su ancho: unos 101 px
+            // a 320 px de pantalla, pasara lo que pasara. Dentro crece un cuadro
+            // de icono de 32 px fijos más dos líneas de texto que SÍ escalan con
+            // el tipo de letra del sistema. Con la letra normal sobraban 11 px;
+            // desde ×1,3 —muy por debajo del ×2 que ofrece Accesibilidad en
+            // Android— el texto ya no cabía y las seis baldosas desbordaban a la
+            // vez.
+            //
+            // Dividir la proporción por la escala tapaba el caso hasta ×1,5 y
+            // volvía a desbordar 29 px en ×2: el ancho de la baldosa no cambia,
+            // así que a letra muy grande la descripción se parte en más líneas
+            // de las que cualquier proporción fija prevé. La única forma de que
+            // no vuelva es no fijar la altura: cada fila mide lo que mida su
+            // contenido, y el `IntrinsicHeight` iguala las dos baldosas de la
+            // fila para que sigan pareciendo una rejilla.
+            for (var i = 0; i < accesos.length; i += 2)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: accesos[i]),
+                      const SizedBox(width: 8),
+                      // Con un número impar de accesos, el hueco mantiene la
+                      // última baldosa a su ancho en vez de estirarla al doble.
+                      Expanded(
+                        child: i + 1 < accesos.length
+                            ? accesos[i + 1]
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              _AccesoDirecto(
-                icono: Icons.menu_book_outlined,
-                titulo: "Teoría",
-                descripcion: "Curso por curso",
-                onTap: () => _irAPestana(1),
-              ),
-              _AccesoDirecto(
-                icono: Icons.timer_outlined,
-                titulo: "Simulacros",
-                descripcion: "Cronometrados",
-                onTap: () => _irAPestana(3),
-              ),
-              _AccesoDirecto(
-                icono: Icons.search,
-                titulo: "Buscar",
-                descripcion: "Por nombre o código",
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const PantallaBuscar()),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _AdaptativaConAppBar extends StatelessWidget {

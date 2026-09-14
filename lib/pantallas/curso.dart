@@ -217,7 +217,17 @@ class _Tema extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
+                      // La barra mide 70 px fijos y el texto crece con el
+                      // tipo de letra del sistema, así que a 320 px esta fila
+                      // no tenía holgura: desbordaba 0,43 px ya con la letra
+                      // normal y 64 px con la letra a ×1,5 —dentro de lo que
+                      // Android deja subir desde Accesibilidad—. El `Flexible`
+                      // deja que el texto se parta en dos líneas en vez de
+                      // empujar la fila fuera de la tarjeta; la barra sigue
+                      // midiendo lo mismo, que es lo que la hace comparable
+                      // entre temas.
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(4),
@@ -234,11 +244,13 @@ class _Tema extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            "$conPreguntas/$total con preguntas",
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Paleta.textoTenue,
+                          Flexible(
+                            child: Text(
+                              "$conPreguntas/$total con preguntas",
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Paleta.textoTenue,
+                              ),
                             ),
                           ),
                         ],

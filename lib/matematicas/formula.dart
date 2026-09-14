@@ -30,13 +30,23 @@ final _patron = RegExp(r"\$\$([\s\S]+?)\$\$|\$([^\n$]+?)\$");
 /// importado son tablas que la extracción convirtió mal en pseudo-fracciones
 /// (ESTADO.md § 8, «Fórmulas rotas») — pero cambia "esto es código roto" por
 /// "esto es una frase suelta", que es lo que un alumno puede al menos leer.
+///
+/// **Las barras van dobladas, y no es cosmético.** En una cadena cruda `r"\f"`
+/// llega al motor de expresiones regulares como `\f`, que ahí significa
+/// *form feed* — no la barra invertida de LaTeX seguida de una efe. Lo mismo
+/// con `\s` (espacio), `\t` (tabulador) y `\[` (corchete literal). Escrito
+/// así, esta función no reconocía NINGUNO de los cuatro patrones que dice
+/// reconocer: `\frac{a}{b}` salía como `\fracab`, `\sqrt{x}` como `\sqrtx`, y
+/// el barrido final de órdenes sueltas no barría nada. `\\` es la barra de
+/// verdad. Los `replaceAll` de más abajo nunca tuvieron el problema porque
+/// reciben una cadena llana, no un patrón: ahí `r"\times"` ya es literal.
 String legibilizar(String tex) {
   return tex
       .replaceAllMapped(
-        RegExp(r"\frac\{([^{}]*)\}\{([^{}]*)\}"),
+        RegExp(r"\\frac\{([^{}]*)\}\{([^{}]*)\}"),
         (m) => "${m[1]}/${m[2]}",
       )
-      .replaceAllMapped(RegExp(r"\sqrt\{([^{}]*)\}"), (m) => "√(${m[1]})")
+      .replaceAllMapped(RegExp(r"\\sqrt\{([^{}]*)\}"), (m) => "√(${m[1]})")
       .replaceAll(r"\times", "×")
       .replaceAll(r"\div", "÷")
       .replaceAll(r"\pm", "±")
@@ -45,8 +55,10 @@ String legibilizar(String tex) {
       .replaceAll(r"\circ", "°")
       .replaceAll(r"\vec", "")
       .replaceAll(r"\overline", "")
-      .replaceAllMapped(RegExp(r"\text\{([^{}]*)\}"), (m) => m[1] ?? "")
-      .replaceAll(RegExp(r"\[a-zA-Z]+"), "")
+      .replaceAllMapped(RegExp(r"\\text\{([^{}]*)\}"), (m) => m[1] ?? "")
+      // Lo que quede con forma de orden LaTeX se va: a estas alturas es
+      // marcado que nadie va a leer, no contenido.
+      .replaceAll(RegExp(r"\\[a-zA-Z]+"), "")
       .replaceAll(RegExp(r"[{}_^]"), "")
       .replaceAll(RegExp(r"[ \t]{2,}"), " ")
       .trim();

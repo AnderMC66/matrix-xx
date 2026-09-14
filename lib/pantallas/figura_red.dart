@@ -1,3 +1,4 @@
+import "package:cached_network_image/cached_network_image.dart";
 import "package:flutter/material.dart";
 import "package:flutter_svg/flutter_svg.dart";
 
@@ -33,6 +34,23 @@ import "../tema.dart";
 /// ejercicio se resuelve—, o línea compacta para las de teoría, que aparecen
 /// miles de veces y donde un recuadro por cada una convertiría la lectura en
 /// un campo de avisos.
+/// **Las figuras se guardan en disco, y eso importa más de lo que parece.**
+///
+/// `Image.network` solo cachea en memoria, y esa memoria muere con el
+/// proceso: cada vez que se reabría una sección se volvían a descargar todas
+/// sus figuras, y sin señal no se veía ninguna. Medido sobre el corpus: la
+/// sección mediana con figuras pide 27 KB, el percentil 90 pide 197 KB, y
+/// «Áreas Naturales Protegidas del Perú» pide 7,8 MB en 115 archivos.
+/// Releerla tres veces con datos móviles son 23 MB.
+///
+/// Es, además, la pieza que le faltaba a esta app para igualar a la web, que
+/// con su service worker ya guarda teoría y figuras para «el alumno con datos
+/// móviles justos fuera de Lima» —palabras de `public/sw.js`—. Que la versión
+/// nativa hiciera menos que la web sin conexión era al revés de lo esperable.
+///
+/// `cached_network_image` cubre las 3 590 figuras rasterizadas. El SVG sigue
+/// yendo por `flutter_svg` sin caché de disco: hoy es un solo archivo en todo
+/// el banco, y montarle un cargador propio no se paga.
 class FiguraRed extends StatelessWidget {
   final String url;
   final String alt;
@@ -62,6 +80,15 @@ class FiguraRed extends StatelessWidget {
     final limpio = alt.trim();
     if (limpio.isEmpty || limpio.toLowerCase() == "figura") return null;
     return limpio;
+  }
+
+  /// `CachedNetworkImage` no tiene `semanticLabel`, así que la etiqueta se
+  /// pone a mano. No es opcional: el `alt` del banco describe la figura
+  /// entera, que en una pregunta de geometría es media pregunta.
+  Widget _conEtiqueta(Widget hijo) {
+    final etiqueta = _etiqueta;
+    if (etiqueta == null) return hijo;
+    return Semantics(label: etiqueta, image: true, child: hijo);
   }
 
   @override
@@ -96,20 +123,17 @@ class FiguraRed extends StatelessWidget {
                 placeholderBuilder: (_) => _girando(),
                 errorBuilder: (context, error, stack) => ausente,
               )
-            : Image.network(
-                url,
-                fit: BoxFit.contain,
-                // El `alt` del banco no es decorativo: describe la figura
-                // entera («Trapecio ABCD con la base menor AB de 6 cm
-                // arriba…»), que en una pregunta de geometría es la mitad del
-                // enunciado. Sin esto, un lector de pantalla anuncia la imagen
-                // y no dice nada de ella — y solo cuando la figura FALLA
-                // aparecía el texto, que es justo al revés de lo que hace
-                // falta.
-                semanticLabel: _etiqueta,
-                loadingBuilder: (context, child, progreso) =>
-                    progreso == null ? child : _girando(),
-                errorBuilder: (context, error, stack) => ausente,
+            : _conEtiqueta(
+                CachedNetworkImage(
+                  imageUrl: url,
+                  fit: BoxFit.contain,
+                  // Sin desvanecido, como hacía `Image.network`: una figura
+                  // que aparece progresivamente dentro de un hueco ya
+                  // reservado solo se lee como parpadeo.
+                  fadeInDuration: Duration.zero,
+                  placeholder: (context, _) => _girando(),
+                  errorWidget: (context, _, _) => ausente,
+                ),
               ),
       ),
     );
@@ -143,14 +167,15 @@ class FiguraRed extends StatelessWidget {
             placeholderBuilder: (_) => _Ausente(alt: alt, cargando: true),
             errorBuilder: (context, error, stack) => _Ausente(alt: alt),
           )
-        : Image.network(
-            url,
-            fit: BoxFit.contain,
-            alignment: Alignment.centerLeft,
-            semanticLabel: _etiqueta,
-            loadingBuilder: (context, child, progreso) =>
-                progreso == null ? child : _Ausente(alt: alt, cargando: true),
-            errorBuilder: (context, error, stack) => _Ausente(alt: alt),
+        : _conEtiqueta(
+            CachedNetworkImage(
+              imageUrl: url,
+              fit: BoxFit.contain,
+              alignment: Alignment.centerLeft,
+              fadeInDuration: Duration.zero,
+              placeholder: (context, _) => _Ausente(alt: alt, cargando: true),
+              errorWidget: (context, _, _) => _Ausente(alt: alt),
+            ),
           ),
   );
 }

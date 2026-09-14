@@ -38,6 +38,16 @@ dependencies:
   # fórmulas».
   flutter_math_fork: ^0.7.4
   flutter_svg: ^2.3.0
+  # Guarda las figuras en disco. `Image.network` solo cachea en memoria y esa
+  # memoria muere con el proceso: reabrir una sección de teoría volvía a
+  # descargarlo todo, y sin señal no se veía ninguna figura. La sección
+  # mediana con figuras pide 27 KB, el percentil 90 pide 197 KB y la peor
+  # —«Áreas Naturales Protegidas del Perú»— pide 7,8 MB en 115 archivos.
+  #
+  # Es lo que iguala a la web, cuyo service worker ya guarda teoría y figuras
+  # para «el alumno con datos móviles justos fuera de Lima». Cubre las 3 590
+  # rasterizadas; el único SVG del banco sigue por `flutter_svg`.
+  cached_network_image: ^4.0.0
 
   # Tres dependencias del andamiaje inicial se quitaron el 2026-09-10 porque
   # ningún archivo las importaba, comprobado con

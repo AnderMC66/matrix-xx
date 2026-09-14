@@ -14,7 +14,7 @@ import "../tema.dart";
 /// `_Aviso` antes de reunirse en `aviso.dart`, y por el mismo motivo se
 /// arregla igual.
 ///
-/// La diferencia con [Aviso] es de sitio, no de tono: `Aviso` ocupa el cuerpo
+/// La diferencia con `Aviso` es de sitio, no de tono: `Aviso` ocupa el cuerpo
 /// de una pantalla cuando no hay nada que mostrar; `Nota` se intercala entre
 /// contenido que sí existe.
 ///

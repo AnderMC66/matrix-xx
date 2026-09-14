@@ -258,7 +258,7 @@ class RepositorioPanel {
   /// ver perfiles ajenos a los admin y no a los docentes—, y para decidir si
   /// el reporte tiene razón hace falta la pregunta, no el alumno.
   Future<List<ReporteStaff>> reportes(String estado) async {
-    var consulta = _cliente
+    final consulta = _cliente
         .from("reportes_error")
         .select(
           "id, motivo, detalle, estado, creado_en, pregunta_id, "

@@ -41,15 +41,14 @@
 // escritura real de esta suite se corre aparte, no aquí.
 //
 // ignore_for_file: avoid_print
-import "package:supabase/supabase.dart";
-import "package:test/test.dart";
-
 import "package:matr_u/config.dart";
 import "package:matr_u/datos/practica.dart";
 import "package:matr_u/datos/preguntas.dart" show EtiquetaLetra, Letra;
 import "package:matr_u/datos/progreso.dart";
 import "package:matr_u/datos/repaso.dart";
 import "package:matr_u/datos/simulacro.dart";
+import "package:supabase/supabase.dart";
+import "package:test/test.dart";
 
 const _correo = String.fromEnvironment("CORREO");
 const _contrasena = String.fromEnvironment("CONTRASENA");

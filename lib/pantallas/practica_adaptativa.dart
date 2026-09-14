@@ -10,17 +10,9 @@ import "../tema.dart";
 import "../widgets/aviso.dart";
 import "practica.dart";
 
-/// `/practica/adaptativa` — práctica que elige las preguntas por ti.
-///
-/// Réplica de `src/app/practica/adaptativa/page.tsx`: primero los subtemas
-/// donde peor vas, y dentro de ellos lo que nunca viste o fallaste, de menor
-/// a mayor dificultad. Lo que ya dominas no vuelve a salir aquí.
-///
-/// [cursoSlug] la acota a un curso; `null` mezcla todo el banco — mismo
-/// contrato que el parámetro `?curso=` de la web.
 /// La misma pantalla, con su propia barra, para cuando se empuja como ruta.
 ///
-/// `PantallaPracticaAdaptativa` no trae `Scaffold` porque también se muestra
+/// [PantallaPracticaAdaptativa] no trae `Scaffold` porque también se muestra
 /// dentro del armazón, que ya pone uno. Este envoltorio existía duplicado
 /// palabra por palabra en `inicio.dart` y en `practica.dart`; vive aquí, que
 /// es donde vive la pantalla que envuelve.
@@ -34,6 +26,14 @@ class AdaptativaConBarra extends StatelessWidget {
   );
 }
 
+/// `/practica/adaptativa` — práctica que elige las preguntas por ti.
+///
+/// Réplica de `src/app/practica/adaptativa/page.tsx`: primero los subtemas
+/// donde peor vas, y dentro de ellos lo que nunca viste o fallaste, de menor
+/// a mayor dificultad. Lo que ya dominas no vuelve a salir aquí.
+///
+/// [PantallaPracticaAdaptativa.cursoSlug] la acota a un curso; `null` mezcla
+/// todo el banco — mismo contrato que el parámetro `?curso=` de la web.
 class PantallaPracticaAdaptativa extends StatefulWidget {
   final String? cursoSlug;
   const PantallaPracticaAdaptativa({super.key, this.cursoSlug});

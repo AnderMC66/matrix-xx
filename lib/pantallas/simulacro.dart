@@ -1,5 +1,3 @@
-import "../fechas.dart";
-
 import "dart:async";
 
 import "package:flutter/material.dart";
@@ -7,6 +5,7 @@ import "package:flutter/material.dart";
 import "../datos/preguntas.dart";
 import "../datos/sesion.dart";
 import "../datos/simulacro.dart";
+import "../fechas.dart";
 import "../matematicas/formula.dart";
 import "../tema.dart";
 import "../widgets/aviso.dart";
@@ -1019,7 +1018,11 @@ class _PantallaResultadoState extends State<PantallaResultado> {
   Future<(Intento, List<ResultadoPregunta>, PercentilSimulacro?)>
   _cargar() async {
     final intento = await _repo.intento(widget.intentoId);
-    if (intento == null) throw "Este intento no existe o no es tuyo.";
+    // `ErrorSimulacro` y no una cadena suelta: lanzar un `String` deja fuera
+    // a cualquier `on Exception catch`, y el tipo ya existe para esto.
+    if (intento == null) {
+      throw const ErrorSimulacro("Este intento no existe o no es tuyo.");
+    }
     return (
       intento,
       await _repo.resultado(intento),

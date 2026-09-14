@@ -178,7 +178,7 @@ class _FilaResultado extends StatelessWidget {
 /// El estado vacío de Buscar: qué se puede escribir aquí, y una salida al
 /// temario completo para quien no sabe qué buscar.
 ///
-/// **Va dentro de un `SingleChildScrollView` por la misma razón que [Aviso].**
+/// **Va dentro de un `SingleChildScrollView` por la misma razón que `Aviso`.**
 /// Este widget es, de hecho, una novena copia a mano del que aquella
 /// consolidación reunió en `widgets/aviso.dart`: se quedó fuera porque tiene
 /// una línea de ejemplos en monoespaciada que `Aviso` no sabe pintar, y con

@@ -30,9 +30,38 @@ linter:
   # or a specific dart file by using the `// ignore: name_of_lint` and
   # `// ignore_for_file: name_of_lint` syntax on the line or in the file
   # producing the lint.
+  # Reglas añadidas sobre `flutter_lints`, cada una porque encontró algo real
+  # o porque cierra una puerta que este proyecto no quiere abrir:
+  #
+  #   only_throw_errors      pilló un `throw "..."` con una cadena suelta en la
+  #                          pantalla de resultado, que dejaba fuera a
+  #                          cualquier `on Exception catch`.
+  #   comment_references     pilló tres `[Referencia]` que no resolvían — una
+  #                          de ellas era una doc entera colgada de la clase
+  #                          equivocada. En un repo donde el comentario ES la
+  #                          documentación, esto vale su peso.
+  #   directives_ordering    los imports se desordenaron al añadir `fechas.dart`.
+  #   prefer_final_locals    un `var` que nunca se reasignaba.
+  #
+  # Las demás no encontraron nada hoy, y por eso mismo entran: salen gratis y
+  # cierran fallos que no se ven hasta que ocurren —una suscripción sin
+  # cancelar, un `Future` sin esperar, un `throw` dentro de un `finally`.
+  #
+  # `sort_constructors_first` se queda FUERA a propósito: daba 142 avisos
+  # contra un estilo que el proyecto sigue de forma consistente —campos
+  # primero, constructor después— y que se lee mejor en widgets con muchos
+  # campos finales. Un lint que obliga a reescribir 142 sitios no está
+  # encontrando un problema, está imponiendo un gusto.
   rules:
-    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
-    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
-
-# Additional information about this file can be found at
-# https://dart.dev/guides/language/analysis-options
+    - always_declare_return_types
+    - avoid_slow_async_io
+    - cancel_subscriptions
+    - close_sinks
+    - comment_references
+    - directives_ordering
+    - only_throw_errors
+    - prefer_final_locals
+    - throw_in_finally
+    - unawaited_futures
+    - unnecessary_parenthesis
+    - use_string_buffers

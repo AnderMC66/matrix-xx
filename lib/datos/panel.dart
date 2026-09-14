@@ -68,7 +68,18 @@ class PreguntaRevision {
   final String enunciadoMd;
   final String? imagenUrl;
   final String? imagenAlt;
-  final Letra clave;
+
+  /// `null` cuando el RPC no devolvió una letra legible.
+  ///
+  /// Es nullable a propósito, y antes no lo era: el valor por defecto era
+  /// `Letra.a`, así que una clave ausente o ilegible se le presentaba al
+  /// docente como «la respuesta correcta es A», en verde y con su etiqueta.
+  /// De todos los sitios donde inventar un valor sale mal, este es el peor:
+  /// la pantalla existe para que alguien audite precisamente esa letra, y una
+  /// clave falsa auditada se publica con el visto bueno de un profesor. Sin
+  /// letra no se marca ninguna alternativa y la ficha lo dice.
+  final Letra? clave;
+
   final String? explicacionMd;
   final String estado;
   final String dificultad;
@@ -201,7 +212,7 @@ class RepositorioPanel {
           enunciadoMd: p["enunciado_md"] as String? ?? "",
           imagenUrl: p["enunciado_imagen_url"] as String?,
           imagenAlt: p["enunciado_imagen_alt"] as String?,
-          clave: letraDesde(p["clave"] as String? ?? "") ?? Letra.a,
+          clave: letraDesde(p["clave"] as String? ?? ""),
           explicacionMd: p["explicacion_md"] as String?,
           estado: p["estado"] as String? ?? "",
           dificultad: p["dificultad"] as String? ?? "",

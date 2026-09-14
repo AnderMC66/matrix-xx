@@ -31,7 +31,11 @@ class _PantallaPanelState extends State<PantallaPanel> {
     _recargar();
   }
 
-  void _recargar() => setState(() => _carga = _pedir());
+  void _recargar() {
+    setState(() {
+      _carga = _pedir();
+    });
+  }
 
   Future<(Rol?, ResumenPanel?)> _pedir() async {
     final rol = await _repo.rolActual();
@@ -46,6 +50,14 @@ class _PantallaPanelState extends State<PantallaPanel> {
       body: FutureBuilder<(Rol?, ResumenPanel?)>(
         future: _carga,
         builder: (context, snap) {
+          if (snap.hasError) {
+            return Aviso(
+              icono: Icons.cloud_off_outlined,
+              titulo: "No se pudo abrir el panel",
+              detalle: "${snap.error}",
+              accion: ("Reintentar", _recargar),
+            );
+          }
           if (!snap.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -259,8 +271,9 @@ class _PantallaPanelRevisionState extends State<PantallaPanelRevision> {
     _recargar();
   }
 
-  void _recargar() =>
-      setState(() => _carga = _repo.paraRevision(filtro: _filtro));
+  void _recargar() => setState(() {
+    _carga = _repo.paraRevision(filtro: _filtro);
+  });
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -294,6 +307,14 @@ class _PantallaPanelRevisionState extends State<PantallaPanelRevision> {
           child: FutureBuilder<List<PreguntaRevision>>(
             future: _carga,
             builder: (context, snap) {
+              if (snap.hasError) {
+                return Aviso(
+                  icono: Icons.cloud_off_outlined,
+                  titulo: "No se pudieron cargar las preguntas",
+                  detalle: "${snap.error}",
+                  accion: ("Reintentar", _recargar),
+                );
+              }
               if (!snap.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
@@ -420,6 +441,27 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
             FiguraRed(url: url, alt: p.imagenAlt ?? "", grande: true),
           ],
           const SizedBox(height: 10),
+          // Sin clave legible no se marca ninguna alternativa en verde, así que
+          // sin este aviso la ficha se leería como una pregunta normal a la que
+          // el docente no le encuentra la clave marcada. Decir que falta es lo
+          // que evita que la audite a ciegas.
+          if (p.clave == null) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: Paleta.avisoSuave,
+                border: Border.all(color: Paleta.aviso),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Text(
+                "El servidor no devolvió la clave de esta pregunta. No la "
+                "audites: no hay qué revisar.",
+                style: TextStyle(fontSize: 12, color: Paleta.aviso),
+              ),
+            ),
+          ],
           for (final a in p.alternativas)
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
@@ -602,7 +644,11 @@ class _PantallaPanelReportesState extends State<PantallaPanelReportes> {
     _recargar();
   }
 
-  void _recargar() => setState(() => _carga = _repo.reportes(_filtro));
+  void _recargar() {
+    setState(() {
+      _carga = _repo.reportes(_filtro);
+    });
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -636,6 +682,14 @@ class _PantallaPanelReportesState extends State<PantallaPanelReportes> {
           child: FutureBuilder<List<ReporteStaff>>(
             future: _carga,
             builder: (context, snap) {
+              if (snap.hasError) {
+                return Aviso(
+                  icono: Icons.cloud_off_outlined,
+                  titulo: "No se pudieron cargar los reportes",
+                  detalle: "${snap.error}",
+                  accion: ("Reintentar", _recargar),
+                );
+              }
               if (!snap.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
@@ -818,7 +872,22 @@ class PantallaPanelUsuarios extends StatefulWidget {
 class _PantallaPanelUsuariosState extends State<PantallaPanelUsuarios> {
   final _repo = RepositorioPanel();
   final _sesion = Sesion();
-  late final Future<List<Persona>> _carga = _repo.personas();
+
+  // No es `late final`: para que «Reintentar» sirva de algo, la petición tiene
+  // que poder rehacerse.
+  Future<List<Persona>>? _carga;
+
+  @override
+  void initState() {
+    super.initState();
+    _recargar();
+  }
+
+  void _recargar() {
+    setState(() {
+      _carga = _repo.personas();
+    });
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -826,6 +895,14 @@ class _PantallaPanelUsuariosState extends State<PantallaPanelUsuarios> {
     body: FutureBuilder<List<Persona>>(
       future: _carga,
       builder: (context, snap) {
+        if (snap.hasError) {
+          return Aviso(
+            icono: Icons.cloud_off_outlined,
+            titulo: "No se pudieron cargar las personas",
+            detalle: "${snap.error}",
+            accion: ("Reintentar", _recargar),
+          );
+        }
         if (!snap.hasData) {
           return const Center(child: CircularProgressIndicator());
         }

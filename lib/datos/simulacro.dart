@@ -251,8 +251,18 @@ class RepositorioSimulacro {
   /// medias queda en el historial del navegador—. En una app no hay barra de
   /// direcciones: sin esto, cerrar la app a mitad de examen dejaría el intento
   /// abierto e inalcanzable, corriendo su cronómetro hasta agotarse.
+  ///
+  /// **El filtro por `perfil_id` es obligatorio aquí, y RLS no basta.** La
+  /// política de `intentos` deja ver «el dueño o un admin» (ver [intento]), y
+  /// esta consulta pide *el intento abierto más reciente que yo pueda ver*: a
+  /// un admin o docente eso le devolvía el examen a medias de OTRO alumno, y
+  /// el botón «Retomar» se lo abría para responderlo en su nombre. Donde
+  /// [intento] recibe un id concreto y RLS solo decide si lo deja pasar, esto
+  /// busca a ciegas — y buscar a ciegas con permisos amplios encuentra lo que
+  /// no toca.
   Future<Intento?> intentoEnCurso() async {
-    if (!hayCuenta) return null;
+    final usuario = _cliente.auth.currentUser;
+    if (usuario == null) return null;
 
     final f = await _cliente
         .from("intentos")
@@ -260,6 +270,7 @@ class RepositorioSimulacro {
           "id, simulacro_id, iniciado_en, finalizado_en, puntaje, "
           "total_preguntas, correctas",
         )
+        .eq("perfil_id", usuario.id)
         .eq("modo", "simulacro")
         .isFilter("finalizado_en", null)
         .order("iniciado_en", ascending: false)

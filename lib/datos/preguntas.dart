@@ -261,7 +261,7 @@ class RepositorioPreguntas {
             enunciado: crudo["enunciado"] as String? ?? "",
             imagen: Figura.desde(crudo["imagen"] as Map<String, dynamic>?),
             dificultad: _dificultadDesde(crudo["dificultad"] as String?),
-            alternativas: _alternativas(
+            alternativas: alternativasDesde(
               (crudo["alternativas"] as Map?)?.cast<String, dynamic>() ??
                   const {},
             ),
@@ -279,25 +279,42 @@ class RepositorioPreguntas {
       for (final p in preguntas) p.codigo: p,
     }, sonEjemplos);
   }
-
-  /// Una alternativa admite dos formas en el JSON, como en la web:
-  ///
-  ///   "A": "18 g"                              → solo texto
-  ///   "A": { "texto": "…", "imagen": { … } }   → con figura
-  List<Alternativa> _alternativas(Map<String, dynamic> crudas) => [
-    for (final letra in letras)
-      if (crudas[letra.etiqueta] case final cruda)
-        Alternativa(
-          letra: letra,
-          texto: cruda is String
-              ? cruda
-              : (cruda as Map<String, dynamic>?)?["texto"] as String? ?? "",
-          imagen: cruda is String
-              ? null
-              : Figura.desde(
-                  (cruda as Map<String, dynamic>?)?["imagen"]
-                      as Map<String, dynamic>?,
-                ),
-        ),
-  ];
 }
+
+/// Las alternativas de una pregunta, desde el mapa crudo del JSON.
+///
+/// Admite las dos formas que admite la web:
+///
+///   "A": "18 g"                              → solo texto
+///   "A": { "texto": "…", "imagen": { … } }   → con figura
+///
+/// Es una función de nivel superior, y no un método privado del repositorio,
+/// para que se pueda probar sin montar el catálogo entero —igual que
+/// [letraDesde] y que `legibilizar` en `matematicas/formula.dart`.
+///
+/// **El `?` del patrón es lo que hace que una pregunta de cuatro alternativas
+/// tenga cuatro.** Sin él —`case final cruda`— el patrón es irrefutable:
+/// coincide con cualquier valor, `null` incluido, así que las cinco letras
+/// producían siempre una alternativa y la que faltaba en el JSON salía en
+/// pantalla como una opción vacía y pulsable. Hoy las 392 preguntas del banco
+/// traen las cinco, así que no se veía; las escribe gente en el repo web, y la
+/// primera de cuatro opciones lo habría destapado en producción. Ojo: «cada
+/// pregunta tiene cinco alternativas», en `datos_test.dart`, pasaba igual con
+/// la quinta fantasma — por eso el test de esto mira el contenido y no el
+/// número.
+List<Alternativa> alternativasDesde(Map<String, dynamic> crudas) => [
+  for (final letra in letras)
+    if (crudas[letra.etiqueta] case final cruda?)
+      Alternativa(
+        letra: letra,
+        texto: cruda is String
+            ? cruda
+            : (cruda as Map<String, dynamic>)["texto"] as String? ?? "",
+        imagen: cruda is String
+            ? null
+            : Figura.desde(
+                (cruda as Map<String, dynamic>)["imagen"]
+                    as Map<String, dynamic>?,
+              ),
+      ),
+];

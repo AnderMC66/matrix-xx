@@ -22,7 +22,7 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
   final _repo = RepositorioSimulacro();
   final _sesion = Sesion();
 
-  Future<(List<SimulacroResumen>, Intento?)>? _carga;
+  Future<(List<SimulacroResumen>, Intento?, List<Intento>)>? _carga;
 
   @override
   void initState() {
@@ -30,8 +30,11 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
     _recargar();
   }
 
-  Future<(List<SimulacroResumen>, Intento?)> _pedir() async =>
-      (await _repo.publicados(), await _repo.intentoEnCurso());
+  Future<(List<SimulacroResumen>, Intento?, List<Intento>)> _pedir() async => (
+    await _repo.publicados(),
+    await _repo.intentoEnCurso(),
+    await _repo.historial(),
+  );
 
   void _recargar() {
     if (!_sesion.hayCuenta) return;
@@ -53,7 +56,7 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
       );
     }
 
-    return FutureBuilder<(List<SimulacroResumen>, Intento?)>(
+    return FutureBuilder<(List<SimulacroResumen>, Intento?, List<Intento>)>(
       future: _carga,
       builder: (context, snap) {
         if (snap.hasError) {
@@ -68,7 +71,7 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final (simulacros, enCurso) = snap.data!;
+        final (simulacros, enCurso, historial) = snap.data!;
         if (simulacros.isEmpty) {
           return const Aviso(
             icono: Icons.inbox_outlined,
@@ -93,12 +96,149 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
                   alVolver: _recargar,
                 ),
               ),
+            if (historial.isNotEmpty) ...[
+              const SizedBox(height: 26),
+              const Text(
+                "LO QUE YA RENDISTE",
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: Paleta.textoSuave,
+                ),
+              ),
+              const SizedBox(height: 10),
+              for (final intento in historial)
+                _FilaHistorial(
+                  intento: intento,
+                  nombre: simulacros
+                      .where((s) => s.id == intento.simulacroId)
+                      .map((s) => s.nombre)
+                      .firstOrNull,
+                ),
+            ],
           ],
         );
       },
     );
   }
 }
+
+/// Un simulacro ya rendido, que vuelve a abrir su resultado.
+///
+/// La pantalla de resultado ya existía y solo se alcanzaba una vez, justo al
+/// terminar: el puntaje, el percentil y el desglose por curso quedaban en la
+/// base sin nada que los leyera. Aquí no hace falta widget nuevo — basta con
+/// volver a empujar `PantallaResultado` con el id del intento.
+class _FilaHistorial extends StatelessWidget {
+  final Intento intento;
+
+  /// El nombre del simulacro, si sigue publicado. Puede faltar: un simulacro
+  /// despublicado no desaparece de tu historial, solo pierde el rótulo.
+  final String? nombre;
+
+  const _FilaHistorial({required this.intento, required this.nombre});
+
+  @override
+  Widget build(BuildContext context) {
+    final pct = (intento.puntaje ?? 0).round();
+    final fecha = intento.finalizadoEn?.toLocal();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Paleta.superficieAlta,
+        borderRadius: BorderRadius.circular(10),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => PantallaResultado(intentoId: intento.id),
+            ),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Paleta.borde),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                // El puntaje manda: es lo que se busca al mirar atrás.
+                SizedBox(
+                  width: 52,
+                  child: Text(
+                    "$pct %",
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: pct >= 60 ? Paleta.exito : Paleta.acento,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        nombre ?? "Simulacro retirado",
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: Paleta.texto,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        [
+                          if (fecha != null) _fechaCorta(fecha),
+                          if (intento.correctas != null &&
+                              intento.totalPreguntas != null)
+                            "${intento.correctas}/${intento.totalPreguntas} correctas",
+                        ].join(" · "),
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: Paleta.textoTenue,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: Paleta.textoTenue,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+const _mesesCortos = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sep",
+  "oct",
+  "nov",
+  "dic",
+];
+
+/// `14 sep 2026`. En hora local: `finalizadoEn` viene en UTC.
+String _fechaCorta(DateTime d) =>
+    "${d.day} ${_mesesCortos[d.month - 1]} ${d.year}";
 
 /// Retomar un examen a medias.
 ///

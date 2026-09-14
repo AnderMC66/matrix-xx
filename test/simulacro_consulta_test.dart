@@ -46,6 +46,8 @@ class _ClienteEspia extends http.BaseClient {
       final valor = fila[columna];
       final coincide = switch (criterio) {
         "is.null" => valor == null,
+        // Lo que emite `.not("finalizado_en", "is", null)`.
+        "not.is.null" => valor != null,
         _ when criterio.startsWith("eq.") => "$valor" == criterio.substring(3),
         _ => true,
       };
@@ -99,6 +101,23 @@ Map<String, dynamic> _filaIntento({required int id, required String dueno}) => {
   "puntaje": null,
   "total_preguntas": null,
   "correctas": null,
+};
+
+/// Un intento ya terminado, con su puntaje.
+Map<String, dynamic> _filaCerrada({
+  required int id,
+  required String dueno,
+  required String fin,
+  double puntaje = 72,
+}) => {
+  "id": id,
+  "perfil_id": dueno,
+  "simulacro_id": 7,
+  "iniciado_en": "2026-09-11T10:00:00+00:00",
+  "finalizado_en": fin,
+  "puntaje": puntaje,
+  "total_preguntas": 50,
+  "correctas": 36,
 };
 
 void main() {
@@ -202,6 +221,82 @@ void main() {
       espia.peticiones.where((u) => u.path == "/rest/v1/intentos"),
       isEmpty,
       reason: "la guarda de sesión va antes de armar la petición",
+    );
+  });
+
+  // ── Historial ───────────────────────────────────────────────────────────
+  //
+  // Un simulacro terminado era inalcanzable para siempre: el resultado se veía
+  // una vez, al acabar, y el puntaje, el percentil y el desglose por curso se
+  // quedaban en Postgres sin que ninguna pantalla los leyera.
+
+  test("el historial pide solo los intentos CERRADOS y propios", () async {
+    espia.intentos = [
+      _filaCerrada(id: 1, dueno: _idPropio, fin: "2026-09-12T11:00:00+00:00"),
+    ];
+
+    await RepositorioSimulacro(cliente: cliente).historial();
+
+    final filtros = consultaDeIntentos().queryParameters;
+    expect(filtros["perfil_id"], "eq.$_idPropio");
+    expect(filtros["modo"], "eq.simulacro");
+    expect(
+      filtros["finalizado_en"],
+      "not.is.null",
+      reason: "sin esto entraría también el examen que está a medias",
+    );
+  });
+
+  test("un intento a medias no aparece en el historial", () async {
+    espia.intentos = [
+      _filaIntento(id: 9, dueno: _idPropio), // finalizado_en == null
+      _filaCerrada(id: 1, dueno: _idPropio, fin: "2026-09-12T11:00:00+00:00"),
+    ];
+
+    final lista = await RepositorioSimulacro(cliente: cliente).historial();
+
+    expect(lista.map((i) => i.id), [1]);
+    expect(lista.single.enCurso, isFalse);
+  });
+
+  test("el historial de otra persona no llega", () async {
+    espia.intentos = [
+      _filaCerrada(id: 500, dueno: _idAjeno, fin: "2026-09-13T11:00:00+00:00"),
+    ];
+
+    expect(
+      await RepositorioSimulacro(cliente: cliente).historial(),
+      isEmpty,
+      reason: "la política de `intentos` deja ver también al admin",
+    );
+  });
+
+  test("el puntaje y el recuento llegan enteros", () async {
+    espia.intentos = [
+      _filaCerrada(
+        id: 3,
+        dueno: _idPropio,
+        fin: "2026-09-12T11:00:00+00:00",
+        puntaje: 72,
+      ),
+    ];
+
+    final i = (await RepositorioSimulacro(cliente: cliente).historial()).single;
+
+    expect(i.puntaje, 72);
+    expect(i.correctas, 36);
+    expect(i.totalPreguntas, 50);
+    expect(i.finalizadoEn!.isUtc, isTrue);
+  });
+
+  test("sin sesión el historial es vacío y no consulta nada", () async {
+    await cliente.auth.signOut();
+    espia.peticiones.clear();
+
+    expect(await RepositorioSimulacro(cliente: cliente).historial(), isEmpty);
+    expect(
+      espia.peticiones.where((u) => u.path == "/rest/v1/intentos"),
+      isEmpty,
     );
   });
 

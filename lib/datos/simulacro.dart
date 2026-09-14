@@ -289,6 +289,51 @@ class RepositorioSimulacro {
     );
   }
 
+  /// Los simulacros que el alumno ya rindió, del más reciente al más antiguo.
+  ///
+  /// **Sin esto, un simulacro terminado era inalcanzable para siempre.** El
+  /// resultado se veía una vez, al acabar, y nunca más: el puntaje, el
+  /// percentil y el desglose por curso seguían en Postgres y ninguna pantalla
+  /// los volvía a leer. Es exactamente el mismo razonamiento que justificó
+  /// [intentoEnCurso] —«en una app no hay barra de direcciones»— aplicado a la
+  /// otra mitad del problema, que se había quedado sin resolver. Y pesa más
+  /// aquí: en un examen de cupo limitado, «¿cómo iba hace tres semanas?» es la
+  /// pregunta que sostiene el estudio.
+  ///
+  /// El filtro por `perfil_id` es obligatorio por lo mismo que en
+  /// [intentoEnCurso]: la política de `intentos` deja ver «el dueño o un
+  /// admin», así que sin él un docente vería el historial ajeno.
+  Future<List<Intento>> historial({int limite = 20}) async {
+    final usuario = _cliente.auth.currentUser;
+    if (usuario == null) return const [];
+
+    final filas = await _cliente
+        .from("intentos")
+        .select(
+          "id, simulacro_id, iniciado_en, finalizado_en, puntaje, "
+          "total_preguntas, correctas",
+        )
+        .eq("perfil_id", usuario.id)
+        .eq("modo", "simulacro")
+        .not("finalizado_en", "is", null)
+        .order("finalizado_en", ascending: false)
+        .limit(limite);
+
+    return [
+      for (final f in filas)
+        if (f["simulacro_id"] != null)
+          Intento(
+            id: f["id"] as int,
+            simulacroId: f["simulacro_id"] as int,
+            iniciadoEn: instanteUtc(f["iniciado_en"] as String),
+            finalizadoEn: instanteUtc(f["finalizado_en"] as String),
+            puntaje: (f["puntaje"] as num?)?.toDouble(),
+            totalPreguntas: f["total_preguntas"] as int?,
+            correctas: f["correctas"] as int?,
+          ),
+    ];
+  }
+
   /// Las preguntas de un intento, en el orden del simulacro, con lo que ya se
   /// hubiera respondido.
   ///

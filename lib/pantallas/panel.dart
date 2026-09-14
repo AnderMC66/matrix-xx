@@ -330,7 +330,16 @@ class _PantallaPanelRevisionState extends State<PantallaPanelRevision> {
                 padding: const EdgeInsets.all(16),
                 itemCount: preguntas.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 14),
+                // La `Key` por id es lo que impide que el estado de una
+                // ficha se quede pegado a la pregunta siguiente. Sin ella,
+                // Flutter reutiliza el `State` por posición: al dictaminar la
+                // primera, la lista se recarga, y el «Marcada como publicada»
+                // —y el `_enviando`— aparecían sobre la pregunta NUEVA que
+                // caía en ese hueco, que nadie había tocado. Es el mismo
+                // motivo por el que `_Reporte`, en practica.dart, lleva
+                // `ValueKey(_pregunta.codigo)`.
                 itemBuilder: (context, i) => _FichaPregunta(
+                  key: ValueKey(preguntas[i].id),
                   pregunta: preguntas[i],
                   onDictaminada: _recargar,
                 ),
@@ -346,7 +355,11 @@ class _PantallaPanelRevisionState extends State<PantallaPanelRevision> {
 class _FichaPregunta extends StatefulWidget {
   final PreguntaRevision pregunta;
   final VoidCallback onDictaminada;
-  const _FichaPregunta({required this.pregunta, required this.onDictaminada});
+  const _FichaPregunta({
+    super.key,
+    required this.pregunta,
+    required this.onDictaminada,
+  });
 
   @override
   State<_FichaPregunta> createState() => _FichaPreguntaState();
@@ -705,6 +718,7 @@ class _PantallaPanelReportesState extends State<PantallaPanelReportes> {
                 itemCount: reportes.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 12),
                 itemBuilder: (context, i) => _FichaReporte(
+                  key: ValueKey(reportes[i].id),
                   reporte: reportes[i],
                   onDictaminado: _recargar,
                 ),
@@ -735,7 +749,11 @@ const _mesesCortosPanel = [
 class _FichaReporte extends StatefulWidget {
   final ReporteStaff reporte;
   final VoidCallback onDictaminado;
-  const _FichaReporte({required this.reporte, required this.onDictaminado});
+  const _FichaReporte({
+    super.key,
+    required this.reporte,
+    required this.onDictaminado,
+  });
 
   @override
   State<_FichaReporte> createState() => _FichaReporteState();
@@ -935,6 +953,7 @@ class _PantallaPanelUsuariosState extends State<PantallaPanelUsuarios> {
             }
             final p = personas[i - 1];
             return _FilaPersona(
+              key: ValueKey(p.id),
               persona: p,
               esUnoMismo: p.id == _sesion.usuario?.id,
             );
@@ -948,7 +967,11 @@ class _PantallaPanelUsuariosState extends State<PantallaPanelUsuarios> {
 class _FilaPersona extends StatefulWidget {
   final Persona persona;
   final bool esUnoMismo;
-  const _FilaPersona({required this.persona, required this.esUnoMismo});
+  const _FilaPersona({
+    super.key,
+    required this.persona,
+    required this.esUnoMismo,
+  });
 
   @override
   State<_FilaPersona> createState() => _FilaPersonaState();
@@ -956,9 +979,27 @@ class _FilaPersona extends StatefulWidget {
 
 class _FilaPersonaState extends State<_FilaPersona> {
   final _repo = RepositorioPanel();
+
+  /// Copia local del rol, para que el desplegable responda antes de que el
+  /// RPC conteste. Al ser `late` se inicializa UNA vez, así que hay que
+  /// resincronizarla en [didUpdateWidget]: con la `Key` por id esto no
+  /// debería dispararse nunca, pero una copia que se desincroniza en silencio
+  /// enseñaría el rol de una persona sobre el nombre de otra, y eso en la
+  /// pantalla que reparte permisos no se puede dejar al aire.
   late Rol _rol = widget.persona.rol;
+
   bool _guardando = false;
   String? _mensaje;
+
+  @override
+  void didUpdateWidget(_FilaPersona anterior) {
+    super.didUpdateWidget(anterior);
+    if (anterior.persona.id != widget.persona.id ||
+        anterior.persona.rol != widget.persona.rol) {
+      _rol = widget.persona.rol;
+      _mensaje = null;
+    }
+  }
 
   Future<void> _cambiar(Rol nuevo) async {
     final anterior = _rol;

@@ -57,10 +57,24 @@ class _PantallaPracticaAdaptativaState
         ? await _progreso.cursosDesatendidos()
         : const <CursoDesatendido>[];
 
+    // Cuánto cubre el banco, para no felicitar al alumno por dominar un curso
+    // del que apenas hay preguntas. Sale del APK, no del servidor.
+    final banco = await RepositorioPreguntas().cargar();
+    final conteo = banco.conteoPorSubtema();
+    var cubiertos = 0;
+    for (final tema in curso?.temas ?? const <Tema>[]) {
+      for (final sub in tema.subtemas) {
+        if ((conteo[sub.codigo] ?? 0) > 0) cubiertos++;
+      }
+    }
+
     return _Datos(
       curso: curso,
       preguntas: preguntas,
       desatendidos: desatendidos,
+      enElBanco: curso == null ? banco.total : banco.deCurso(curso.slug).length,
+      subtemasCubiertos: cubiertos,
+      subtemasTotales: curso?.totalSubtemas ?? 0,
     );
   }
 
@@ -122,7 +136,12 @@ class _PantallaPracticaAdaptativaState
             ],
             const SizedBox(height: 22),
             if (datos.preguntas.isEmpty)
-              _NadaPendiente(curso: curso)
+              _NadaPendiente(
+                curso: curso,
+                enElBanco: datos.enElBanco,
+                subtemasCubiertos: datos.subtemasCubiertos,
+                subtemasTotales: datos.subtemasTotales,
+              )
             else
               _EmpezarSesion(curso: curso, preguntas: datos.preguntas),
             if (curso != null) ...[
@@ -150,16 +169,53 @@ class _Datos {
   final List<Pregunta> preguntas;
   final List<CursoDesatendido> desatendidos;
 
+  /// Cuántas preguntas tiene el banco del APK para este curso (o en total).
+  final int enElBanco;
+
+  /// Cuántos subtemas del curso tienen al menos una pregunta, y cuántos hay.
+  final int subtemasCubiertos;
+  final int subtemasTotales;
+
   const _Datos({
     required this.curso,
     required this.preguntas,
     required this.desatendidos,
+    required this.enElBanco,
+    required this.subtemasCubiertos,
+    required this.subtemasTotales,
   });
 }
 
-class _AvisoMasFlojo extends StatelessWidget {
+/// «Tu curso más flojo ahora es X», con X pulsable.
+///
+/// Es `StatefulWidget` por el `TapGestureRecognizer`, no por tener estado.
+/// Un reconocedor dentro de un `TextSpan` hay que liberarlo —lo dice la
+/// documentación de `TextSpan.recognizer`— y creándolo dentro de `build` se
+/// fabricaba uno nuevo en cada reconstrucción sin soltar el anterior. Esta
+/// pantalla se reconstruye al girar el móvil, al abrirse el teclado y en cada
+/// `setState`, así que la fuga no era teórica.
+class _AvisoMasFlojo extends StatefulWidget {
   final CursoDesatendido curso;
   const _AvisoMasFlojo({required this.curso});
+
+  @override
+  State<_AvisoMasFlojo> createState() => _AvisoMasFlojoState();
+}
+
+class _AvisoMasFlojoState extends State<_AvisoMasFlojo> {
+  late final TapGestureRecognizer _pulsar = TapGestureRecognizer()
+    ..onTap = () => Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) =>
+            PantallaPracticaAdaptativa(cursoSlug: widget.curso.slug),
+      ),
+    );
+
+  @override
+  void dispose() {
+    _pulsar.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => Container(
@@ -179,21 +235,15 @@ class _AvisoMasFlojo extends StatelessWidget {
         children: [
           const TextSpan(text: "Tu curso más flojo ahora es "),
           TextSpan(
-            text: curso.nombre,
+            text: widget.curso.nombre,
             style: const TextStyle(
               fontWeight: FontWeight.w600,
               color: Paleta.acento,
             ),
-            recognizer: TapGestureRecognizer()
-              ..onTap = () => Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                  builder: (_) =>
-                      PantallaPracticaAdaptativa(cursoSlug: curso.slug),
-                ),
-              ),
+            recognizer: _pulsar,
           ),
-          if (curso.porcentaje != null)
-            TextSpan(text: " (${curso.porcentaje} % de acierto)."),
+          if (widget.curso.porcentaje != null)
+            TextSpan(text: " (${widget.curso.porcentaje} % de acierto)."),
         ],
       ),
     ),
@@ -222,9 +272,29 @@ class _EmpezarSesion extends StatelessWidget {
   );
 }
 
+/// Cuando la adaptativa no tiene nada que recomendar.
+///
+/// **Decía «Has acertado todo lo que hay en el banco» y eso se lee como “ya
+/// dominas este curso”.** No es lo mismo: el banco cubre hoy el 21,5 % del
+/// sílabo, y hay cursos como Álgebra con 6 preguntas repartidas en 3 de sus
+/// 60 subtemas. Felicitar a alguien por terminarlas, sin decirle cuántas
+/// eran, le hace creer que puede pasar a otra cosa — justo antes del examen
+/// que decide su cupo.
+///
+/// Las cifras salen del banco del APK, que ya está cargado, así que decir la
+/// verdad no cuesta ninguna petición.
 class _NadaPendiente extends StatelessWidget {
   final Curso? curso;
-  const _NadaPendiente({required this.curso});
+  final int enElBanco;
+  final int subtemasCubiertos;
+  final int subtemasTotales;
+
+  const _NadaPendiente({
+    required this.curso,
+    required this.enElBanco,
+    required this.subtemasCubiertos,
+    required this.subtemasTotales,
+  });
 
   @override
   Widget build(BuildContext context) => Container(
@@ -248,9 +318,12 @@ class _NadaPendiente extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          "Has acertado todo lo que hay en el banco"
-          "${curso != null ? " de este curso" : ""}. Vuelve por los "
-          "repasos programados para no olvidarlo.",
+          enElBanco == 0
+              ? "Todavía no hay preguntas de este curso en el banco."
+              : "Ya respondiste bien "
+                    "${enElBanco == 1 ? "la única pregunta" : "las $enElBanco preguntas"}"
+                    "${curso != null ? " que hay de este curso" : " del banco"}."
+                    " Vuelve por los repasos programados para no olvidarlo.",
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 13,
@@ -258,6 +331,24 @@ class _NadaPendiente extends StatelessWidget {
             height: 1.5,
           ),
         ),
+        // La cobertura del sílabo es lo que impide leer esto como «curso
+        // terminado». Solo se enseña si hay hueco que enseñar.
+        if (curso != null &&
+            subtemasTotales > 0 &&
+            subtemasCubiertos < subtemasTotales) ...[
+          const SizedBox(height: 10),
+          Text(
+            "Ojo: el banco cubre $subtemasCubiertos de los $subtemasTotales "
+            "subtemas del sílabo en ${curso!.nombre}. Lo que falta hay que "
+            "estudiarlo en la teoría.",
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 12.5,
+              color: Paleta.aviso,
+              height: 1.45,
+            ),
+          ),
+        ],
       ],
     ),
   );

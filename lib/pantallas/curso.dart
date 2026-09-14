@@ -357,7 +357,11 @@ class _FilaSubtema extends StatelessWidget {
   Widget build(BuildContext context) {
     final n = conteo[subtema.codigo] ?? 0;
 
-    return Padding(
+    // Con preguntas, la fila lleva a practicar ese subtema suelto; sin ellas
+    // no hay adónde ir y se queda como texto. Antes no llevaba a ningún lado
+    // ni con preguntas: la cifra de la derecha era información y no una
+    // puerta, que es justo lo que la web sí ofrece con `?subtema=`.
+    final fila = Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,7 +404,7 @@ class _FilaSubtema extends StatelessWidget {
           ],
           // Un subtema sin preguntas no muestra nada: un "0" repetido
           // cientos de veces sería ruido, y no hay sesión a la que llevar.
-          if (n > 0)
+          if (n > 0) ...[
             Text(
               "$n",
               style: const TextStyle(
@@ -409,7 +413,27 @@ class _FilaSubtema extends StatelessWidget {
                 color: Paleta.textoSuave,
               ),
             ),
+            const Icon(Icons.chevron_right, size: 15, color: Paleta.textoTenue),
+          ],
         ],
+      ),
+    );
+
+    if (n == 0) return fila;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(6),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => PantallaPracticaSubtema(
+              codigo: subtema.codigo,
+              nombre: subtema.nombre,
+            ),
+          ),
+        ),
+        child: fila,
       ),
     );
   }

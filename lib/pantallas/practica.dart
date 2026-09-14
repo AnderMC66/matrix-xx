@@ -145,6 +145,158 @@ class _AdaptativaConAppBar extends StatelessWidget {
   );
 }
 
+/// Practicar UN subtema, entrando por su código (`ALG-02-01`).
+///
+/// **Es el destino que le faltaba al diagnóstico.** Progreso calcula los cinco
+/// subtemas donde el alumno pierde más puntos y los pintaba sin enlace: la app
+/// decía exactamente dónde estás flojo y no ofrecía ninguna forma de ir. Lo
+/// mismo en Curso, donde cada subtema muestra cuántas preguntas tiene y no se
+/// podía pulsar. La web sí lo hace, con `?subtema=` resuelto en el cliente.
+///
+/// Carga el banco aquí y no en quien llama para que Progreso no tenga que
+/// conocer los assets: desde allí basta con un código y un nombre.
+///
+/// **Dice cuántas preguntas hay antes de empezar.** No es un adorno: 128 de
+/// los 206 subtemas con preguntas tienen exactamente una, así que prometer
+/// «practica esto» y abrir una tanda de una pregunta sería engañar. Con el
+/// número delante, el alumno decide.
+class PantallaPracticaSubtema extends StatefulWidget {
+  final String codigo;
+  final String nombre;
+
+  const PantallaPracticaSubtema({
+    super.key,
+    required this.codigo,
+    required this.nombre,
+  });
+
+  @override
+  State<PantallaPracticaSubtema> createState() =>
+      _PantallaPracticaSubtemaState();
+}
+
+class _PantallaPracticaSubtemaState extends State<PantallaPracticaSubtema> {
+  late final Future<List<Pregunta>> _preguntas = RepositorioPreguntas()
+      .cargar()
+      .then((banco) => banco.deSubtema(widget.codigo));
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: Text(widget.nombre, style: const TextStyle(fontSize: 16)),
+    ),
+    body: FutureBuilder<List<Pregunta>>(
+      future: _preguntas,
+      builder: (context, snap) {
+        if (snap.hasError) {
+          return Aviso.contenidoLocal(
+            titulo: "No se pudo cargar el banco",
+            error: snap.error!,
+          );
+        }
+        if (!snap.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final preguntas = snap.data!;
+        if (preguntas.isEmpty) {
+          // Pasa a menudo y no es un fallo: 750 de los 956 subtemas del
+          // sílabo no tienen ninguna pregunta todavía. Decirlo con el código
+          // delante evita que se lea como un error de la app.
+          return Aviso(
+            icono: Icons.inbox_outlined,
+            titulo: "Todavía no hay preguntas de este subtema",
+            detalle:
+                "${widget.codigo} está en el sílabo, pero el banco aún no lo "
+                "cubre. La cobertura crece subtema a subtema.",
+          );
+        }
+
+        return _PortadaSubtema(
+          codigo: widget.codigo,
+          nombre: widget.nombre,
+          preguntas: preguntas,
+        );
+      },
+    ),
+  );
+}
+
+class _PortadaSubtema extends StatelessWidget {
+  final String codigo;
+  final String nombre;
+  final List<Pregunta> preguntas;
+
+  const _PortadaSubtema({
+    required this.codigo,
+    required this.nombre,
+    required this.preguntas,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final n = preguntas.length;
+    final curso = preguntas.first.cursoNombre;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
+      children: [
+        Text(
+          nombre,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: Paleta.texto,
+            height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          "$codigo · $curso",
+          style: const TextStyle(fontSize: 12.5, color: Paleta.textoTenue),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          n == 1
+              ? "Hay 1 pregunta de este subtema."
+              : "Hay $n preguntas de este subtema.",
+          style: const TextStyle(
+            fontSize: 14.5,
+            color: Paleta.texto,
+            height: 1.5,
+          ),
+        ),
+        if (n < 3) ...[
+          const SizedBox(height: 8),
+          const Text(
+            "Son pocas: úsalas para comprobar si lo tienes, no para "
+            "estudiarlo entero.",
+            style: TextStyle(
+              fontSize: 12.5,
+              color: Paleta.textoSuave,
+              height: 1.45,
+            ),
+          ),
+        ],
+        const SizedBox(height: 22),
+        FilledButton(
+          onPressed: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => SesionPractica(
+                titulo: nombre,
+                preguntas: preguntas,
+                etiquetaSalida: "Volver",
+              ),
+            ),
+          ),
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
+          child: Text(n == 1 ? "Ver la pregunta" : "Empezar"),
+        ),
+      ],
+    );
+  }
+}
+
 class _Encabezado extends StatelessWidget {
   final Banco banco;
   const _Encabezado({required this.banco});

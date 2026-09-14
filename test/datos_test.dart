@@ -218,6 +218,45 @@ void main() {
       expect(totales, orderedEquals(List.of(totales)..sort((a, b) => b - a)));
     });
 
+    // `deSubtema` es lo que hace accionable al diagnóstico: Progreso dice
+    // «aquí pierdes puntos» y la fila lleva a practicar ESE subtema.
+    test("deSubtema devuelve solo las de ese código", () async {
+      final banco = await RepositorioPreguntas().cargar();
+      final conteo = banco.conteoPorSubtema();
+      // El subtema con más preguntas, para que el caso valga la pena.
+      final codigo = conteo.entries
+          .reduce((a, b) => a.value >= b.value ? a : b)
+          .key;
+
+      final preguntas = banco.deSubtema(codigo);
+
+      expect(preguntas, hasLength(conteo[codigo]));
+      expect(
+        preguntas.every((p) => p.subtemaCodigo == codigo),
+        isTrue,
+        reason: "se coló una pregunta de otro subtema",
+      );
+    });
+
+    test(
+      "deSubtema de un código inexistente devuelve vacío, no lanza",
+      () async {
+        // Pasa de verdad: el diagnóstico sale de las respuestas del alumno y el
+        // banco del APK, y pueden no coincidir si la pregunta se retiró.
+        final banco = await RepositorioPreguntas().cargar();
+        expect(banco.deSubtema("NO-99-99"), isEmpty);
+      },
+    );
+
+    test("deSubtema reparte el banco sin perder ni duplicar", () async {
+      final banco = await RepositorioPreguntas().cargar();
+      final conteo = banco.conteoPorSubtema();
+      final suma = conteo.keys
+          .map((c) => banco.deSubtema(c).length)
+          .fold(0, (a, b) => a + b);
+      expect(suma, banco.total);
+    });
+
     test("las figuras rechazan nombres que no son un archivo llano", () {
       expect(
         Figura.desde({

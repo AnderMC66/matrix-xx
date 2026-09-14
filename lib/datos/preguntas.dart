@@ -175,6 +175,19 @@ class Banco {
   List<Pregunta> deCurso(String slug) =>
       preguntas.where((p) => p.cursoSlug == slug).toList();
 
+  /// Las preguntas de un subtema concreto (`ALG-02-01`).
+  ///
+  /// Es lo que convierte el diagnóstico en algo accionable: Progreso dice
+  /// «aquí pierdes puntos» y hace falta poder ir a practicar eso mismo. La
+  /// web lo resuelve con `/practica/algebra?subtema=ALG-02-01`, filtrando en
+  /// el cliente; aquí el banco ya está en memoria, así que es un `where`.
+  ///
+  /// Puede devolver muy poco: de los 206 subtemas con preguntas, 128 tienen
+  /// exactamente una. Quien llama debe decir cuántas hay antes de abrir la
+  /// tanda, no prometer una sesión de estudio que dura treinta segundos.
+  List<Pregunta> deSubtema(String codigo) =>
+      preguntas.where((p) => p.subtemaCodigo == codigo).toList();
+
   /// Los códigos que devuelve Postgres, resueltos contra el banco local.
   ///
   /// Un código puede no encontrarse —pregunta retirada del banco después de

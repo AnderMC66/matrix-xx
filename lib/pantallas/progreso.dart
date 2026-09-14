@@ -362,8 +362,13 @@ class _TarjetaRacha extends StatelessWidget {
     return _Panel(
       titulo: "RACHA DE ESTUDIO",
       child: r == null || !r.arrancada
+          // `Racha.arrancada` es `diasActual > 0`: basta UN día respondiendo
+          // para que esta tarjeta pase a mostrar el número. El texto decía
+          // «dos días seguidos», que le pedía al alumno el doble de lo que
+          // hace falta para ver su primer resultado — justo lo contrario de
+          // lo que una racha intenta provocar.
           ? const Text(
-              "Responde preguntas dos días seguidos y aquí arranca tu racha.",
+              "Responde preguntas hoy y aquí arranca tu racha.",
               style: TextStyle(
                 fontSize: 12.5,
                 color: Paleta.textoSuave,

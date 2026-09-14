@@ -70,7 +70,30 @@ final _formula = RegExp(r"\$\$([\s\S]+?)\$\$|\$([^\n$]+?)\$");
 final _figura = RegExp(r"!\[([^\]]*)\]\(([^)]*)\)");
 final _encabezado = RegExp(r"^(#{1,6})\s+(.*)$");
 final _lineaNegrita = RegExp(r"^\*\*([^*]+)\*\*$");
-final _vineta = RegExp(r"^([-*•])\s+(.*)$");
+
+/// Viñeta escrita con guion o asterisco. **El espacio es obligatorio aquí**:
+/// sin él, «-5 °C» sería una lista y no una temperatura, y `*x*` una lista y
+/// no una cursiva.
+final _vineta = RegExp(r"^([-*])\s+(.*)$");
+
+/// Viñeta escrita con el carácter redondo. **Aquí el espacio es opcional, y
+/// esa es toda la diferencia**: el extractor del PDF deja 721 líneas pegadas
+/// («•Los organismos están compuestos por células»), el 37 % de todas las
+/// viñetas del corpus. Con `\s+` obligatorio ninguna se reconocía: salían como
+/// párrafo con el «•» soldado a la primera palabra, que es como se veían en la
+/// app. Los cursos más afectados eran geografía (234), física (142) y
+/// literatura (112).
+///
+/// Aflojarlo es seguro para `•` y solo para `•`: de las 1 387 líneas del
+/// corpus que empiezan por ese carácter, exactamente una no es una viñeta.
+/// Con `-` no lo sería —el guion es también un signo menos— y con los números
+/// mucho menos: hay 459 líneas que empiezan por dígito y punto sin espacio, y
+/// casi todas son años de cita («2008).», «723). Elsevier.») que se
+/// convertirían en listas falsas. Por eso [_numerada] se queda como está.
+///
+/// El `\S` final descarta las dos líneas que son solo el carácter suelto.
+final _vinetaRedonda = RegExp(r"^•\s*(\S.*)$");
+
 final _numerada = RegExp(r"^(\d+[.)])\s+(.*)$");
 
 /// Centinelas en el Área de Uso Privado de Unicode. Se comprobó que no
@@ -171,6 +194,13 @@ void _clasificarSimple(
 
   if (_vineta.firstMatch(linea) case final m?) {
     destino.add(ItemTeoria(texto(m[2]!), marca: "•"));
+    return;
+  }
+
+  // Va después de [_lineaNegrita] por el mismo motivo que la anterior: una
+  // línea entera en negrita se decide antes de mirar si empieza por viñeta.
+  if (_vinetaRedonda.firstMatch(linea) case final m?) {
+    destino.add(ItemTeoria(texto(m[1]!), marca: "•"));
     return;
   }
 

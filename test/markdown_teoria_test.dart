@@ -139,5 +139,69 @@ void main() {
       final b = analizarTeoria("Se obtiene 3. Luego se simplifica.");
       expect(b.single, isA<ParrafoTeoria>());
     });
+
+    // ── La viñeta pegada ────────────────────────────────────────────────
+    //
+    // El extractor del PDF deja 638 líneas con el «•» soldado a la primera
+    // palabra. Exigiendo un espacio detrás, ninguna se reconocía: salían como
+    // párrafo con el símbolo dentro del texto, y así se veían en la app
+    // («•Se dibuja el primer vector.»). Eran el 37 % de las viñetas del
+    // corpus, peor en geografía, física y literatura.
+
+    test("un «•» sin espacio detrás sigue siendo una viñeta", () {
+      final b = analizarTeoria("•Los organismos se reproducen");
+      expect(b.single, isA<ItemTeoria>());
+      final item = b.single as ItemTeoria;
+      expect(item.marca, "•");
+      expect(
+        item.texto,
+        "Los organismos se reproducen",
+        reason: "el símbolo no debe quedarse dentro del texto",
+      );
+    });
+
+    test("con espacio o sin él, el resultado es el mismo", () {
+      final pegada = analizarTeoria("•Uno").single as ItemTeoria;
+      final suelta = analizarTeoria("• Uno").single as ItemTeoria;
+      expect(pegada.texto, suelta.texto);
+      expect(pegada.marca, suelta.marca);
+    });
+
+    test("un «•» solo, sin texto, no es una viñeta vacía", () {
+      // Hay dos líneas así en el corpus. Una viñeta sin contenido sería un
+      // hueco con un punto al lado.
+      final b = analizarTeoria("•");
+      expect(b.whereType<ItemTeoria>(), isEmpty);
+    });
+
+    test("el guion pegado NO se toca: «-5 °C» es una temperatura", () {
+      // Aflojar `-` como se aflojó `•` convertiría números negativos en
+      // listas. Son 56 líneas del corpus y no compensan el riesgo.
+      final b = analizarTeoria("-5 °C es el punto de partida");
+      expect(b.single, isA<ParrafoTeoria>());
+    });
+
+    test("el asterisco pegado tampoco: es cursiva y es multiplicación", () {
+      final b = analizarTeoria("*a* por *b*");
+      expect(b.single, isA<ParrafoTeoria>());
+    });
+
+    test("un número pegado al punto NO es una lista: son años de cita", () {
+      // 459 líneas del corpus empiezan por dígito y punto sin espacio, y casi
+      // todas son referencias bibliográficas.
+      for (final linea in ["2008).", "723). Elsevier.", "1.65 millones"]) {
+        expect(
+          analizarTeoria(linea).single,
+          isA<ParrafoTeoria>(),
+          reason: linea,
+        );
+      }
+    });
+
+    test("una línea entera en negrita gana a la viñeta", () {
+      // El orden de las reglas importa: `**…**` se decide antes.
+      final b = analizarTeoria("**TRIÁNGULO**");
+      expect(b.single, isA<TituloTeoria>());
+    });
   });
 }

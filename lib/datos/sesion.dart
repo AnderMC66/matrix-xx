@@ -92,6 +92,44 @@ class Sesion {
 
   Future<void> salir() => _cliente.auth.signOut();
 
+  /// Borra la cuenta y todo lo que cuelga de ella, y cierra la sesión.
+  ///
+  /// **Es requisito de Google Play, no una mejora.** Toda app que deje crear
+  /// una cuenta tiene que dejar borrarla desde dentro; sin esto la ficha se
+  /// rechaza.
+  ///
+  /// Pasa por el RPC `eliminar_mi_cuenta` porque borrar de `auth.users` es
+  /// una operación de administrador: con la clave publishable no se puede, y
+  /// la secret key no puede viajar en un APK. La función resuelve a quién
+  /// borrar con `auth.uid()` y no acepta parámetros, así que no hay forma de
+  /// pedirle que borre a otro — ver
+  /// `20260914120000_borrar_cuenta.sql` en el repo web.
+  ///
+  /// El `signOut` local va después y fuera del `try`: si el borrado salió
+  /// bien, la sesión que quedaba en el dispositivo apunta a un usuario que ya
+  /// no existe, y dejarla ahí haría que la siguiente pantalla fallara con un
+  /// error incomprensible en vez de volver al estado de "sin cuenta".
+  Future<void> eliminarCuenta() async {
+    if (usuario == null) {
+      throw const ErrorSesion("No hay ninguna sesión que borrar.");
+    }
+    try {
+      await _cliente.rpc("eliminar_mi_cuenta");
+    } on PostgrestException catch (e) {
+      // PGRST202 = la función no está en la base. Pasa si el APK se publicó
+      // antes de aplicar la migración, y el mensaje crudo de PostgREST no le
+      // dice nada al alumno.
+      if (e.code == "PGRST202") {
+        throw const ErrorSesion(
+          "El servidor todavía no admite el borrado de cuenta. Escríbenos y "
+          "la borramos nosotros.",
+        );
+      }
+      throw ErrorSesion(traducir(e.message));
+    }
+    await _cliente.auth.signOut();
+  }
+
   /// Las áreas de postulación, para el desplegable del registro.
   Future<List<AreaPostulacion>> areas() async {
     final filas = await _cliente

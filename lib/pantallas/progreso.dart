@@ -8,6 +8,7 @@ import "../tema.dart";
 import "../widgets/aviso.dart";
 import "horario.dart";
 import "panel.dart";
+import "practica.dart";
 
 /// `/cuenta` en la web, «Progreso» en la barra inferior.
 ///
@@ -134,6 +135,9 @@ class _PantallaProgresoState extends State<PantallaProgreso> {
               _ProximoBloque(horario: horario),
               const SizedBox(height: 28),
               _SeccionDiagnostico(diagnostico: diagnostico),
+              const SizedBox(height: 32),
+              const Divider(),
+              _EliminarCuenta(alEliminar: _recargar),
             ],
           ),
         );
@@ -721,6 +725,18 @@ class _Metrica extends StatelessWidget {
   );
 }
 
+/// Uno de los cinco subtemas donde más puntos se pierden.
+///
+/// **Ahora lleva a alguna parte.** Era un `Container` sin `onTap`: la app
+/// calculaba con precisión dónde está flojo el alumno, lo pintaba, y ahí se
+/// acababa — en las 900 líneas de esta pantalla no había una sola ruta a
+/// practicar. Decirle a alguien dónde falla y no darle la puerta es la mitad
+/// de un diagnóstico.
+///
+/// `PantallaPracticaSubtema` decide qué enseñar según cuántas preguntas haya,
+/// incluido el caso de ninguna: el diagnóstico sale de las respuestas del
+/// alumno y el banco del APK, que pueden no coincidir si la pregunta se
+/// retiró.
 class _FilaPrioridad extends StatelessWidget {
   final int puesto;
   final SubtemaDiagnostico subtema;
@@ -728,55 +744,70 @@ class _FilaPrioridad extends StatelessWidget {
   const _FilaPrioridad({required this.puesto, required this.subtema});
 
   @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.only(bottom: 6),
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Paleta.superficieAlta,
+  Widget build(BuildContext context) => Material(
+    color: Paleta.superficieAlta,
+    borderRadius: BorderRadius.circular(10),
+    child: InkWell(
       borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: Paleta.borde),
-    ),
-    child: Row(
-      children: [
-        Text(
-          "$puesto",
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: Paleta.textoTenue,
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PantallaPracticaSubtema(
+            codigo: subtema.codigo,
+            nombre: subtema.nombre,
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                subtema.nombre,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 13.5,
-                  fontWeight: FontWeight.w600,
-                  color: Paleta.texto,
-                  height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                "${subtema.codigo} · ${subtema.cursoNombre}",
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 11.5,
-                  color: Paleta.textoTenue,
-                ),
-              ),
-            ],
-          ),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: Paleta.borde),
         ),
-        const SizedBox(width: 10),
-        _Marcador(subtema: subtema),
-      ],
+        child: Row(
+          children: [
+            Text(
+              "$puesto",
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: Paleta.textoTenue,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    subtema.nombre,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
+                      color: Paleta.texto,
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    "${subtema.codigo} · ${subtema.cursoNombre}",
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 11.5,
+                      color: Paleta.textoTenue,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            _Marcador(subtema: subtema),
+            const Icon(Icons.chevron_right, size: 16, color: Paleta.textoTenue),
+          ],
+        ),
+      ),
     ),
   );
 }
@@ -916,4 +947,138 @@ class _Nota extends StatelessWidget {
       style: const TextStyle(fontSize: 12.5, color: Paleta.aviso, height: 1.45),
     ),
   );
+}
+
+/// «Eliminar mi cuenta».
+///
+/// **Existe porque Google Play lo exige**: toda app que deje crear una cuenta
+/// tiene que dejar borrarla desde dentro. Sin esto la ficha se rechaza, así
+/// que no es una preferencia de diseño ni algo aplazable.
+///
+/// Va al final de Progreso, después de todo lo demás, y en gris: tiene que
+/// poder encontrarse sin buscar ayuda, y a la vez no competir con nada. Y
+/// pide confirmación escribiendo, no solo pulsando —es lo único irreversible
+/// de toda la app, y un diálogo de dos botones se acepta por inercia.
+class _EliminarCuenta extends StatefulWidget {
+  /// Se llama cuando la cuenta ya no existe, para que el armazón vuelva al
+  /// estado de "sin sesión".
+  final VoidCallback alEliminar;
+
+  const _EliminarCuenta({required this.alEliminar});
+
+  @override
+  State<_EliminarCuenta> createState() => _EliminarCuentaState();
+}
+
+class _EliminarCuentaState extends State<_EliminarCuenta> {
+  final _sesion = Sesion();
+  bool _borrando = false;
+
+  Future<void> _confirmar() async {
+    final seguro = await showDialog<bool>(
+      context: context,
+      builder: (_) => const _DialogoEliminar(),
+    );
+    if (!(seguro ?? false) || !mounted) return;
+
+    setState(() => _borrando = true);
+    try {
+      await _sesion.eliminarCuenta();
+      if (mounted) widget.alEliminar();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _borrando = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("$e")));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: Alignment.centerLeft,
+    child: TextButton.icon(
+      onPressed: _borrando ? null : _confirmar,
+      icon: const Icon(Icons.delete_outline, size: 16),
+      label: Text(_borrando ? "Borrando…" : "Eliminar mi cuenta"),
+      style: TextButton.styleFrom(
+        foregroundColor: Paleta.textoTenue,
+        textStyle: const TextStyle(fontSize: 12.5),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+      ),
+    ),
+  );
+}
+
+/// El diálogo pide escribir BORRAR.
+///
+/// No es fricción por gusto: es la única acción de la app que no se puede
+/// deshacer, y la lista de lo que se lleva por delante —racha, diagnóstico,
+/// repasos programados, simulacros rendidos— es justo lo que a un alumno le
+/// costó meses construir. Un «¿Seguro?» con dos botones se pulsa sin leer.
+class _DialogoEliminar extends StatefulWidget {
+  const _DialogoEliminar();
+
+  @override
+  State<_DialogoEliminar> createState() => _DialogoEliminarState();
+}
+
+class _DialogoEliminarState extends State<_DialogoEliminar> {
+  static const _palabra = "BORRAR";
+  final _campo = TextEditingController();
+
+  @override
+  void dispose() {
+    _campo.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final coincide = _campo.text.trim().toUpperCase() == _palabra;
+
+    return AlertDialog(
+      title: const Text("¿Eliminar tu cuenta?"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Se borra para siempre, y con ella:\n\n"
+            "· tu racha y tu diagnóstico por subtema\n"
+            "· los repasos que tenías programados\n"
+            "· tus simulacros rendidos y sus puntajes\n"
+            "· tu horario de estudio\n\n"
+            "No se puede deshacer. Escribe $_palabra para confirmar.",
+            style: TextStyle(fontSize: 13.5, height: 1.5),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _campo,
+            autofocus: true,
+            autocorrect: false,
+            textCapitalization: TextCapitalization.characters,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              isDense: true,
+              hintText: _palabra,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        // La salida segura va primero, igual que en el diálogo de finalizar
+        // simulacro: en algo irreversible, lo fácil de pulsar por accidente
+        // tiene que ser lo que no rompe nada.
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text("Cancelar"),
+        ),
+        FilledButton(
+          onPressed: coincide ? () => Navigator.of(context).pop(true) : null,
+          style: FilledButton.styleFrom(backgroundColor: Paleta.acento),
+          child: const Text("Eliminar"),
+        ),
+      ],
+    );
+  }
 }

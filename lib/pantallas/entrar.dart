@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 
 import "../datos/sesion.dart";
 import "../tema.dart";
+import "../widgets/nota.dart";
 
 /// `/entrar` — acceso y registro en una sola pantalla, como en la web.
 class PantallaEntrar extends StatefulWidget {
@@ -159,11 +160,11 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
 
         if (_error != null) ...[
           const SizedBox(height: 16),
-          _Nota(texto: _error!, esError: true),
+          Nota.error(texto: _error!, icono: Icons.error_outline),
         ],
         if (_aviso != null) ...[
           const SizedBox(height: 16),
-          _Nota(texto: _aviso!, esError: false),
+          Nota.exito(texto: _aviso!, icono: Icons.mark_email_unread_outlined),
         ],
 
         const SizedBox(height: 20),
@@ -237,42 +238,6 @@ class _Campo extends StatelessWidget {
       labelText: etiqueta,
       prefixIcon: Icon(icono, size: 20),
       border: const OutlineInputBorder(),
-    ),
-  );
-}
-
-class _Nota extends StatelessWidget {
-  final String texto;
-  final bool esError;
-  const _Nota({required this.texto, required this.esError});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: esError ? Paleta.acentoSuave : Paleta.exitoSuave,
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          esError ? Icons.error_outline : Icons.mark_email_unread_outlined,
-          size: 18,
-          color: esError ? Paleta.acento : Paleta.exito,
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            texto,
-            style: TextStyle(
-              fontSize: 13,
-              height: 1.45,
-              color: esError ? Paleta.acento : Paleta.exito,
-            ),
-          ),
-        ),
-      ],
     ),
   );
 }

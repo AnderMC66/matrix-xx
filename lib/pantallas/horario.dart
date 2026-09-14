@@ -20,6 +20,20 @@ const _duraciones = [30, 45, 60, 90, 120];
 /// mientras está abierta y nada más. Portar el aviso persistente exigiría
 /// notificaciones locales del sistema (un plugin nuevo, permisos nuevos), y
 /// el alcance de la web no lo pide: ni ahí sobrevive a cerrar la pestaña.
+/// La misma pantalla, con su propia barra, para cuando se empuja como ruta.
+///
+/// Estaba duplicado palabra por palabra en `inicio.dart` y en `progreso.dart`,
+/// que son los dos sitios desde donde se llega al horario.
+class HorarioConBarra extends StatelessWidget {
+  const HorarioConBarra({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text("Horario de estudio")),
+    body: const PantallaHorario(),
+  );
+}
+
 class PantallaHorario extends StatefulWidget {
   const PantallaHorario({super.key});
 
@@ -114,7 +128,7 @@ class _PantallaHorarioState extends State<PantallaHorario> {
         "${_hora.hour.toString().padLeft(2, "0")}:${_hora.minute.toString().padLeft(2, "0")}:00";
 
     try {
-      await _repo.crear(
+      final id = await _repo.crear(
         cursoCodigo: codigo,
         diaSemana: _dia,
         horaInicio: horaTexto,
@@ -127,8 +141,14 @@ class _PantallaHorarioState extends State<PantallaHorario> {
             [
               ..._horario,
               BloqueHorario(
-                // Provisional hasta la próxima recarga, igual que en la web.
-                id: -DateTime.now().millisecondsSinceEpoch,
+                // El id REAL que devolvió Postgres. Antes aquí iba uno
+                // negativo «provisional hasta la próxima recarga», y esa
+                // recarga no existe: el horario solo se carga en `initState`.
+                // Con el id inventado, borrar un bloque recién creado mandaba
+                // el `delete` contra una fila que no existe —PostgREST no se
+                // queja— así que desaparecía de la pantalla y seguía en la
+                // base hasta la siguiente visita.
+                id: id,
                 cursoCodigo: curso.codigo,
                 cursoNombre: curso.nombre,
                 cursoSlug: curso.slug,

@@ -7,6 +7,7 @@ import "../datos/sesion.dart";
 import "../matematicas/formula.dart";
 import "../tema.dart";
 import "../widgets/aviso.dart";
+import "../widgets/nota.dart";
 import "figura_red.dart";
 import "practica_adaptativa.dart";
 
@@ -99,9 +100,8 @@ class _TarjetaAdaptativa extends StatelessWidget {
     borderRadius: BorderRadius.circular(12),
     child: InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (_) => const _AdaptativaConAppBar())),
+      onTap: () => Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const AdaptativaConBarra())),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -132,16 +132,6 @@ class _TarjetaAdaptativa extends StatelessWidget {
         ),
       ),
     ),
-  );
-}
-
-class _AdaptativaConAppBar extends StatelessWidget {
-  const _AdaptativaConAppBar();
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text("Práctica adaptativa")),
-    body: const PantallaPracticaAdaptativa(),
   );
 }
 
@@ -508,11 +498,7 @@ class _SesionPracticaState extends State<SesionPractica> {
 
           if (_error != null) ...[
             const SizedBox(height: 12),
-            _Nota(
-              texto: _error!,
-              color: Paleta.acento,
-              fondo: Paleta.acentoSuave,
-            ),
+            Nota.error(texto: _error!),
             if (!_sesion.hayCuenta) ...[
               const SizedBox(height: 8),
               Text(
@@ -776,26 +762,6 @@ class FiguraPregunta extends StatelessWidget {
     alt: figura.alt,
     proporcion: figura.proporcion,
     grande: true,
-  );
-}
-
-class _Nota extends StatelessWidget {
-  final String texto;
-  final Color color;
-  final Color fondo;
-  const _Nota({required this.texto, required this.color, required this.fondo});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: fondo,
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Text(
-      texto,
-      style: TextStyle(fontSize: 13, height: 1.45, color: color),
-    ),
   );
 }
 

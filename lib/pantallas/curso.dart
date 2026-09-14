@@ -5,6 +5,7 @@ import "../datos/temario.dart";
 import "../datos/vinculos.dart";
 import "../tema.dart";
 import "../widgets/aviso.dart";
+import "../widgets/nota.dart";
 import "practica.dart";
 import "teoria.dart";
 
@@ -106,7 +107,7 @@ class _PantallaCursoState extends State<PantallaCurso> {
               ),
               if (curso.nota case final nota? when nota.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                _Nota(texto: nota),
+                Nota(texto: nota),
               ],
               const SizedBox(height: 16),
               Row(
@@ -437,22 +438,4 @@ class _FilaSubtema extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Nota extends StatelessWidget {
-  final String texto;
-  const _Nota({required this.texto});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Paleta.avisoSuave,
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Text(
-      texto,
-      style: const TextStyle(fontSize: 12.5, color: Paleta.aviso, height: 1.45),
-    ),
-  );
 }

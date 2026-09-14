@@ -98,9 +98,8 @@ class _PantallaInicioState extends State<PantallaInicio> {
       icono: Icons.adjust_outlined,
       titulo: "Adaptativa",
       descripcion: "Tus puntos flojos",
-      onTap: () => Navigator.of(
-        context,
-      ).push(MaterialPageRoute(builder: (_) => const _AdaptativaConAppBar())),
+      onTap: () => Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => const AdaptativaConBarra())),
     ),
     _AccesoDirecto(
       icono: Icons.menu_book_outlined,
@@ -294,26 +293,6 @@ class _PantallaInicioState extends State<PantallaInicio> {
       ),
     );
   }
-}
-
-class _AdaptativaConAppBar extends StatelessWidget {
-  const _AdaptativaConAppBar();
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text("Práctica adaptativa")),
-    body: const PantallaPracticaAdaptativa(),
-  );
-}
-
-class _HorarioConAppBar extends StatelessWidget {
-  const _HorarioConAppBar();
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text("Horario de estudio")),
-    body: const PantallaHorario(),
-  );
 }
 
 class _AvisoSinCuenta extends StatelessWidget {
@@ -614,9 +593,9 @@ class _TarjetaProximoBloque extends StatelessWidget {
             ),
           const SizedBox(height: 8),
           TextButton(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const _HorarioConAppBar()),
-            ),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const HorarioConBarra())),
             style: TextButton.styleFrom(
               padding: EdgeInsets.zero,
               visualDensity: VisualDensity.compact,

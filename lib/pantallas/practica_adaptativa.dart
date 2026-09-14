@@ -18,6 +18,22 @@ import "practica.dart";
 ///
 /// [cursoSlug] la acota a un curso; `null` mezcla todo el banco — mismo
 /// contrato que el parámetro `?curso=` de la web.
+/// La misma pantalla, con su propia barra, para cuando se empuja como ruta.
+///
+/// `PantallaPracticaAdaptativa` no trae `Scaffold` porque también se muestra
+/// dentro del armazón, que ya pone uno. Este envoltorio existía duplicado
+/// palabra por palabra en `inicio.dart` y en `practica.dart`; vive aquí, que
+/// es donde vive la pantalla que envuelve.
+class AdaptativaConBarra extends StatelessWidget {
+  const AdaptativaConBarra({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text("Práctica adaptativa")),
+    body: const PantallaPracticaAdaptativa(),
+  );
+}
+
 class PantallaPracticaAdaptativa extends StatefulWidget {
   final String? cursoSlug;
   const PantallaPracticaAdaptativa({super.key, this.cursoSlug});

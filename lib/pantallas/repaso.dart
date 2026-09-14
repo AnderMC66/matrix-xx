@@ -3,6 +3,7 @@ import "package:flutter/material.dart";
 import "../datos/preguntas.dart";
 import "../datos/repaso.dart";
 import "../datos/sesion.dart";
+import "../fechas.dart";
 import "../tema.dart";
 import "../widgets/aviso.dart";
 import "practica.dart";
@@ -260,7 +261,7 @@ class _Vacio extends StatelessWidget {
         : falladas
         ? "Todo lo que fallaste alguna vez lo has vuelto a acertar después."
         : resumen?.proximaFecha != null
-        ? "El próximo repaso te toca el ${_fecha(resumen!.proximaFecha!)}."
+        ? "El próximo repaso te toca el ${fechaLarga(resumen!.proximaFecha!)}."
         : "No hay repasos programados para hoy.";
 
     return Aviso(
@@ -270,26 +271,6 @@ class _Vacio extends StatelessWidget {
     );
   }
 }
-
-const _meses = [
-  "enero",
-  "febrero",
-  "marzo",
-  "abril",
-  "mayo",
-  "junio",
-  "julio",
-  "agosto",
-  "septiembre",
-  "octubre",
-  "noviembre",
-  "diciembre",
-];
-
-/// «14 de septiembre». Se formatea a mano en vez de con `intl`: es el único
-/// sitio de la app que muestra una fecha larga, y añadir la dependencia y la
-/// inicialización de locales por una línea no se paga.
-String _fecha(DateTime d) => "${d.day} de ${_meses[d.month - 1]}";
 
 class _SinCuenta extends StatelessWidget {
   final String titulo;

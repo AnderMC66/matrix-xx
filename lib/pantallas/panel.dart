@@ -3,6 +3,7 @@ import "package:flutter/material.dart";
 import "../datos/panel.dart";
 import "../datos/preguntas.dart" show EtiquetaLetra;
 import "../datos/sesion.dart";
+import "../fechas.dart";
 import "../matematicas/formula.dart";
 import "../tema.dart";
 import "../widgets/aviso.dart";
@@ -731,21 +732,6 @@ class _PantallaPanelReportesState extends State<PantallaPanelReportes> {
   );
 }
 
-const _mesesCortosPanel = [
-  "ene",
-  "feb",
-  "mar",
-  "abr",
-  "may",
-  "jun",
-  "jul",
-  "ago",
-  "sep",
-  "oct",
-  "nov",
-  "dic",
-];
-
 class _FichaReporte extends StatefulWidget {
   final ReporteStaff reporte;
   final VoidCallback onDictaminado;
@@ -798,7 +784,7 @@ class _FichaReporteState extends State<_FichaReporte> {
         children: [
           Text(
             "${r.preguntaCodigo ?? "pregunta #${r.preguntaId}"} · "
-            "${r.creadoEn.day} ${_mesesCortosPanel[r.creadoEn.month - 1]} · ${r.estado}",
+            "${fechaDiaMes(r.creadoEn)} · ${r.estado}",
             style: const TextStyle(fontSize: 11, color: Paleta.textoTenue),
           ),
           const SizedBox(height: 4),

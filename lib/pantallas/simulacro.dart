@@ -1,3 +1,5 @@
+import "../fechas.dart";
+
 import "dart:async";
 
 import "package:flutter/material.dart";
@@ -194,7 +196,7 @@ class _FilaHistorial extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         [
-                          if (fecha != null) _fechaCorta(fecha),
+                          if (fecha != null) fechaDiaMesAno(fecha),
                           if (intento.correctas != null &&
                               intento.totalPreguntas != null)
                             "${intento.correctas}/${intento.totalPreguntas} correctas",
@@ -220,25 +222,6 @@ class _FilaHistorial extends StatelessWidget {
     );
   }
 }
-
-const _mesesCortos = [
-  "ene",
-  "feb",
-  "mar",
-  "abr",
-  "may",
-  "jun",
-  "jul",
-  "ago",
-  "sep",
-  "oct",
-  "nov",
-  "dic",
-];
-
-/// `14 sep 2026`. En hora local: `finalizadoEn` viene en UTC.
-String _fechaCorta(DateTime d) =>
-    "${d.day} ${_mesesCortos[d.month - 1]} ${d.year}";
 
 /// Retomar un examen a medias.
 ///

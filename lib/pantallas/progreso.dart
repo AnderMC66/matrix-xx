@@ -4,8 +4,10 @@ import "../datos/horario.dart";
 import "../datos/progreso.dart";
 import "../datos/repaso.dart";
 import "../datos/sesion.dart";
+import "../fechas.dart";
 import "../tema.dart";
 import "../widgets/aviso.dart";
+import "../widgets/nota.dart";
 import "horario.dart";
 import "panel.dart";
 import "practica.dart";
@@ -102,7 +104,7 @@ class _PantallaProgresoState extends State<PantallaProgreso> {
               _Cabecera(perfil: perfil, correo: _repo.usuario?.email),
               if (perfil == null) ...[
                 const SizedBox(height: 16),
-                const _Nota(
+                const Nota(
                   texto:
                       "Tu usuario existe pero no tiene perfil: el disparador "
                       "`al_crear_usuario` no se ejecutó.",
@@ -182,30 +184,13 @@ class _Cabecera extends StatelessWidget {
             _Etiqueta(clave: "Área", valor: p.areaNombre ?? "Sin elegir"),
             _Etiqueta(clave: "Plan", valor: p.plan),
             _Etiqueta(clave: "Créditos", valor: "${p.creditos}"),
-            _Etiqueta(clave: "Desde", valor: _mesAno(p.creadoEn)),
+            _Etiqueta(clave: "Desde", valor: mesAno(p.creadoEn)),
           ],
         ),
       ],
     ],
   );
 }
-
-const _mesesCortos = [
-  "ene",
-  "feb",
-  "mar",
-  "abr",
-  "may",
-  "jun",
-  "jul",
-  "ago",
-  "sep",
-  "oct",
-  "nov",
-  "dic",
-];
-
-String _mesAno(DateTime d) => "${_mesesCortos[d.month - 1]} ${d.year}";
 
 class _Etiqueta extends StatelessWidget {
   final String clave;
@@ -522,7 +507,7 @@ class _ProximoBloque extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: TextButton(
               onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const _HorarioConAppBar()),
+                MaterialPageRoute(builder: (_) => const HorarioConBarra()),
               ),
               style: TextButton.styleFrom(padding: EdgeInsets.zero),
               child: Text(
@@ -534,16 +519,6 @@ class _ProximoBloque extends StatelessWidget {
       ),
     );
   }
-}
-
-class _HorarioConAppBar extends StatelessWidget {
-  const _HorarioConAppBar();
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text("Horario de estudio")),
-    body: const PantallaHorario(),
-  );
 }
 
 class _Panel extends StatelessWidget {
@@ -934,24 +909,6 @@ class _Marcador extends StatelessWidget {
       ],
     );
   }
-}
-
-class _Nota extends StatelessWidget {
-  final String texto;
-  const _Nota({required this.texto});
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Paleta.avisoSuave,
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Text(
-      texto,
-      style: const TextStyle(fontSize: 12.5, color: Paleta.aviso, height: 1.45),
-    ),
-  );
 }
 
 /// «Eliminar mi cuenta».

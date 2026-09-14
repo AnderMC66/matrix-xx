@@ -48,7 +48,9 @@ class _PantallaProgresoState extends State<PantallaProgreso> {
 
   void _recargar() {
     if (!_sesion.hayCuenta) return;
-    setState(() => _carga = _pedir());
+    setState(() {
+      _carga = _pedir();
+    });
   }
 
   Future<_Datos> _pedir() async => (

@@ -35,7 +35,9 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
 
   void _recargar() {
     if (!_sesion.hayCuenta) return;
-    setState(() => _carga = _pedir());
+    setState(() {
+      _carga = _pedir();
+    });
   }
 
   @override

@@ -178,7 +178,13 @@ class Armazon extends StatefulWidget {
   /// siempre en la misma.
   final int destinoInicial;
 
-  const Armazon({super.key, this.destinoInicial = 1});
+  /// Sustituye la sesión real. Existe para los tests, igual que
+  /// [Arranque.inicializador]: `Sesion()` toca `Supabase.instance.client` en
+  /// su constructor, así que sin esta costura el armazón no se puede montar
+  /// fuera de una app con Supabase inicializado. En producción nadie la pasa.
+  final Sesion? sesion;
+
+  const Armazon({super.key, this.destinoInicial = 1, this.sesion});
 
   @override
   State<Armazon> createState() => _ArmazonState();
@@ -188,7 +194,7 @@ class _ArmazonState extends State<Armazon> {
   late int _destino =
       widget.destinoInicial; // por defecto Teoría: se lee sin cuenta
 
-  final _sesion = Sesion();
+  late final _sesion = widget.sesion ?? Sesion();
   StreamSubscription<AuthState>? _escucha;
 
   static const _titulos = [
@@ -217,6 +223,25 @@ class _ArmazonState extends State<Armazon> {
     _escucha?.cancel();
     super.dispose();
   }
+
+  /// Las pestañas de catálogo que ya se visitaron. Se construyen la primera
+  /// vez y a partir de ahí se quedan montadas, con su scroll y su estado.
+  ///
+  /// Perezoso a propósito: montar las cinco pantallas en el primer frame
+  /// haría que abrir la app cargara el banco y la teoría de golpe, y la
+  /// mayoría de sesiones no pasan por todas.
+  final _visitadas = <int, Widget>{};
+
+  /// Una pestaña de catálogo: se monta una vez y se conserva.
+  Widget _catalogo(int indice, Widget pantalla) {
+    if (_destino == indice) _visitadas[indice] ??= pantalla;
+    return _visitadas[indice] ?? const SizedBox.shrink();
+  }
+
+  /// Una pestaña que lee del servidor: solo existe mientras se mira, para que
+  /// lo que enseña sea de ahora y no de la última vez que se pasó por aquí.
+  Widget _servidor(int indice, Widget pantalla) =>
+      _destino == indice ? pantalla : const SizedBox.shrink();
 
   @override
   Widget build(BuildContext context) {
@@ -273,17 +298,39 @@ class _ArmazonState extends State<Armazon> {
           child: Container(height: 1, color: Paleta.borde),
         ),
       ),
-      // La clave por sesión fuerza a reconstruir las pantallas que dependen
-      // del servidor cuando se entra o se sale: sin ella, Repaso y Simulacro
-      // conservarían el `Future` que resolvieron sin cuenta y seguirían
-      // pidiendo iniciar sesión después de haberla iniciado.
-      body: switch (_destino) {
-        0 => PantallaRepaso(key: ValueKey(hayCuenta)),
-        1 => const PantallaTeoria(),
-        2 => const PantallaPractica(),
-        3 => PantallaSimulacro(key: ValueKey(hayCuenta)),
-        _ => PantallaProgreso(key: ValueKey(hayCuenta)),
-      },
+      // Teoría y Práctica se quedan montadas; las otras tres se rehacen.
+      //
+      // Antes esto era un `switch` que devolvía una pantalla distinta por
+      // pestaña, así que cambiar de pestaña DESTRUÍA la anterior: volver a
+      // Teoría después de mirar Práctica te devolvía al principio de la lista
+      // de cursos, y lo mismo con el índice de secciones o con la búsqueda a
+      // medio escribir. En una app que se usa a ratos, entre clase y clase,
+      // perder el sitio en cada ida y vuelta se nota más que ninguna otra
+      // cosa de esta pantalla.
+      //
+      // **Pero no se conservan las cinco, y la diferencia importa.** Teoría y
+      // Práctica se alimentan del catálogo del APK, que es inmutable: guardar
+      // su estado no puede enseñar nada viejo. Repaso, Simulacro y Progreso
+      // leen del servidor lo que el propio alumno acaba de cambiar —responder
+      // una pregunta mueve la racha, el calendario de repasos y el
+      // diagnóstico—, así que mantenerlas vivas mostraría cifras de hace un
+      // rato como si fueran de ahora. Esas se siguen rehaciendo al entrar,
+      // que es lo que las mantiene honestas.
+      //
+      // La clave por sesión sigue estando por el motivo de siempre: sin ella,
+      // Repaso y Simulacro conservarían el `Future` que resolvieron sin
+      // cuenta y seguirían pidiendo iniciar sesión después de haberla
+      // iniciado.
+      body: IndexedStack(
+        index: _destino,
+        children: [
+          _servidor(0, PantallaRepaso(key: ValueKey(hayCuenta))),
+          _catalogo(1, const PantallaTeoria()),
+          _catalogo(2, const PantallaPractica()),
+          _servidor(3, PantallaSimulacro(key: ValueKey(hayCuenta))),
+          _servidor(4, PantallaProgreso(key: ValueKey(hayCuenta))),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _destino,
         onDestinationSelected: (i) => setState(() => _destino = i),

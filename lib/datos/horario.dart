@@ -130,7 +130,17 @@ class RepositorioHorario {
   /// [cursoCodigo] y no el slug porque es la columna `unique` real de la
   /// tabla `cursos`, y porque reutilizar el mismo campo que el resto de la
   /// app evita tener dos formas de nombrar el mismo curso en el código.
-  Future<void> crear({
+  /// Devuelve el id que le puso Postgres.
+  ///
+  /// **No es un extra: sin él la pantalla se inventaba uno.** Antes esto no
+  /// devolvía nada y `PantallaHorario` metía el bloque nuevo en su lista con
+  /// un id negativo «provisional hasta la próxima recarga» — recarga que no
+  /// llega nunca, porque solo se carga en `initState`. Borrar ese bloque sin
+  /// salir de la pantalla mandaba el `delete` contra un id inexistente:
+  /// PostgREST no falla cuando no encuentra filas, así que la app lo quitaba
+  /// de la lista y el bloque seguía en la base, esperando a reaparecer la
+  /// próxima vez que se abriera el horario.
+  Future<int> crear({
     required String cursoCodigo,
     required int diaSemana,
     required String horaInicio,
@@ -156,13 +166,18 @@ class RepositorioHorario {
     if (curso == null) throw const ErrorHorario("Curso no encontrado");
 
     try {
-      await _cliente.from("horarios_estudio").insert({
-        "perfil_id": usuario.id,
-        "curso_id": curso["id"],
-        "dia_semana": diaSemana,
-        "hora_inicio": horaInicio,
-        "duracion_minutos": duracionMinutos,
-      });
+      final fila = await _cliente
+          .from("horarios_estudio")
+          .insert({
+            "perfil_id": usuario.id,
+            "curso_id": curso["id"],
+            "dia_semana": diaSemana,
+            "hora_inicio": horaInicio,
+            "duracion_minutos": duracionMinutos,
+          })
+          .select("id")
+          .single();
+      return fila["id"] as int;
     } on PostgrestException catch (e) {
       if (e.code == "23505") {
         throw const ErrorHorario(

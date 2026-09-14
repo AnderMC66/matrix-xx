@@ -56,14 +56,37 @@ class _PantallaProgresoState extends State<PantallaProgreso> {
     });
   }
 
-  Future<_Datos> _pedir() async => (
-    await _repo.perfil(),
-    await _repo.racha(),
-    await _repasos.resumen(),
-    await _horario.obtener(),
-    await _repo.diagnostico(),
-    await _repo.reportesResueltos(),
-  );
+  /// Las seis peticiones salen A LA VEZ, no una detrás de otra.
+  ///
+  /// Escrito como seis `await` seguidos, cada una esperaba a que terminara la
+  /// anterior: seis viajes de ida y vuelta encadenados contra Supabase para
+  /// pintar una pantalla cuyos seis datos no dependen entre sí. En el wifi de
+  /// casa se nota poco; en los datos móviles con los que se estudia en el
+  /// micro, son seis latencias sumadas cada vez que se abre Progreso.
+  ///
+  /// `Future.wait` las lanza juntas y espera a la más lenta, así que el coste
+  /// pasa de la suma al máximo. Si alguna falla, `Future.wait` propaga el
+  /// error igual que antes y el `FutureBuilder` enseña su aviso con
+  /// «Reintentar».
+  Future<_Datos> _pedir() async {
+    final resultados = await Future.wait([
+      _repo.perfil(),
+      _repo.racha(),
+      _repasos.resumen(),
+      _horario.obtener(),
+      _repo.diagnostico(),
+      _repo.reportesResueltos(),
+    ]);
+
+    return (
+      resultados[0] as Perfil?,
+      resultados[1] as Racha?,
+      resultados[2] as ResumenRepasos?,
+      resultados[3] as List<BloqueHorario>,
+      resultados[4] as Diagnostico,
+      resultados[5] as List<ReporteResuelto>,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

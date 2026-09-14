@@ -48,11 +48,22 @@ class _PantallaInicioState extends State<PantallaInicio> {
     final repasos = RepositorioRepaso();
     final horarioRepo = RepositorioHorario();
 
-    final diagnostico = await progreso.diagnostico();
-    final racha = await progreso.racha();
-    final resumenRepasos = await repasos.resumen();
-    final horario = await horarioRepo.obtener();
-    final desatendidos = await progreso.cursosDesatendidos();
+    // Las cinco a la vez: ninguna depende de otra, y encadenarlas sumaba
+    // cinco latencias antes de que la portada enseñara nada. Ver la nota
+    // equivalente en `progreso.dart`.
+    final resultados = await Future.wait([
+      progreso.diagnostico(),
+      progreso.racha(),
+      repasos.resumen(),
+      horarioRepo.obtener(),
+      progreso.cursosDesatendidos(),
+    ]);
+
+    final diagnostico = resultados[0] as Diagnostico;
+    final racha = resultados[1] as Racha?;
+    final resumenRepasos = resultados[2] as ResumenRepasos?;
+    final horario = resultados[3] as List<BloqueHorario>;
+    final desatendidos = resultados[4] as List<CursoDesatendido>;
 
     // Aviso dirigido: el curso más flojo que además lleva días sin tocarse.
     // El umbral de 2 días evita regañar a quien practicó ayer; el de 70 %

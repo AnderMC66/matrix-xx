@@ -149,7 +149,8 @@ class _PantallaPanelState extends State<PantallaPanel> {
                     detalle: "Cuentas registradas y sus roles",
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => const PantallaPanelUsuarios(),
+                        builder: (_) =>
+                            PantallaPanelUsuarios(repositorio: _repo),
                       ),
                     ),
                   ),
@@ -165,12 +166,16 @@ class _PantallaPanelState extends State<PantallaPanel> {
   void _abrirRevision(BuildContext context, String filtro) =>
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => PantallaPanelRevision(filtroInicial: filtro),
+          builder: (_) =>
+              PantallaPanelRevision(filtroInicial: filtro, repositorio: _repo),
         ),
       );
 
-  void _abrirReportes(BuildContext context) => Navigator.of(context)
-      .push(MaterialPageRoute(builder: (_) => const PantallaPanelReportes()));
+  void _abrirReportes(BuildContext context) => Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => PantallaPanelReportes(repositorio: _repo),
+    ),
+  );
 }
 
 class _TarjetaPanel extends StatelessWidget {
@@ -260,14 +265,25 @@ const _filtrosRevision = [
 /// de pantallas está revocada por columna en Postgres.
 class PantallaPanelRevision extends StatefulWidget {
   final String filtroInicial;
-  const PantallaPanelRevision({super.key, this.filtroInicial = "sin_auditar"});
+
+  /// Repositorio inyectable, igual que en [PantallaPanel]. Baja también a las
+  /// fichas: si se quedara en la pantalla de arriba, la primera que
+  /// construyera el suyo volvería a romper el montaje. En producción nadie lo
+  /// pasa.
+  final RepositorioPanel? repositorio;
+
+  const PantallaPanelRevision({
+    super.key,
+    this.filtroInicial = "sin_auditar",
+    this.repositorio,
+  });
 
   @override
   State<PantallaPanelRevision> createState() => _PantallaPanelRevisionState();
 }
 
 class _PantallaPanelRevisionState extends State<PantallaPanelRevision> {
-  final _repo = RepositorioPanel();
+  late final _repo = widget.repositorio ?? RepositorioPanel();
   late String _filtro = widget.filtroInicial;
   Future<List<PreguntaRevision>>? _carga;
 
@@ -348,6 +364,7 @@ class _PantallaPanelRevisionState extends State<PantallaPanelRevision> {
                   key: ValueKey(preguntas[i].id),
                   pregunta: preguntas[i],
                   onDictaminada: _recargar,
+                  repositorio: _repo,
                 ),
               );
             },
@@ -361,10 +378,13 @@ class _PantallaPanelRevisionState extends State<PantallaPanelRevision> {
 class _FichaPregunta extends StatefulWidget {
   final PreguntaRevision pregunta;
   final VoidCallback onDictaminada;
+  final RepositorioPanel repositorio;
+
   const _FichaPregunta({
     super.key,
     required this.pregunta,
     required this.onDictaminada,
+    required this.repositorio,
   });
 
   @override
@@ -372,7 +392,7 @@ class _FichaPregunta extends StatefulWidget {
 }
 
 class _FichaPreguntaState extends State<_FichaPregunta> {
-  final _repo = RepositorioPanel();
+  late final _repo = widget.repositorio;
   bool _enviando = false;
   String? _mensaje;
 
@@ -533,26 +553,48 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
             ),
           if (p.explicacionMd case final exp? when exp.isNotEmpty) ...[
             const SizedBox(height: 6),
-            ExpansionTile(
-              tilePadding: EdgeInsets.zero,
-              title: const Text(
-                "Explicación",
-                style: TextStyle(fontSize: 13, color: Paleta.textoSuave),
-              ),
-              children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: TextoConFormulas(
-                    exp,
-                    conMarcado: true,
-                    estilo: const TextStyle(
-                      fontSize: 13,
-                      color: Paleta.texto,
-                      height: 1.5,
+            // **El `Material` no es decorativo: sin él la ficha no se pinta.**
+            //
+            // `ExpansionTile` lleva un `ListTile` dentro, y un `ListTile`
+            // dibuja su fondo y sus ondas de pulsación sobre el `Material` más
+            // cercano. Aquí el ancestro inmediato es el `Container` de la
+            // ficha, que tiene color de fondo propio: Flutter lo detecta y
+            // lanza una aserción en depuración —«ListTile background color or
+            // ink splashes may be invisible»— que deja la ficha entera en una
+            // caja roja.
+            //
+            // `MaterialType.transparency` es la salida que recomienda el
+            // propio framework: da al `ListTile` un `Material` donde pintar sin
+            // añadir ningún color, así que la ficha se ve igual que antes.
+            //
+            // Solo salta cuando la pregunta trae explicación, que es el caso
+            // normal de una pregunta escrita. No lo vio nadie porque esta
+            // pantalla no se podía montar en un test hasta la auditoría del
+            // 2026-09-16: es el mismo patrón que escondía el desbordamiento de
+            // Progreso.
+            Material(
+              type: MaterialType.transparency,
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                title: const Text(
+                  "Explicación",
+                  style: TextStyle(fontSize: 13, color: Paleta.textoSuave),
+                ),
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextoConFormulas(
+                      exp,
+                      conMarcado: true,
+                      estilo: const TextStyle(
+                        fontSize: 13,
+                        color: Paleta.texto,
+                        height: 1.5,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
           const SizedBox(height: 10),
@@ -646,14 +688,20 @@ const _filtrosReporte = [
 
 /// `/panel/reportes` — bandeja de errores reportados por los alumnos.
 class PantallaPanelReportes extends StatefulWidget {
-  const PantallaPanelReportes({super.key});
+  /// Repositorio inyectable, igual que en [PantallaPanel]. Baja también a las
+  /// fichas: si se quedara en la pantalla de arriba, la primera que
+  /// construyera el suyo volvería a romper el montaje. En producción nadie lo
+  /// pasa.
+  final RepositorioPanel? repositorio;
+
+  const PantallaPanelReportes({super.key, this.repositorio});
 
   @override
   State<PantallaPanelReportes> createState() => _PantallaPanelReportesState();
 }
 
 class _PantallaPanelReportesState extends State<PantallaPanelReportes> {
-  final _repo = RepositorioPanel();
+  late final _repo = widget.repositorio ?? RepositorioPanel();
   String _filtro = "abierto";
   Future<List<ReporteStaff>>? _carga;
 
@@ -727,6 +775,7 @@ class _PantallaPanelReportesState extends State<PantallaPanelReportes> {
                   key: ValueKey(reportes[i].id),
                   reporte: reportes[i],
                   onDictaminado: _recargar,
+                  repositorio: _repo,
                 ),
               );
             },
@@ -740,10 +789,13 @@ class _PantallaPanelReportesState extends State<PantallaPanelReportes> {
 class _FichaReporte extends StatefulWidget {
   final ReporteStaff reporte;
   final VoidCallback onDictaminado;
+  final RepositorioPanel repositorio;
+
   const _FichaReporte({
     super.key,
     required this.reporte,
     required this.onDictaminado,
+    required this.repositorio,
   });
 
   @override
@@ -751,7 +803,7 @@ class _FichaReporte extends StatefulWidget {
 }
 
 class _FichaReporteState extends State<_FichaReporte> {
-  final _repo = RepositorioPanel();
+  late final _repo = widget.repositorio;
   bool _enviando = false;
   String? _mensaje;
 
@@ -872,15 +924,22 @@ class _FichaReporteState extends State<_FichaReporte> {
 /// `/panel/usuarios` — solo para admin: `personas_del_panel` comprueba
 /// `es_admin()` por dentro y le devolvería una lista vacía a un docente.
 class PantallaPanelUsuarios extends StatefulWidget {
-  const PantallaPanelUsuarios({super.key});
+  /// Repositorio inyectable, igual que en [PantallaPanel]. Baja también a las
+  /// fichas: si se quedara en la pantalla de arriba, la primera que
+  /// construyera el suyo volvería a romper el montaje. En producción nadie lo
+  /// pasa.
+  final RepositorioPanel? repositorio;
+  final Sesion? sesion;
+
+  const PantallaPanelUsuarios({super.key, this.repositorio, this.sesion});
 
   @override
   State<PantallaPanelUsuarios> createState() => _PantallaPanelUsuariosState();
 }
 
 class _PantallaPanelUsuariosState extends State<PantallaPanelUsuarios> {
-  final _repo = RepositorioPanel();
-  final _sesion = Sesion();
+  late final _repo = widget.repositorio ?? RepositorioPanel();
+  late final _sesion = widget.sesion ?? Sesion();
 
   // No es `late final`: para que «Reintentar» sirva de algo, la petición tiene
   // que poder rehacerse.
@@ -947,6 +1006,7 @@ class _PantallaPanelUsuariosState extends State<PantallaPanelUsuarios> {
               key: ValueKey(p.id),
               persona: p,
               esUnoMismo: p.id == _sesion.usuario?.id,
+              repositorio: _repo,
             );
           },
         );
@@ -958,10 +1018,13 @@ class _PantallaPanelUsuariosState extends State<PantallaPanelUsuarios> {
 class _FilaPersona extends StatefulWidget {
   final Persona persona;
   final bool esUnoMismo;
+  final RepositorioPanel repositorio;
+
   const _FilaPersona({
     super.key,
     required this.persona,
     required this.esUnoMismo,
+    required this.repositorio,
   });
 
   @override
@@ -969,7 +1032,7 @@ class _FilaPersona extends StatefulWidget {
 }
 
 class _FilaPersonaState extends State<_FilaPersona> {
-  final _repo = RepositorioPanel();
+  late final _repo = widget.repositorio;
 
   /// Copia local del rol, para que el desplegable responda antes de que el
   /// RPC conteste. Al ser `late` se inicializa UNA vez, así que hay que

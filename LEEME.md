@@ -134,7 +134,7 @@ cuando entre contenido nuevo.
 | Repaso — programadas hoy / falladas, tanda | Funciona; exige sesión |
 | Simulacro — lista, sesión cronometrada, resultado con percentil | Funciona; exige sesión |
 | Progreso — perfil, racha, diagnóstico por subtema, reportes | Funciona; exige sesión |
-| Acceso — entrar, registro con área de postulación | Funciona |
+| Acceso — entrar, registro, recuperar contraseña | Funciona |
 | Buscar — subtema por nombre o código, con debounce | Funciona con contenido real |
 | Temario — cifras, áreas, cursos | Funciona con contenido real |
 | Curso — cabecera, botones a Teoría/Práctica, temas con progreso | Funciona con contenido real |
@@ -204,18 +204,24 @@ respuesta por plazo vencido llega como `TiempoAgotado`, que **no se reintenta**
 propósito: si un `timestamptz` llegara sin offset, `DateTime.parse` lo leería
 como hora local y en Perú (UTC-5) el plazo se correría cinco horas. Hay test.
 
-### Progreso: qué se dejó fuera
+### Progreso: qué lleva dentro
 
 «Progreso» apunta a `/cuenta` en la web (`nav-mobile.tsx`); aquí se conserva el
 nombre de la pestaña porque lo que domina la pantalla es el diagnóstico.
 
-Falta el bloque de **horario**, que en la web enlaza a `/horario` — pantalla
-aparte, con editor semanal (`gestor-horario.tsx`) y notificador. No entra en
-esta pestaña ni en la barra inferior, así que es su propio tramo.
+Esta sección decía, hasta la auditoría del 2026-09-16, que faltaban dos cosas
+que para entonces ya estaban hechas — y lo decía tres párrafos después de la
+tabla de «Estado del porte», que las daba por funcionando. Se corrige aquí
+porque en este repo el comentario ES la documentación, y una que se
+contradice consigo misma vale menos que ninguna:
 
-El **panel de docente/admin** tampoco está portado. La pantalla lo señala en
-vez de esconderlo: un docente que abre la app y no ve nada supone que perdió el
-rol, y ese aviso le dice que el panel sigue en la web.
+- El bloque de **horario** sí está: `_ProximoBloque` lee el mismo horario que
+  gestiona `PantallaHorario` y enlaza a ella (`HorarioConBarra`).
+- El **panel de docente/admin** sí está: `_PanelStaff` abre `PantallaPanel`
+  de verdad, no un aviso de que el panel sigue en la web.
+
+Las seis peticiones de la pantalla salen a la vez con `Future.wait`, no
+encadenadas — ver la nota en `_pedir()`.
 
 Los umbrales del diagnóstico (`umbralFlojo` 50, `umbralBien` 70) están copiados
 de `diagnostico.tsx` para que las dos plataformas cuenten «subtemas dominados»
@@ -472,10 +478,87 @@ no se corrieron, porque escribir en la base de un alumno de prueba real
 es una decisión que le toca al usuario, no algo que valga la pena hacer
 sin pedirlo explícitamente cada vez.
 
+La recuperación de contraseña y el deep link, que salían en esta lista, se
+hicieron en la auditoría del 2026-09-16 — ver «Volver del correo a la app», más
+abajo. Quedan dos cosas, y las dos son decisiones o acciones del usuario, no
+código:
+
+**Dar de alta `matrixu://acceso`** como «Redirect URL» en el panel de Supabase.
+Sin eso, el deep link está puesto en la app pero el servidor de auth lo ignora
+en silencio y manda los correos a la web. Ver la sección de abajo.
+
 **El CAPTCHA**, que sigue sin activarse en el panel de Supabase — y si se
 activa, el registro desde la app se rompe porque no hay widget de Turnstile
 nativo (ver «Turnstile no está», arriba). Es una decisión y una acción del
 usuario, no algo que el código pueda resolver solo.
+
+## Volver del correo a la app
+
+Los dos correos que manda la app —confirmar la cuenta y recuperar la
+contraseña— vuelven por `matrixu://acceso`, declarado como `intent-filter` en
+`AndroidManifest.xml`. `supabase_flutter` ya trae `app_links` y recoge el URI
+solo: no hace falta código de plataforma.
+
+**Hasta el 2026-09-16 ese `intent-filter` no existía**, aunque el comentario de
+`lib/datos/sesion.dart` daba por hecho que sí («el enlace de confirmación
+vuelve por un deep link, que se declara en el manifiesto»). El correo abría la
+web y había que volver a la app a mano. Para confirmar la cuenta era un paso de
+más; para recuperar la contraseña era imposible, porque el token es de un solo
+uso y solo vale dentro de la app que lo pidió — así que **no había ninguna
+forma de recuperar una contraseña olvidada**, y quien la olvidaba perdía su
+progreso, su racha y sus simulacros para siempre.
+
+El esquema es `matrixu` y no el `applicationId` al revés (`com.ander_u.matr_u`)
+porque un esquema de URI no admite guiones bajos (RFC 3986): Android aceptaría
+el manifiesto igual y el enlace no abriría nunca.
+
+**Falta un paso que no es código.** `matrixu://acceso` tiene que estar dado de
+alta como «Redirect URL» en el panel de Supabase (Authentication → URL
+Configuration). Si no está en esa lista, el servidor de auth **ignora en
+silencio** lo que se le mande y usa la «Site URL» —la web— sin devolver ningún
+error: el correo llega, el enlace abre el navegador y parece que la app no
+tiene deep link. Es el fallo más difícil de diagnosticar de todo este tramo.
+
+La escucha vive en `Arranque` (`lib/main.dart`) y no en `Armazon` ni en
+`PantallaEntrar` porque el enlace puede llegar con la app cerrada: Android la
+arranca de cero con el `VIEW` del `intent-filter`, y en ese arranque lo único
+montado es `Arranque`.
+
+El acuse de «te mandamos el correo» es **el mismo exista la cuenta o no**. El
+servidor de auth responde igual en los dos casos a propósito; si la pantalla
+distinguiera «no hay cuenta con ese correo», sería un comprobador de quién está
+registrado aquí que cualquiera podría usar sin tener cuenta.
+
+## Las pantallas también tienen tests
+
+Hasta la auditoría del 2026-09-16, `datos/` estaba al 95 % y `pantallas/` al
+1 %. No era por difícil: era por cómo estaban escritas. `RepositorioX()` y
+`Sesion()` resuelven `Supabase.instance.client` **en su constructor**, así que
+una pantalla que los construye como campo de instancia no se puede montar en un
+widget test — lanza «You must initialize the supabase instance» antes de pintar
+nada. Ese patrón era exactamente la frontera entre las dos cifras.
+
+Hoy las once pantallas que hablan con el servidor aceptan sus repositorios
+inyectados (`repositorio:`, `sesion:`, `progreso:`…). En producción nadie los
+pasa y se construyen igual que antes; en un test se les da un `SupabaseClient`
+con un `http.Client` espía, que es el mismo arnés que ya usaba `datos/`.
+
+Cobertura: **34,9 % → 67,2 %**, con 330 tests.
+
+**Y el primer test que montó Progreso encontró un fallo a la primera**: el
+`Row(crossAxisAlignment: stretch)` de las tarjetas de racha y repasos colgaba
+directo de un `ListView`, que ofrece altura ilimitada; `RenderFlex` lo traduce a
+`tightFor(height: Infinity)` y salta la aserción de constraints. Caja roja en
+depuración y las dos tarjetas sin dibujar. `inicio.dart` ya lo hacía bien con su
+`IntrinsicHeight`; Progreso se había quedado sin la envoltura, y
+`desborde_test.dart` —que es justo quien busca esto— no podía alcanzarla.
+
+Lo que sigue sin tests es `pantallas/figura_red.dart` (0 %): pide imágenes por
+red, y montarle un arnés a `cached_network_image` cuesta más de lo que rinde
+mientras `figuras_rotas_test.dart` cubra la decisión que de verdad importa
+—cuándo una figura se declara rota—. Del panel solo está probada la portada;
+sus tres subpantallas (revisión, reportes, personas) construyen su propio
+repositorio y siguen fuera.
 
 ## Lo que de verdad falta no es código: es banco de preguntas
 

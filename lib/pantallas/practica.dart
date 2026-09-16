@@ -335,11 +335,22 @@ class SesionPractica extends StatefulWidget {
   /// repaso, cuyo calendario acaba de moverse).
   final String etiquetaSalida;
 
+  /// Repositorio y sesión inyectables, igual que en `PantallaHorario`.
+  ///
+  /// `RepositorioPractica()` y `Sesion()` resuelven `Supabase.instance.client`
+  /// en su constructor, así que montar esta pantalla en un test lanzaba «You
+  /// must initialize the supabase instance» antes de pintar nada. En
+  /// producción nadie los pasa y se construyen aquí, igual que antes.
+  final RepositorioPractica? repositorio;
+  final Sesion? sesion;
+
   const SesionPractica({
     super.key,
     required this.titulo,
     required this.preguntas,
     this.etiquetaSalida = "Volver a los cursos",
+    this.repositorio,
+    this.sesion,
   });
 
   @override
@@ -347,8 +358,8 @@ class SesionPractica extends StatefulWidget {
 }
 
 class _SesionPracticaState extends State<SesionPractica> {
-  final _repo = RepositorioPractica();
-  final _sesion = Sesion();
+  late final _repo = widget.repositorio ?? RepositorioPractica();
+  late final _sesion = widget.sesion ?? Sesion();
 
   int _indice = 0;
   Letra? _marcada;
@@ -364,6 +375,29 @@ class _SesionPracticaState extends State<SesionPractica> {
   DateTime _mostradaEn = DateTime.now();
 
   Pregunta get _pregunta => widget.preguntas[_indice];
+
+  /// **Salir a mitad de tanda también la cierra.**
+  ///
+  /// `finalizar()` solo se llamaba al pasar de la última pregunta, y esa es la
+  /// forma menos frecuente de terminar una práctica: lo normal es responder
+  /// cinco de veinte y volver atrás. El intento quedaba abierto en `intentos`
+  /// para siempre —nadie lo vuelve a tocar, porque la siguiente tanda
+  /// construye un `RepositorioPractica` nuevo y abre otro—, así que sus
+  /// totales nunca se consolidaban y la tabla acumulaba una fila huérfana por
+  /// cada abandono. No era visible en ninguna pantalla, que es justo por lo
+  /// que había durado.
+  ///
+  /// Va sin `await` porque `dispose` es síncrono, y sin `unawaited` porque el
+  /// lint `unawaited_futures` solo mira dentro de funciones `async`. El fallo
+  /// se traga a propósito: la pantalla ya no existe, no hay a quién avisar, y
+  /// `finalizar_intento` es idempotente — la próxima vez que se cierre ese
+  /// intento (o nunca) da igual. Lo que no puede es tirar una excepción sin
+  /// capturar desde un `dispose`.
+  @override
+  void dispose() {
+    _repo.finalizar().catchError((_) {});
+    super.dispose();
+  }
 
   Future<void> _responder() async {
     final marcada = _marcada;

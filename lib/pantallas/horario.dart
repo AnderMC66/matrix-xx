@@ -25,25 +25,42 @@ const _duraciones = [30, 45, 60, 90, 120];
 /// Estaba duplicado palabra por palabra en `inicio.dart` y en `progreso.dart`,
 /// que son los dos sitios desde donde se llega al horario.
 class HorarioConBarra extends StatelessWidget {
-  const HorarioConBarra({super.key});
+  final RepositorioHorario? repositorio;
+  final Sesion? sesion;
+
+  const HorarioConBarra({super.key, this.repositorio, this.sesion});
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text("Horario de estudio")),
-    body: const PantallaHorario(),
+    body: PantallaHorario(repositorio: repositorio, sesion: sesion),
   );
 }
 
 class PantallaHorario extends StatefulWidget {
-  const PantallaHorario({super.key});
+  /// Repositorio y sesión inyectables.
+  ///
+  /// **No es ceremonia: es lo único que separa a esta pantalla de poder
+  /// probarse.** `RepositorioHorario()` y `Sesion()` resuelven
+  /// `Supabase.instance.client` en su constructor, así que construir el widget
+  /// fuera de una app con Supabase inicializado lanza «You must initialize the
+  /// supabase instance» antes de pintar nada. Medida la cobertura, ese patrón
+  /// es exactamente la frontera entre el 95 % de `datos/` y el 1 % de
+  /// `pantallas/`.
+  ///
+  /// En producción nadie los pasa y se construyen aquí, igual que antes.
+  final RepositorioHorario? repositorio;
+  final Sesion? sesion;
+
+  const PantallaHorario({super.key, this.repositorio, this.sesion});
 
   @override
   State<PantallaHorario> createState() => _PantallaHorarioState();
 }
 
 class _PantallaHorarioState extends State<PantallaHorario> {
-  final _repo = RepositorioHorario();
-  final _sesion = Sesion();
+  late final _repo = widget.repositorio ?? RepositorioHorario();
+  late final _sesion = widget.sesion ?? Sesion();
 
   List<Curso> _cursos = const [];
   List<BloqueHorario> _horario = const [];
@@ -200,10 +217,22 @@ class _PantallaHorarioState extends State<PantallaHorario> {
       );
     }
     if (_errorCarga != null) {
+      // Con «Reintentar», como el resto de la app: sin él, la única salida de
+      // un fallo de red era salir de la pantalla y volver a entrar.
       return Aviso(
         icono: Icons.cloud_off_outlined,
         titulo: "No se pudo cargar el horario",
         detalle: _errorCarga!,
+        accion: (
+          "Reintentar",
+          () {
+            setState(() {
+              _errorCarga = null;
+              _cargando = true;
+            });
+            _cargar();
+          },
+        ),
       );
     }
     if (_cargando) {

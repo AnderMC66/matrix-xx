@@ -543,22 +543,53 @@ inyectados (`repositorio:`, `sesion:`, `progreso:`…). En producción nadie los
 pasa y se construyen igual que antes; en un test se les da un `SupabaseClient`
 con un `http.Client` espía, que es el mismo arnés que ya usaba `datos/`.
 
-Cobertura: **34,9 % → 67,2 %**, con 330 tests.
+Cobertura: **34,9 % → 85,6 %**, con 372 tests. Ningún archivo de `lib/` queda
+a cero.
 
-**Y el primer test que montó Progreso encontró un fallo a la primera**: el
-`Row(crossAxisAlignment: stretch)` de las tarjetas de racha y repasos colgaba
-directo de un `ListView`, que ofrece altura ilimitada; `RenderFlex` lo traduce a
-`tightFor(height: Infinity)` y salta la aserción de constraints. Caja roja en
-depuración y las dos tarjetas sin dibujar. `inicio.dart` ya lo hacía bien con su
-`IntrinsicHeight`; Progreso se había quedado sin la envoltura, y
-`desborde_test.dart` —que es justo quien busca esto— no podía alcanzarla.
+### Los tres fallos que aparecieron al poder mirar
 
-Lo que sigue sin tests es `pantallas/figura_red.dart` (0 %): pide imágenes por
-red, y montarle un arnés a `cached_network_image` cuesta más de lo que rinde
-mientras `figuras_rotas_test.dart` cubra la decisión que de verdad importa
-—cuándo una figura se declara rota—. Del panel solo está probada la portada;
-sus tres subpantallas (revisión, reportes, personas) construyen su propio
-repositorio y siguen fuera.
+Ninguno de los tres se escondía. Los tres vivían en pantallas que no se podían
+montar en un test, y los tres los encontró el primer test que las montó.
+
+**Progreso no dibujaba las tarjetas de racha y repasos.** El
+`Row(crossAxisAlignment: stretch)` colgaba directo de un `ListView`, que ofrece
+altura ilimitada; `RenderFlex` lo traduce a `tightFor(height: Infinity)` y salta
+la aserción de constraints. Caja roja en depuración. `inicio.dart` ya lo hacía
+bien con un `IntrinsicHeight`; Progreso se había quedado sin la envoltura, y
+`desborde_test.dart` —que existe justo para cazar esto— no podía alcanzarla.
+
+**La ficha de revisión del panel tampoco.** El `ExpansionTile` de
+«Explicación» lleva un `ListTile` dentro, y un `ListTile` pinta su fondo y sus
+ondas sobre el `Material` más cercano; aquí el ancestro era el `Container` de la
+ficha, con color propio. Flutter lo detecta y lanza «ListTile background color
+or ink splashes may be invisible», que deja la ficha entera en rojo. Salta
+siempre que la pregunta trae explicación — el caso normal de una pregunta
+escrita, y la pantalla donde un docente decide qué se publica. Se arregla con
+`Material(type: MaterialType.transparency)`, que es lo que recomienda el propio
+framework y no cambia cómo se ve.
+
+**Práctica dejaba el intento abierto** al salir a mitad de tanda. Está contado
+en su propio commit.
+
+### Lo que queda fuera, dicho por su nombre
+
+`figura_red.dart` llega al 64,9 %, y el resto no es pereza: la rama de «la
+descarga falló» no se puede ejercitar en un widget test porque
+`cached_network_image` guarda en disco a través de `path_provider`, que necesita
+un canal de plataforma inexistente en un proceso de test — la carga ni progresa
+ni falla, se queda en el marcador. La rama del `.svg` queda fuera por lo mismo
+y algo peor: el parser lanza «Invalid SVG data» DESPUÉS de que el test termine,
+así que no hay forma de consumir esa excepción sin un arnés de red, y un test
+que falla por el reloj en vez de por el código es peor que no tenerlo.
+
+Lo que sí está cubierto de ese archivo es lo que decide ANTES de tocar la red,
+que es donde vive el criterio: qué figura no se pide siquiera —las 149 rotas—,
+qué `alt` se anuncia y cuál es ruido, qué forma reserva el hueco, y que «sin
+contenido en el original» y «no disponible todavía» sean avisos distintos.
+
+`teoria.dart` (44 %) y `practica.dart` (62,9 %) son las dos que más superficie
+de pintado tienen por línea de decisión; lo que deciden ya está probado en
+`markdown_teoria.dart` y en `datos/practica.dart`, los dos al 94 % o más.
 
 ## Lo que de verdad falta no es código: es banco de preguntas
 

@@ -20,7 +20,23 @@ import "practica.dart";
 /// perdiendo puntos— y solo después el desglose completo por curso. Lo que
 /// decide el puntaje es saber qué repasar mañana, no el promedio.
 class PantallaProgreso extends StatefulWidget {
-  const PantallaProgreso({super.key});
+  /// Repositorios y sesión inyectables, igual que en `PantallaHorario`.
+  ///
+  /// Todos resuelven `Supabase.instance.client` en su constructor, así que sin
+  /// esta costura la pantalla no se puede montar en un test. En producción
+  /// nadie los pasa.
+  final RepositorioProgreso? progreso;
+  final RepositorioRepaso? repasos;
+  final RepositorioHorario? horario;
+  final Sesion? sesion;
+
+  const PantallaProgreso({
+    super.key,
+    this.progreso,
+    this.repasos,
+    this.horario,
+    this.sesion,
+  });
 
   @override
   State<PantallaProgreso> createState() => _PantallaProgresoState();
@@ -36,10 +52,10 @@ typedef _Datos = (
 );
 
 class _PantallaProgresoState extends State<PantallaProgreso> {
-  final _repo = RepositorioProgreso();
-  final _repasos = RepositorioRepaso();
-  final _horario = RepositorioHorario();
-  final _sesion = Sesion();
+  late final _repo = widget.progreso ?? RepositorioProgreso();
+  late final _repasos = widget.repasos ?? RepositorioRepaso();
+  late final _horario = widget.horario ?? RepositorioHorario();
+  late final _sesion = widget.sesion ?? Sesion();
 
   Future<_Datos>? _carga;
 
@@ -142,19 +158,49 @@ class _PantallaProgresoState extends State<PantallaProgreso> {
                 _Reportes(
                   reportes: reportes,
                   alMarcar: () async {
-                    await _repo.marcarReportesVistos();
-                    _recargar();
+                    // Si el RPC falla, no hay nada que decirle al alumno: el
+                    // acuse de «ya lo vi» no es información suya, y el aviso
+                    // seguirá ahí la próxima vez, que es exactamente lo
+                    // correcto. Sin el `catch`, un fallo de red aquí sale como
+                    // excepción sin capturar desde un `onPressed`.
+                    try {
+                      await _repo.marcarReportesVistos();
+                    } catch (_) {
+                      return;
+                    }
+                    // Y sin `mounted`, volver atrás mientras el RPC estaba en
+                    // vuelo llamaba a `setState` sobre un estado ya desechado.
+                    if (mounted) _recargar();
                   },
                 ),
               ],
               const SizedBox(height: 22),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(child: _TarjetaRacha(racha: racha)),
-                  const SizedBox(width: 10),
-                  Expanded(child: _TarjetaRepasos(resumen: repasos)),
-                ],
+              // **El `IntrinsicHeight` no es decorativo: sin él esta pantalla
+              // no se pinta.**
+              //
+              // `CrossAxisAlignment.stretch` en un `Row` estira a los hijos
+              // hasta la altura que le dé su padre, y el padre aquí es un
+              // `ListView`, que ofrece altura ilimitada. `RenderFlex` traduce
+              // eso a `BoxConstraints.tightFor(height: Infinity)` y salta la
+              // aserción de constraints: caja roja en depuración, y las dos
+              // tarjetas —la racha y los repasos— sin dibujar.
+              //
+              // `inicio.dart` ya lo hacía bien con su rejilla de accesos; esta
+              // se quedó sin la envoltura. No lo vio nadie porque hasta la
+              // auditoría del 2026-09-16 esta pantalla no se podía montar en
+              // un test —construía sus repositorios dentro del estado— y
+              // `desborde_test.dart`, que es justo quien busca esto, no la
+              // alcanzaba. El primer test que la montó lo encontró en el
+              // primer intento.
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(child: _TarjetaRacha(racha: racha)),
+                    const SizedBox(width: 10),
+                    Expanded(child: _TarjetaRepasos(resumen: repasos)),
+                  ],
+                ),
               ),
               const SizedBox(height: 16),
               _ProximoBloque(horario: horario),
@@ -162,7 +208,7 @@ class _PantallaProgresoState extends State<PantallaProgreso> {
               _SeccionDiagnostico(diagnostico: diagnostico),
               const SizedBox(height: 32),
               const Divider(),
-              _EliminarCuenta(alEliminar: _recargar),
+              _EliminarCuenta(alEliminar: _recargar, sesion: _sesion),
             ],
           ),
         );
@@ -949,14 +995,20 @@ class _EliminarCuenta extends StatefulWidget {
   /// estado de "sin sesión".
   final VoidCallback alEliminar;
 
-  const _EliminarCuenta({required this.alEliminar});
+  /// La misma sesión que ya tiene la pantalla. Se pasa en vez de construir
+  /// otra: `Sesion()` resuelve `Supabase.instance.client`, y este widget se
+  /// pinta siempre — al final de Progreso—, así que montar la pantalla en un
+  /// test reventaba aquí aunque todo lo demás estuviera inyectado.
+  final Sesion sesion;
+
+  const _EliminarCuenta({required this.alEliminar, required this.sesion});
 
   @override
   State<_EliminarCuenta> createState() => _EliminarCuentaState();
 }
 
 class _EliminarCuentaState extends State<_EliminarCuenta> {
-  final _sesion = Sesion();
+  late final _sesion = widget.sesion;
   bool _borrando = false;
 
   Future<void> _confirmar() async {

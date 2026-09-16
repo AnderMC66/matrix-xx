@@ -6,8 +6,16 @@ import "package:supabase_flutter/supabase_flutter.dart";
 /// **Desaparece el origen calculado.** En la web, `origen()` construye el
 /// `emailRedirectTo` a partir de las cabeceras porque cada previsualización de
 /// Vercel tiene su dominio y `x-forwarded-host` es falsificable. Una app no
-/// tiene cabeceras ni dominio: el enlace de confirmación vuelve por un
-/// `deep link`, que se declara en el manifiesto y no lo elige quien registra.
+/// tiene cabeceras ni dominio, así que aquí no se manda `emailRedirectTo` y el
+/// enlace del correo va donde diga la «Site URL» del proyecto de Supabase: la
+/// web.
+///
+/// **El `deep link` ahora existe de verdad.** Este comentario daba por hecho
+/// que el enlace volvía a la app «por un deep link, que se declara en el
+/// manifiesto» y en el manifiesto no había ninguno, así que el correo abría la
+/// web y se volvía a mano. Desde el 2026-09-16 está declarado
+/// ([enlaceRetorno]) y los dos correos que manda esta clase —confirmar la
+/// cuenta y recuperar la contraseña— apuntan ahí.
 ///
 /// **Desaparece Turnstile.** El widget es un iframe de Cloudflare; no hay
 /// equivalente nativo con `supabase_flutter`. Importa menos de lo que parece:
@@ -20,6 +28,21 @@ import "package:supabase_flutter/supabase_flutter.dart";
 ///
 /// **Se conserva la traducción de errores**, portada literal: son los mismos
 /// mensajes de Supabase, en inglés, y el alumno merece leerlos en español.
+/// A dónde vuelven los correos de auth: el `intent-filter` de
+/// `AndroidManifest.xml`.
+///
+/// Tiene que coincidir **carácter por carácter** con una «Redirect URL» dada
+/// de alta en el panel de Supabase (Authentication → URL Configuration). Si no
+/// está en esa lista, el servidor de auth ignora lo que se le mande y usa la
+/// «Site URL» — la web— sin avisar de nada: el correo llega, el enlace abre el
+/// navegador y parece que la app no tiene deep link. Es el fallo más difícil
+/// de diagnosticar de todo este tramo, porque no hay ningún error en ninguna
+/// parte.
+///
+/// El esquema es `matrixu` y no `com.ander_u.matr_u` porque un esquema de URI
+/// no admite guiones bajos (RFC 3986); ver la nota del manifiesto.
+const enlaceRetorno = "matrixu://acceso";
+
 class Sesion {
   final SupabaseClient _cliente;
 
@@ -73,6 +96,7 @@ class Sesion {
         email: correo.trim(),
         password: contrasena,
         data: {"nombre": nombre.trim()},
+        emailRedirectTo: enlaceRetorno,
       );
 
       if (respuesta.session == null) return true;
@@ -91,6 +115,61 @@ class Sesion {
   }
 
   Future<void> salir() => _cliente.auth.signOut();
+
+  /// Manda el correo con el enlace para poner una contraseña nueva.
+  ///
+  /// **Antes no existía ninguna vía, y eso era lo más grave que le quedaba al
+  /// acceso.** Quien olvidaba su contraseña se quedaba fuera de su progreso,
+  /// su racha y sus simulacros sin ninguna salida dentro de la app: la
+  /// pantalla solo sabía entrar y registrarse, y registrarse con el mismo
+  /// correo devuelve «Ya existe una cuenta con ese correo».
+  ///
+  /// **Nunca dice si el correo está registrado o no**, y quien llama tampoco
+  /// debe deducirlo: Supabase responde igual en los dos casos a propósito,
+  /// porque un formulario que distingue «no existe» de «te mandamos el correo»
+  /// es un comprobador de quién tiene cuenta aquí. La pantalla enseña el mismo
+  /// acuse pase lo que pase.
+  ///
+  /// El enlace vuelve por [enlaceRetorno]; sin el `intent-filter` del
+  /// manifiesto abriría la web, donde el token de un solo uso no sirve para
+  /// esta app.
+  Future<void> recuperarContrasena(String correo) async {
+    if (correo.trim().isEmpty) {
+      throw const ErrorSesion("Escribe tu correo para mandarte el enlace.");
+    }
+    try {
+      await _cliente.auth.resetPasswordForEmail(
+        correo.trim(),
+        redirectTo: enlaceRetorno,
+      );
+    } on AuthException catch (e) {
+      throw ErrorSesion(traducir(e.message));
+    }
+  }
+
+  /// Pone la contraseña nueva. Exige la sesión temporal que abre el enlace de
+  /// recuperación —o una sesión normal, si alguien la cambia estando dentro.
+  ///
+  /// Los 8 caracteres se comprueban aquí por lo mismo que en [registrarse]:
+  /// para dar el aviso en español antes de gastar una petición. El servidor lo
+  /// vuelve a comprobar de todos modos, que es quien manda.
+  Future<void> cambiarContrasena(String nueva) async {
+    if (nueva.length < 8) {
+      throw const ErrorSesion(
+        "La contraseña debe tener al menos 8 caracteres.",
+      );
+    }
+    if (usuario == null) {
+      throw const ErrorSesion(
+        "El enlace ya no vale. Pide otro correo de recuperación.",
+      );
+    }
+    try {
+      await _cliente.auth.updateUser(UserAttributes(password: nueva));
+    } on AuthException catch (e) {
+      throw ErrorSesion(traducir(e.message));
+    }
+  }
 
   /// Borra la cuenta y todo lo que cuelga de ella, y cierra la sesión.
   ///
@@ -174,8 +253,33 @@ String traducir(String mensaje) {
   if (m.contains("password should be at least")) {
     return "La contraseña debe tener al menos 8 caracteres.";
   }
+  // El caso más común de todos en un móvil, y el único que llegaba en inglés:
+  // «Unable to validate email address: invalid format». Un dedo gordo escribe
+  // "gmail.con" o se come la arroba, y el alumno leía una frase en inglés que
+  // ni siquiera nombra el campo. No se valida antes con una expresión regular
+  // a propósito: quien decide qué correo es válido es el servidor de auth, y
+  // una regular propia acabaría rechazando direcciones legítimas.
+  if (m.contains("unable to validate email") ||
+      m.contains("invalid email") ||
+      m.contains("email address") && m.contains("invalid")) {
+    return "Ese correo no parece válido. Revísalo y vuelve a intentar.";
+  }
   if (m.contains("rate limit") || m.contains("too many")) {
     return "Demasiados intentos. Espera unos minutos.";
+  }
+  // Los tres de la recuperación de contraseña. Sin ellos, la pantalla nueva
+  // era la única de la app capaz de enseñar inglés.
+  if (m.contains("should be different from the old password") ||
+      m.contains("same_password")) {
+    return "Esa es la contraseña que ya tenías. Elige otra.";
+  }
+  if (m.contains("token has expired") ||
+      m.contains("invalid or has expired") ||
+      m.contains("otp_expired")) {
+    return "Ese enlace ya venció. Pide otro correo de recuperación.";
+  }
+  if (m.contains("auth session missing")) {
+    return "El enlace ya no vale. Pide otro correo de recuperación.";
   }
   if (m.contains("captcha")) {
     // En la web esto casi siempre era configuración. Aquí es más concreto: la

@@ -61,7 +61,13 @@ class Arranque extends StatefulWidget {
   /// inicializar. En producción nadie lo pasa.
   final Future<void> Function()? inicializador;
 
-  const Arranque({super.key, this.inicializador});
+  /// Sesión inyectable, por lo mismo que [inicializador]: `Sesion()` resuelve
+  /// `Supabase.instance.client` en su constructor. Aquí sirve además para que
+  /// un test pueda empujar un `AuthChangeEvent.passwordRecovery` por el
+  /// `Stream` y comprobar que se abre la pantalla de contraseña nueva.
+  final Sesion? sesion;
+
+  const Arranque({super.key, this.inicializador, this.sesion});
 
   @override
   State<Arranque> createState() => _ArranqueState();
@@ -73,10 +79,23 @@ class _ArranqueState extends State<Arranque> {
   // devuelve la instancia existente si ya está inicializada.
   Future<void>? _inicializacion;
 
+  StreamSubscription<AuthState>? _escuchaAuth;
+
+  /// Para no apilar dos pantallas de contraseña nueva. Supabase reemite el
+  /// último evento de auth a cada suscriptor nuevo, y un `Reintentar` vuelve a
+  /// pasar por aquí.
+  bool _cambiandoContrasena = false;
+
   @override
   void initState() {
     super.initState();
     _reintentar();
+  }
+
+  @override
+  void dispose() {
+    _escuchaAuth?.cancel();
+    super.dispose();
   }
 
   void _reintentar() {
@@ -86,7 +105,11 @@ class _ArranqueState extends State<Arranque> {
   }
 
   Future<void> _inicializar() async {
-    if (widget.inicializador case final propio?) return propio();
+    if (widget.inicializador case final propio?) {
+      await propio();
+      _escucharRecuperacion();
+      return;
+    }
 
     // Teoría (y sus figuras) funciona sin sesión ni Supabase configurado, así
     // que esta carga no puede depender de `Config.configurado`.
@@ -97,6 +120,53 @@ class _ArranqueState extends State<Arranque> {
       url: Config.urlSupabase,
       publishableKey: Config.clavePublishable,
     );
+    _escucharRecuperacion();
+  }
+
+  /// Abre la pantalla de contraseña nueva cuando el deep link del correo trae
+  /// el token de recuperación.
+  ///
+  /// **Se escucha aquí y no en `Armazon` ni en `PantallaEntrar` porque el
+  /// enlace puede llegar con la app cerrada.** Android la arranca de cero con
+  /// el `VIEW` del `intent-filter`, y en ese arranque lo único montado es esto:
+  /// `Armazon` todavía no existe, y la pantalla de acceso menos. `Arranque`, en
+  /// cambio, envuelve a toda la app durante toda su vida —construye
+  /// `PantallaInicio` como hijo, no como reemplazo—, así que es el único sitio
+  /// donde la escucha no depende de por dónde ande el alumno.
+  ///
+  /// `Navigator.of(context)` encuentra el navegador de `MaterialApp`: `home`
+  /// es una ruta dentro de él, no algo por encima.
+  void _escucharRecuperacion() {
+    if (_escuchaAuth != null) return;
+    final sesion = widget.sesion ?? Sesion();
+
+    _escuchaAuth = sesion.cambios.listen((estado) {
+      if (estado.event != AuthChangeEvent.passwordRecovery) return;
+      if (!mounted || _cambiandoContrasena) return;
+      _cambiandoContrasena = true;
+
+      Navigator.of(context)
+          .push(
+            MaterialPageRoute<void>(
+              builder: (ruta) => PantallaNuevaContrasena(
+                sesion: sesion,
+                alCambiar: () {
+                  // El mensajero se resuelve ANTES del `pop`: después, el
+                  // contexto de la ruta ya está desactivado y buscar por él
+                  // sería buscar desde un árbol que se acaba de desmontar.
+                  final mensajero = ScaffoldMessenger.of(ruta);
+                  Navigator.of(ruta).pop();
+                  mensajero.showSnackBar(
+                    const SnackBar(content: Text("Contraseña actualizada.")),
+                  );
+                },
+              ),
+            ),
+          )
+          // También al salir con el gesto de atrás sin cambiarla: si no, un
+          // segundo enlace no abriría nada.
+          .whenComplete(() => _cambiandoContrasena = false);
+    });
   }
 
   @override
@@ -126,7 +196,10 @@ class _ArranqueState extends State<Arranque> {
         if (snapshot.hasError) {
           return _NoArranco(error: snapshot.error!, alReintentar: _reintentar);
         }
-        return const PantallaInicio();
+        // La sesión inyectada baja también a la portada: es su hijo, no su
+        // reemplazo, y sin pasarla `PantallaInicio` construiría `Sesion()`
+        // por su cuenta y volvería a tocar `Supabase.instance.client`.
+        return PantallaInicio(sesion: widget.sesion);
       },
     );
   }

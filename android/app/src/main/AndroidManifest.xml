@@ -30,6 +30,38 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- El deep link de vuelta desde el correo.
+
+                 Hasta el 2026-09-16 este bloque no existía, aunque el
+                 comentario de lib/datos/sesion.dart daba por hecho que sí:
+                 «el enlace de confirmación vuelve por un deep link, que se
+                 declara en el manifiesto». No se declaraba en ninguna parte,
+                 así que el correo abría la web y el alumno tenía que volver a
+                 la app a mano y entrar con su contraseña.
+
+                 Eso era un paso de más al registrarse, y un callejón sin
+                 salida para recuperar la contraseña: el enlace de
+                 recuperación trae un token de un solo uso que solo sirve
+                 dentro de la app que lo pidió. Sin esta puerta, quien
+                 olvidaba su contraseña se quedaba fuera de su progreso para
+                 siempre.
+
+                 El esquema es `matrixu` y no el applicationId al revés
+                 (`com.ander_u.matr_u`) porque un esquema de URI no admite
+                 guiones bajos — RFC 3986: letra, y después letras, dígitos,
+                 `+`, `-` o `.`. Android aceptaría el manifiesto igual y el
+                 enlace no abriría nunca.
+
+                 `supabase_flutter` ya trae `app_links` y recoge el URI solo:
+                 no hace falta código de plataforma, solo esta declaración y
+                 que `matrixu://acceso` esté dado de alta como «Redirect URL»
+                 en el panel de Supabase. Ver LEEME.md, «El deep link». -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="matrixu" android:host="acceso"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

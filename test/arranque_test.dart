@@ -17,12 +17,64 @@
 // verdad es `initState()`, que el framework garantiza posterior al primer
 // build.
 import "dart:async";
+import "dart:convert";
 
 import "package:flutter/material.dart";
 import "package:flutter_test/flutter_test.dart";
+import "package:http/http.dart" as http;
 import "package:matr_u/config.dart";
+import "package:matr_u/datos/sesion.dart";
 import "package:matr_u/main.dart";
+import "package:matr_u/pantallas/entrar.dart";
 import "package:matr_u/tema.dart";
+import "package:supabase/supabase.dart";
+
+/// Un cliente que no sale a ninguna parte.
+///
+/// `autoRefreshToken: false` para que no arranque su `Timer.periodic` de
+/// refresco, y un `http.Client` de mentira porque el binding de
+/// `flutter_test` intercepta todo `HttpClient` real y lo fuerza a 400 — ver la
+/// nota de `pubspec.yaml` sobre `test/integracion/`. Estas pruebas no ejercitan
+/// ninguna petición: lo único que hace falta es que `Sesion` tenga un cliente
+/// que construir.
+SupabaseClient _clienteMudo() => SupabaseClient(
+  "https://x.supabase.co",
+  "clave",
+  httpClient: _SinRed(),
+  authOptions: const AuthClientOptions(autoRefreshToken: false),
+);
+
+class _SinRed extends http.BaseClient {
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest peticion) async =>
+      http.StreamedResponse(
+        Stream.value(utf8.encode("{}")),
+        200,
+        headers: const {"content-type": "application/json; charset=utf-8"},
+        request: peticion,
+      );
+}
+
+/// Una sesión cuyo flujo de eventos de auth lo maneja el test.
+///
+/// `cambios` es un getter, así que basta con taparlo: el cliente que recibe
+/// `super` no llega a usarse para nada en estas pruebas, pero tiene que ser
+/// uno inyectado — `Sesion()` sin argumentos resolvería
+/// `Supabase.instance.client` en el constructor y lanzaría antes de empezar.
+class _SesionDirigida extends Sesion {
+  _SesionDirigida(SupabaseClient cliente) : super(cliente: cliente);
+
+  final _eventos = StreamController<AuthState>.broadcast();
+
+  @override
+  Stream<AuthState> get cambios => _eventos.stream;
+
+  void recuperacion() => emitir(AuthChangeEvent.passwordRecovery);
+
+  void emitir(AuthChangeEvent evento) => _eventos.add(AuthState(evento, null));
+
+  Future<void> cerrar() => _eventos.close();
+}
 
 void main() {
   testWidgets("sin configuración, arranca sin excepciones y muestra la ayuda", (
@@ -161,5 +213,97 @@ void main() {
       reason: "se quedó pintando el error del intento anterior",
     );
     expect(tester.takeException(), isNull);
+  });
+
+  /// Varias vueltas cortas, NO `pumpAndSettle`.
+  ///
+  /// El `SupabaseClient` de estas pruebas trae su cliente de realtime, que
+  /// programa trabajo periódico: `pumpAndSettle` avanza el reloj falso hasta
+  /// que no quede nada pendiente y con eso nunca termina. Unas cuantas vueltas
+  /// bastan — misma razón y misma solución que en `horario_pantalla_test.dart`.
+  Future<void> asentar(WidgetTester tester) async {
+    for (var i = 0; i < 6; i++) {
+      await tester.pump(const Duration(milliseconds: 10));
+    }
+  }
+
+  // ==========================================================================
+  // El deep link del correo de recuperación
+  // ==========================================================================
+  //
+  // Se escucha en `Arranque` y no en `Armazon` ni en `PantallaEntrar` porque el
+  // enlace puede llegar con la app CERRADA: Android la arranca de cero con el
+  // `VIEW` del `intent-filter`, y en ese arranque lo único montado es
+  // `Arranque`. Si la escucha viviera más abajo, el alumno volvería del correo
+  // a la portada y el token de un solo uso se perdería sin recoger.
+  group("recuperación de contraseña por deep link", () {
+    late SupabaseClient cliente;
+    late _SesionDirigida sesion;
+
+    setUp(() {
+      cliente = _clienteMudo();
+      sesion = _SesionDirigida(cliente);
+    });
+
+    // **Fuera del cuerpo del test a propósito.** `SupabaseClient.dispose()`
+    // espera a que su cliente de realtime se cierre, y dentro de un
+    // `testWidgets` eso corre bajo el reloj falso: el futuro no resuelve nunca
+    // y el archivo entero se queda colgado hasta el tiempo límite de la suite.
+    // En `tearDown` corre fuera de esa zona y termina.
+    tearDown(() async {
+      await sesion.cerrar();
+      await cliente.dispose();
+    });
+
+    Future<void> montar(WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: construirTema(),
+          home: Arranque(inicializador: () async {}, sesion: sesion),
+        ),
+      );
+      await asentar(tester);
+    }
+
+    testWidgets("un evento de recuperación abre la pantalla de contraseña", (
+      tester,
+    ) async {
+      await montar(tester);
+      expect(find.byType(PantallaNuevaContrasena), findsNothing);
+
+      sesion.recuperacion();
+      await asentar(tester);
+
+      expect(
+        find.byType(PantallaNuevaContrasena),
+        findsOneWidget,
+        reason:
+            "sin esto, quien abre el enlace del correo vuelve a la portada y "
+            "el token de un solo uso se pierde sin haber cambiado nada",
+      );
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets("dos eventos seguidos no apilan dos pantallas", (tester) async {
+      // Supabase reemite el último evento de auth a cada suscriptor nuevo, y
+      // un «Reintentar» vuelve a pasar por la misma escucha.
+      await montar(tester);
+
+      sesion.recuperacion();
+      await asentar(tester);
+      sesion.recuperacion();
+      await asentar(tester);
+
+      expect(find.byType(PantallaNuevaContrasena), findsOneWidget);
+    });
+
+    testWidgets("otros eventos de auth no abren nada", (tester) async {
+      await montar(tester);
+
+      sesion.emitir(AuthChangeEvent.signedOut);
+      await asentar(tester);
+
+      expect(find.byType(PantallaNuevaContrasena), findsNothing);
+    });
   });
 }

@@ -1092,6 +1092,14 @@ class _PantallaResultadoState extends State<PantallaResultado> {
   late final Future<(Intento, List<ResultadoPregunta>, PercentilSimulacro?)>
   _carga = _cargar();
 
+  /// El intento primero —las otras dos lo necesitan—, y después las dos
+  /// juntas.
+  ///
+  /// El desglose y el percentil no dependen entre sí, así que encadenarlos
+  /// sumaba una latencia de más justo cuando el alumno acaba de terminar un
+  /// examen de tres horas y quiere ver su nota. Misma corrección que ya
+  /// recibieron Progreso, Inicio, Simulacro, Repaso y Adaptativa; esta era la
+  /// última que quedaba en fila.
   Future<(Intento, List<ResultadoPregunta>, PercentilSimulacro?)>
   _cargar() async {
     final intento = await _repo.intento(widget.intentoId);
@@ -1100,10 +1108,14 @@ class _PantallaResultadoState extends State<PantallaResultado> {
     if (intento == null) {
       throw const ErrorSimulacro("Este intento no existe o no es tuyo.");
     }
+    final resultados = await Future.wait([
+      _repo.resultado(intento),
+      _repo.percentil(intento.id),
+    ]);
     return (
       intento,
-      await _repo.resultado(intento),
-      await _repo.percentil(intento.id),
+      resultados[0] as List<ResultadoPregunta>,
+      resultados[1] as PercentilSimulacro?,
     );
   }
 

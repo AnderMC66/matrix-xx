@@ -16,14 +16,19 @@ import "figura_red.dart";
 /// materias la clave la determinó quien programó la aplicación resolviendo,
 /// no un profesor, y que conviene revisarlas antes de cobrar.
 class PantallaPanel extends StatefulWidget {
-  const PantallaPanel({super.key});
+  /// Repositorio inyectable, igual que en `PantallaHorario`.
+  /// `RepositorioPanel()` resuelve `Supabase.instance.client` en su
+  /// constructor. En producción nadie lo pasa.
+  final RepositorioPanel? repositorio;
+
+  const PantallaPanel({super.key, this.repositorio});
 
   @override
   State<PantallaPanel> createState() => _PantallaPanelState();
 }
 
 class _PantallaPanelState extends State<PantallaPanel> {
-  final _repo = RepositorioPanel();
+  late final _repo = widget.repositorio ?? RepositorioPanel();
   Future<(Rol?, ResumenPanel?)>? _carga;
 
   @override

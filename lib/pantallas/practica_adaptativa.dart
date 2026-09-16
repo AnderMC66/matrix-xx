@@ -17,12 +17,25 @@ import "practica.dart";
 /// palabra por palabra en `inicio.dart` y en `practica.dart`; vive aquí, que
 /// es donde vive la pantalla que envuelve.
 class AdaptativaConBarra extends StatelessWidget {
-  const AdaptativaConBarra({super.key});
+  final RepositorioRepaso? repaso;
+  final RepositorioProgreso? progreso;
+  final Sesion? sesion;
+
+  const AdaptativaConBarra({
+    super.key,
+    this.repaso,
+    this.progreso,
+    this.sesion,
+  });
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text("Práctica adaptativa")),
-    body: const PantallaPracticaAdaptativa(),
+    body: PantallaPracticaAdaptativa(
+      repaso: repaso,
+      progreso: progreso,
+      sesion: sesion,
+    ),
   );
 }
 
@@ -36,7 +49,21 @@ class AdaptativaConBarra extends StatelessWidget {
 /// todo el banco — mismo contrato que el parámetro `?curso=` de la web.
 class PantallaPracticaAdaptativa extends StatefulWidget {
   final String? cursoSlug;
-  const PantallaPracticaAdaptativa({super.key, this.cursoSlug});
+
+  /// Repositorios y sesión inyectables, igual que en `PantallaHorario`. Los
+  /// tres resuelven `Supabase.instance.client` en su constructor. En
+  /// producción nadie los pasa.
+  final RepositorioRepaso? repaso;
+  final RepositorioProgreso? progreso;
+  final Sesion? sesion;
+
+  const PantallaPracticaAdaptativa({
+    super.key,
+    this.cursoSlug,
+    this.repaso,
+    this.progreso,
+    this.sesion,
+  });
 
   @override
   State<PantallaPracticaAdaptativa> createState() =>
@@ -45,9 +72,9 @@ class PantallaPracticaAdaptativa extends StatefulWidget {
 
 class _PantallaPracticaAdaptativaState
     extends State<PantallaPracticaAdaptativa> {
-  final _repaso = RepositorioRepaso();
-  final _progreso = RepositorioProgreso();
-  final _sesion = Sesion();
+  late final _repaso = widget.repaso ?? RepositorioRepaso();
+  late final _progreso = widget.progreso ?? RepositorioProgreso();
+  late final _sesion = widget.sesion ?? Sesion();
 
   Future<_Datos>? _carga;
 
@@ -63,19 +90,25 @@ class _PantallaPracticaAdaptativaState
         ? null
         : temario.curso(widget.cursoSlug!);
 
+    // Las dos peticiones de red a la vez, y con ellas la carga del banco:
+    // ninguna depende de otra, y en fila eran dos latencias sumadas más la
+    // lectura de los assets. Misma razón que en Progreso, Inicio, Simulacro y
+    // Repaso.
+    //
     // El RPC trabaja con el código del curso (`FIS`), la pantalla con su
     // slug (`fisica`), que es lo que usa el resto de la app.
-    final preguntas = await _repaso.recomendadas(
-      cursoCodigo: curso?.codigo,
-      limite: 20,
-    );
-    final desatendidos = widget.cursoSlug == null
-        ? await _progreso.cursosDesatendidos()
-        : const <CursoDesatendido>[];
-
-    // Cuánto cubre el banco, para no felicitar al alumno por dominar un curso
-    // del que apenas hay preguntas. Sale del APK, no del servidor.
-    final banco = await RepositorioPreguntas().cargar();
+    final resultados = await Future.wait([
+      _repaso.recomendadas(cursoCodigo: curso?.codigo, limite: 20),
+      widget.cursoSlug == null
+          ? _progreso.cursosDesatendidos()
+          : Future.value(const <CursoDesatendido>[]),
+      // Cuánto cubre el banco, para no felicitar al alumno por dominar un
+      // curso del que apenas hay preguntas. Sale del APK, no del servidor.
+      RepositorioPreguntas().cargar(),
+    ]);
+    final preguntas = resultados[0] as List<Pregunta>;
+    final desatendidos = resultados[1] as List<CursoDesatendido>;
+    final banco = resultados[2] as Banco;
     final conteo = banco.conteoPorSubtema();
     var cubiertos = 0;
     for (final tema in curso?.temas ?? const <Tema>[]) {

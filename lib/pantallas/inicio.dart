@@ -21,14 +21,30 @@ import "practica_adaptativa.dart";
 /// muestra primero, y el ícono de casa en el `AppBar` del resto de la app es
 /// el enlace explícito de vuelta.
 class PantallaInicio extends StatefulWidget {
-  const PantallaInicio({super.key});
+  /// Sesión y repositorios inyectables, igual que en `PantallaHorario`.
+  ///
+  /// Todos resuelven `Supabase.instance.client` en su constructor, así que sin
+  /// esta costura la portada no se puede montar fuera de una app con Supabase
+  /// inicializado. En producción nadie los pasa.
+  final Sesion? sesion;
+  final RepositorioProgreso? progreso;
+  final RepositorioRepaso? repasos;
+  final RepositorioHorario? horario;
+
+  const PantallaInicio({
+    super.key,
+    this.sesion,
+    this.progreso,
+    this.repasos,
+    this.horario,
+  });
 
   @override
   State<PantallaInicio> createState() => _PantallaInicioState();
 }
 
 class _PantallaInicioState extends State<PantallaInicio> {
-  final _sesion = Sesion();
+  late final _sesion = widget.sesion ?? Sesion();
   Future<_PanelPersonal>? _carga;
 
   @override
@@ -44,9 +60,9 @@ class _PantallaInicioState extends State<PantallaInicio> {
   }
 
   Future<_PanelPersonal> _pedir() async {
-    final progreso = RepositorioProgreso();
-    final repasos = RepositorioRepaso();
-    final horarioRepo = RepositorioHorario();
+    final progreso = widget.progreso ?? RepositorioProgreso();
+    final repasos = widget.repasos ?? RepositorioRepaso();
+    final horarioRepo = widget.horario ?? RepositorioHorario();
 
     // Las cinco a la vez: ninguna depende de otra, y encadenarlas sumaba
     // cinco latencias antes de que la portada enseñara nada. Ver la nota

@@ -20,7 +20,13 @@ import "practica.dart";
 /// exactamente como la web reutiliza `<SesionPractica>` aquí: un repaso *es*
 /// una práctica, solo cambia de dónde sale la lista de preguntas.
 class PantallaRepaso extends StatefulWidget {
-  const PantallaRepaso({super.key});
+  /// Repositorio y sesión inyectables, igual que en `PantallaHorario`. Los dos
+  /// resuelven `Supabase.instance.client` en su constructor. En producción
+  /// nadie los pasa.
+  final RepositorioRepaso? repositorio;
+  final Sesion? sesion;
+
+  const PantallaRepaso({super.key, this.repositorio, this.sesion});
 
   @override
   State<PantallaRepaso> createState() => _PantallaRepasoState();
@@ -29,8 +35,8 @@ class PantallaRepaso extends StatefulWidget {
 enum _Modo { programadas, falladas }
 
 class _PantallaRepasoState extends State<PantallaRepaso> {
-  final _repo = RepositorioRepaso();
-  final _sesion = Sesion();
+  late final _repo = widget.repositorio ?? RepositorioRepaso();
+  late final _sesion = widget.sesion ?? Sesion();
 
   _Modo _modo = _Modo.programadas;
   Future<(List<Pregunta>, ResumenRepasos?)>? _carga;
@@ -44,12 +50,21 @@ class _PantallaRepasoState extends State<PantallaRepaso> {
   void _recargar() {
     if (!_sesion.hayCuenta) return;
     setState(() {
+      // Las dos a la vez: la lista de preguntas y el resumen del calendario
+      // no dependen entre sí, y encadenarlas sumaba dos latencias antes de
+      // pintar nada. Misma razón que en Progreso, Inicio y Simulacro.
       _carga = () async {
-        final preguntas = await switch (_modo) {
-          _Modo.falladas => _repo.falladas(),
-          _Modo.programadas => _repo.pendientes(),
-        };
-        return (preguntas, await _repo.resumen());
+        final resultados = await Future.wait([
+          switch (_modo) {
+            _Modo.falladas => _repo.falladas(),
+            _Modo.programadas => _repo.pendientes(),
+          },
+          _repo.resumen(),
+        ]);
+        return (
+          resultados[0] as List<Pregunta>,
+          resultados[1] as ResumenRepasos?,
+        );
       }();
     });
   }

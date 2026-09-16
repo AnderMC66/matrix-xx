@@ -13,15 +13,25 @@ import "practica.dart" show FiguraPregunta;
 
 /// `/simulacros` — los simulacros publicados, y el intento a medias si lo hay.
 class PantallaSimulacro extends StatefulWidget {
-  const PantallaSimulacro({super.key});
+  /// Repositorio y sesión inyectables, igual que en `PantallaHorario`.
+  ///
+  /// Los dos resuelven `Supabase.instance.client` en su constructor, así que
+  /// sin esta costura la pantalla no se puede montar en un test. Baja también
+  /// a las tarjetas y a la sesión de examen: si se quedara aquí, el primer
+  /// hijo que construyera el suyo volvería a romperlo. En producción nadie
+  /// los pasa.
+  final RepositorioSimulacro? repositorio;
+  final Sesion? sesion;
+
+  const PantallaSimulacro({super.key, this.repositorio, this.sesion});
 
   @override
   State<PantallaSimulacro> createState() => _PantallaSimulacroState();
 }
 
 class _PantallaSimulacroState extends State<PantallaSimulacro> {
-  final _repo = RepositorioSimulacro();
-  final _sesion = Sesion();
+  late final _repo = widget.repositorio ?? RepositorioSimulacro();
+  late final _sesion = widget.sesion ?? Sesion();
 
   Future<(List<SimulacroResumen>, Intento?, List<Intento>)>? _carga;
 
@@ -31,11 +41,26 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
     _recargar();
   }
 
-  Future<(List<SimulacroResumen>, Intento?, List<Intento>)> _pedir() async => (
-    await _repo.publicados(),
-    await _repo.intentoEnCurso(),
-    await _repo.historial(),
-  );
+  /// Las tres a la vez, como en Progreso y en Inicio.
+  ///
+  /// Un registro `(await a, await b, await c)` parece paralelo y no lo es: Dart
+  /// evalúa los campos en orden, así que eran tres viajes encadenados contra
+  /// Supabase para pintar una pantalla cuyos tres datos no dependen entre sí.
+  /// Esta pestaña se rehace cada vez que se entra —es de las que leen del
+  /// servidor, ver `main.dart`—, así que esas tres latencias se pagaban
+  /// enteras en cada visita.
+  Future<(List<SimulacroResumen>, Intento?, List<Intento>)> _pedir() async {
+    final resultados = await Future.wait([
+      _repo.publicados(),
+      _repo.intentoEnCurso(),
+      _repo.historial(),
+    ]);
+    return (
+      resultados[0] as List<SimulacroResumen>,
+      resultados[1] as Intento?,
+      resultados[2] as List<Intento>,
+    );
+  }
 
   void _recargar() {
     if (!_sesion.hayCuenta) return;
@@ -85,7 +110,11 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
             if (enCurso != null) ...[
-              _IntentoEnCurso(intento: enCurso, alVolver: _recargar),
+              _IntentoEnCurso(
+                intento: enCurso,
+                alVolver: _recargar,
+                repositorio: _repo,
+              ),
               const SizedBox(height: 16),
             ],
             for (final s in simulacros)
@@ -95,6 +124,7 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
                   simulacro: s,
                   bloqueado: enCurso != null,
                   alVolver: _recargar,
+                  repositorio: _repo,
                 ),
               ),
             if (historial.isNotEmpty) ...[
@@ -112,6 +142,7 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
               for (final intento in historial)
                 _FilaHistorial(
                   intento: intento,
+                  repositorio: _repo,
                   nombre: simulacros
                       .where((s) => s.id == intento.simulacroId)
                       .map((s) => s.nombre)
@@ -133,17 +164,24 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
 /// volver a empujar `PantallaResultado` con el id del intento.
 class _FilaHistorial extends StatelessWidget {
   final Intento intento;
+  final RepositorioSimulacro repositorio;
 
   /// El nombre del simulacro, si sigue publicado. Puede faltar: un simulacro
   /// despublicado no desaparece de tu historial, solo pierde el rótulo.
   final String? nombre;
 
-  const _FilaHistorial({required this.intento, required this.nombre});
+  const _FilaHistorial({
+    required this.intento,
+    required this.nombre,
+    required this.repositorio,
+  });
 
   @override
   Widget build(BuildContext context) {
     final pct = (intento.puntaje ?? 0).round();
-    final fecha = intento.finalizadoEn?.toLocal();
+    // Sin `.toLocal()`: lo hace `fechaDiaMesAno` por dentro, para todas las
+    // pantallas a la vez. Esta era la única que se acordaba.
+    final fecha = intento.finalizadoEn;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -154,7 +192,10 @@ class _FilaHistorial extends StatelessWidget {
           borderRadius: BorderRadius.circular(10),
           onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => PantallaResultado(intentoId: intento.id),
+              builder: (_) => PantallaResultado(
+                intentoId: intento.id,
+                repositorio: repositorio,
+              ),
             ),
           ),
           child: Container(
@@ -231,8 +272,13 @@ class _FilaHistorial extends StatelessWidget {
 class _IntentoEnCurso extends StatelessWidget {
   final Intento intento;
   final VoidCallback alVolver;
+  final RepositorioSimulacro repositorio;
 
-  const _IntentoEnCurso({required this.intento, required this.alVolver});
+  const _IntentoEnCurso({
+    required this.intento,
+    required this.alVolver,
+    required this.repositorio,
+  });
 
   @override
   Widget build(BuildContext context) => Container(
@@ -266,7 +312,12 @@ class _IntentoEnCurso extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         FilledButton(
-          onPressed: () => _abrirSesion(context, intento.id, alVolver),
+          onPressed: () => _abrirSesion(
+            context,
+            intento.id,
+            alVolver,
+            repositorio: repositorio,
+          ),
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(42)),
           child: const Text("Retomar"),
         ),
@@ -280,10 +331,13 @@ class _TarjetaSimulacro extends StatefulWidget {
   final bool bloqueado;
   final VoidCallback alVolver;
 
+  final RepositorioSimulacro repositorio;
+
   const _TarjetaSimulacro({
     required this.simulacro,
     required this.bloqueado,
     required this.alVolver,
+    required this.repositorio,
   });
 
   @override
@@ -291,7 +345,7 @@ class _TarjetaSimulacro extends StatefulWidget {
 }
 
 class _TarjetaSimulacroState extends State<_TarjetaSimulacro> {
-  final _repo = RepositorioSimulacro();
+  late final _repo = widget.repositorio;
   bool _iniciando = false;
 
   Future<void> _empezar() async {
@@ -299,7 +353,12 @@ class _TarjetaSimulacroState extends State<_TarjetaSimulacro> {
     try {
       final intentoId = await _repo.iniciar(widget.simulacro.id);
       if (!mounted) return;
-      await _abrirSesion(context, intentoId, widget.alVolver);
+      await _abrirSesion(
+        context,
+        intentoId,
+        widget.alVolver,
+        repositorio: _repo,
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -378,10 +437,14 @@ class _TarjetaSimulacroState extends State<_TarjetaSimulacro> {
 Future<void> _abrirSesion(
   BuildContext context,
   int intentoId,
-  VoidCallback alVolver,
-) async {
+  VoidCallback alVolver, {
+  RepositorioSimulacro? repositorio,
+}) async {
   await Navigator.of(context).push(
-    MaterialPageRoute(builder: (_) => SesionSimulacro(intentoId: intentoId)),
+    MaterialPageRoute(
+      builder: (_) =>
+          SesionSimulacro(intentoId: intentoId, repositorio: repositorio),
+    ),
   );
   alVolver();
 }
@@ -395,7 +458,11 @@ Future<void> _abrirSesion(
 /// navegación libre entre preguntas en vez de un flujo de una sola vía.
 class SesionSimulacro extends StatefulWidget {
   final int intentoId;
-  const SesionSimulacro({super.key, required this.intentoId});
+
+  /// Inyectable, por lo mismo que en [PantallaSimulacro].
+  final RepositorioSimulacro? repositorio;
+
+  const SesionSimulacro({super.key, required this.intentoId, this.repositorio});
 
   @override
   State<SesionSimulacro> createState() => _SesionSimulacroState();
@@ -404,7 +471,7 @@ class SesionSimulacro extends StatefulWidget {
 enum _Guardado { guardando, guardado, error }
 
 class _SesionSimulacroState extends State<SesionSimulacro> {
-  final _repo = RepositorioSimulacro();
+  late final _repo = widget.repositorio ?? RepositorioSimulacro();
 
   List<PreguntaSimulacro>? _preguntas;
   SimulacroResumen? _simulacro;
@@ -440,13 +507,14 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
   Future<void> _cargar() async {
     try {
       final intento = await _repo.intento(widget.intentoId);
+      if (!mounted) return;
       if (intento == null) {
         setState(() => _errorCarga = "Este intento no existe o no es tuyo.");
         return;
       }
       // Ya cerrado: no hay sesión que retomar, al resultado.
       if (!intento.enCurso) {
-        if (mounted) _irAlResultado(intento.id);
+        _irAlResultado(intento.id);
         return;
       }
 
@@ -565,7 +633,8 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
   void _irAlResultado(int intentoId) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-        builder: (_) => PantallaResultado(intentoId: intentoId),
+        builder: (_) =>
+            PantallaResultado(intentoId: intentoId, repositorio: _repo),
       ),
     );
   }
@@ -1004,14 +1073,22 @@ class _AlternativaSimulacro extends StatelessWidget {
 /// `/simulacros/resultado/[intentoId]`.
 class PantallaResultado extends StatefulWidget {
   final int intentoId;
-  const PantallaResultado({super.key, required this.intentoId});
+
+  /// Inyectable, por lo mismo que en [PantallaSimulacro].
+  final RepositorioSimulacro? repositorio;
+
+  const PantallaResultado({
+    super.key,
+    required this.intentoId,
+    this.repositorio,
+  });
 
   @override
   State<PantallaResultado> createState() => _PantallaResultadoState();
 }
 
 class _PantallaResultadoState extends State<PantallaResultado> {
-  final _repo = RepositorioSimulacro();
+  late final _repo = widget.repositorio ?? RepositorioSimulacro();
   late final Future<(Intento, List<ResultadoPregunta>, PercentilSimulacro?)>
   _carga = _cargar();
 

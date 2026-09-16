@@ -44,20 +44,41 @@ const _largos = [
   "diciembre",
 ];
 
+/// **Todo se pasa a hora local antes de mirarle el día o el mes**, y esa es
+/// la única línea de este archivo que arregla algo en vez de ordenarlo.
+///
+/// Postgres guarda `timestamptz` y PostgREST lo manda con offset, así que
+/// `DateTime.parse` devuelve un instante **en UTC**. Leerle `.day` a ese
+/// instante es leer el día que era en Londres, no en Arequipa: en Perú
+/// (UTC-5) todo lo que ocurre entre las 19:00 y la medianoche cae ya en el
+/// día siguiente en UTC. Un reporte enviado anoche a las 21:00 se le
+/// mostraba al docente con la fecha de hoy, y el perfil de quien se registró
+/// un 31 de agosto por la noche decía «desde sep».
+///
+/// Se convierte aquí y no en cada pantalla por el mismo motivo por el que
+/// existe el archivo: había cuatro formateadores y solo uno
+/// —`simulacro.dart`— se acordaba de llamar a `.toLocal()`. Con la conversión
+/// dentro, el que se olvide ya no puede equivocarse, y un `DateTime` que ya
+/// era local pasa por `toLocal()` sin cambiar nada.
+DateTime _local(DateTime d) => d.toLocal();
+
 /// `sep`
-String mesCorto(DateTime d) => _cortos[d.month - 1];
+String mesCorto(DateTime d) => _cortos[_local(d).month - 1];
 
 /// `septiembre`
-String mesLargo(DateTime d) => _largos[d.month - 1];
+String mesLargo(DateTime d) => _largos[_local(d).month - 1];
 
 /// `14 sep` — para una fecha reciente, donde el año se da por supuesto.
-String fechaDiaMes(DateTime d) => "${d.day} ${mesCorto(d)}";
+String fechaDiaMes(DateTime d) => "${_local(d).day} ${mesCorto(d)}";
 
 /// `14 sep 2026` — cuando la fecha puede ser de hace meses.
-String fechaDiaMesAno(DateTime d) => "${d.day} ${mesCorto(d)} ${d.year}";
+String fechaDiaMesAno(DateTime d) {
+  final l = _local(d);
+  return "${l.day} ${mesCorto(l)} ${l.year}";
+}
 
 /// `14 de septiembre` — para leerla dentro de una frase.
-String fechaLarga(DateTime d) => "${d.day} de ${mesLargo(d)}";
+String fechaLarga(DateTime d) => "${_local(d).day} de ${mesLargo(d)}";
 
 /// `sep 2026` — para «miembro desde».
-String mesAno(DateTime d) => "${mesCorto(d)} ${d.year}";
+String mesAno(DateTime d) => "${mesCorto(d)} ${_local(d).year}";

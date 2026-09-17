@@ -154,10 +154,18 @@ class PantallaPracticaSubtema extends StatefulWidget {
   final String codigo;
   final String nombre;
 
+  /// Se los pasa a la tanda que abre. No los usa ella —el banco sale de los
+  /// assets—, pero `SesionPractica` sí, y sin poder atravesarla esta pantalla
+  /// no se puede probar hasta el final. En producción nadie los pasa.
+  final RepositorioPractica? repositorio;
+  final Sesion? sesion;
+
   const PantallaPracticaSubtema({
     super.key,
     required this.codigo,
     required this.nombre,
+    this.repositorio,
+    this.sesion,
   });
 
   @override
@@ -206,6 +214,8 @@ class _PantallaPracticaSubtemaState extends State<PantallaPracticaSubtema> {
           codigo: widget.codigo,
           nombre: widget.nombre,
           preguntas: preguntas,
+          repositorio: widget.repositorio,
+          sesion: widget.sesion,
         );
       },
     ),
@@ -217,10 +227,16 @@ class _PortadaSubtema extends StatelessWidget {
   final String nombre;
   final List<Pregunta> preguntas;
 
+  /// De paso hacia la tanda, igual que en [PantallaPracticaSubtema].
+  final RepositorioPractica? repositorio;
+  final Sesion? sesion;
+
   const _PortadaSubtema({
     required this.codigo,
     required this.nombre,
     required this.preguntas,
+    required this.repositorio,
+    required this.sesion,
   });
 
   @override
@@ -276,6 +292,8 @@ class _PortadaSubtema extends StatelessWidget {
                 titulo: nombre,
                 preguntas: preguntas,
                 etiquetaSalida: "Volver",
+                repositorio: repositorio,
+                sesion: sesion,
               ),
             ),
           ),

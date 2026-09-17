@@ -543,8 +543,8 @@ inyectados (`repositorio:`, `sesion:`, `progreso:`…). En producción nadie los
 pasa y se construyen igual que antes; en un test se les da un `SupabaseClient`
 con un `http.Client` espía, que es el mismo arnés que ya usaba `datos/`.
 
-Cobertura: **34,9 % → 85,6 %**, con 372 tests. Ningún archivo de `lib/` queda
-a cero.
+Cobertura: **34,9 % → 89,0 %**, con 396 tests. Ningún archivo de `lib/` queda
+a cero, y el más bajo está en el 64,9 %.
 
 ### Los tres fallos que aparecieron al poder mirar
 
@@ -587,9 +587,22 @@ que es donde vive el criterio: qué figura no se pide siquiera —las 149 rotas�
 qué `alt` se anuncia y cuál es ruido, qué forma reserva el hueco, y que «sin
 contenido en el original» y «no disponible todavía» sean avisos distintos.
 
-`teoria.dart` (44 %) y `practica.dart` (62,9 %) son las dos que más superficie
-de pintado tienen por línea de decisión; lo que deciden ya está probado en
-`markdown_teoria.dart` y en `datos/practica.dart`, los dos al 94 % o más.
+`practica_adaptativa.dart` (70,8 %) y `main.dart` (77,9 %) son los dos
+siguientes, y lo que les falta es ramas de pintado sobre datos que ya están
+probados en su repositorio.
+
+### Una cosa que el servidor ya manda y la app tira
+
+`preguntas_recomendadas` devuelve también `motivo` y `porcentaje_subtema`, dos
+campos que `RepositorioRepaso` descarta. Con ellos, la práctica adaptativa
+podría explicar **por qué** le pone delante cada pregunta —«nunca la has
+visto», «la fallaste», «vas al 40 % en este subtema»— en vez de pedir fe.
+
+No está hecho, y la razón es deliberada: **los valores de `motivo` viven en el
+repo web**, no aquí, y no se pueden deducir desde este lado. Inventar etiquetas
+en español para valores que nadie ha visto es exactamente el error que produjo
+la clave ausente convertida en «A». Cuando se tengan a mano, es un cambio
+pequeño: añadir los dos campos al modelo y una línea bajo cada pregunta.
 
 ## Lo que de verdad falta no es código: es banco de preguntas
 

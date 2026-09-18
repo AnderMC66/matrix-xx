@@ -51,12 +51,11 @@ class _PantallaTemarioState extends State<PantallaTemario> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
-              const Text(
+              Text(
                 "El sílabo, curso por curso",
-                style: TextStyle(
-                  fontSize: 20,
+                style: context.textos.headlineSmall!.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: Paleta.texto,
+                  color: context.esquema.onSurface,
                 ),
               ),
               const SizedBox(height: 6),
@@ -64,10 +63,8 @@ class _PantallaTemarioState extends State<PantallaTemario> {
                 "${temario.areas.expand((a) => a.cursos).length} cursos, "
                 "tema por tema, para que sepas exactamente qué estudiar y "
                 "encuentres en segundos dónde practicarlo.",
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Paleta.textoSuave,
-                  height: 1.5,
+                style: context.textos.bodyMedium!.copyWith(
+                  color: context.esquema.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 20),
@@ -94,10 +91,10 @@ class _FilaCifras extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(vertical: 16),
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       border: Border(
-        top: BorderSide(color: Paleta.borde),
-        bottom: BorderSide(color: Paleta.borde),
+        top: BorderSide(color: context.esquema.outlineVariant),
+        bottom: BorderSide(color: context.esquema.outlineVariant),
       ),
     ),
     child: Row(
@@ -126,20 +123,17 @@ class _Cifra extends StatelessWidget {
       children: [
         Text(
           "$valor",
-          style: const TextStyle(
-            fontSize: 24,
+          style: context.textos.headlineMedium!.copyWith(
             fontWeight: FontWeight.w800,
-            color: Paleta.texto,
-            height: 1.1,
+            color: context.esquema.onSurface,
           ),
         ),
         const SizedBox(height: 3),
         Text(
           etiqueta,
-          style: const TextStyle(
-            fontSize: 10.5,
+          style: context.textos.labelSmall!.copyWith(
             letterSpacing: 0.4,
-            color: Paleta.textoTenue,
+            color: context.esquema.onSurfaceVariant,
           ),
         ),
       ],
@@ -155,22 +149,20 @@ class _AvisoPendientes extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
-      color: Paleta.avisoSuave,
+      color: context.colores.avisoContenedor,
       borderRadius: BorderRadius.circular(10),
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.info_outline, size: 16, color: Paleta.aviso),
+        Icon(Icons.info_outline, size: 16, color: context.colores.aviso),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             "$cantidad temas siguen sin desglose de subtemas en el "
             "sílabo. Aparecen marcados como pendientes.",
-            style: const TextStyle(
-              fontSize: 12,
-              color: Paleta.aviso,
-              height: 1.45,
+            style: context.textos.bodySmall!.copyWith(
+              color: context.colores.aviso,
             ),
           ),
         ),
@@ -191,16 +183,17 @@ class _BloqueArea extends StatelessWidget {
       children: [
         Text(
           area.nombre,
-          style: const TextStyle(
-            fontSize: 15,
+          style: context.textos.titleMedium!.copyWith(
             fontWeight: FontWeight.w700,
-            color: Paleta.texto,
+            color: context.esquema.onSurface,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           "${area.cursos.length} ${area.cursos.length == 1 ? "curso" : "cursos"}",
-          style: const TextStyle(fontSize: 11.5, color: Paleta.textoTenue),
+          style: context.textos.bodySmall!.copyWith(
+            color: context.esquema.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 10),
         for (final curso in area.cursos) _TarjetaCurso(curso: curso),
@@ -217,7 +210,7 @@ class _TarjetaCurso extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Material(
-      color: Paleta.superficieAlta,
+      color: context.esquema.surfaceContainerLowest,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -227,7 +220,7 @@ class _TarjetaCurso extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            border: Border.all(color: Paleta.borde),
+            border: Border.all(color: context.esquema.outlineVariant),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
@@ -237,13 +230,13 @@ class _TarjetaCurso extends StatelessWidget {
                 height: 38,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: Paleta.acentoSuave,
+                  color: context.esquema.secondaryContainer,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.menu_book_outlined,
                   size: 18,
-                  color: Paleta.acento,
+                  color: context.esquema.primary,
                 ),
               ),
               const SizedBox(width: 12),
@@ -253,27 +246,25 @@ class _TarjetaCurso extends StatelessWidget {
                   children: [
                     Text(
                       curso.nombre,
-                      style: const TextStyle(
-                        fontSize: 14,
+                      style: context.textos.labelLarge!.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: Paleta.texto,
+                        color: context.esquema.onSurface,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       "${curso.temas.length} temas · ${curso.totalSubtemas} subtemas",
-                      style: const TextStyle(
-                        fontSize: 11.5,
-                        color: Paleta.textoTenue,
+                      style: context.textos.bodySmall!.copyWith(
+                        color: context.esquema.onSurfaceVariant,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right,
                 size: 18,
-                color: Paleta.textoTenue,
+                color: context.esquema.onSurfaceVariant,
               ),
             ],
           ),

@@ -104,9 +104,8 @@ class _PantallaBuscarState extends State<PantallaBuscar> {
                       ? "Más de $_limite resultados. Afina la búsqueda."
                       : "${_resultados.length} "
                             "${_resultados.length == 1 ? "resultado" : "resultados"}.",
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    color: Paleta.textoSuave,
+                  style: context.textos.bodySmall!.copyWith(
+                    color: context.esquema.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -147,27 +146,28 @@ class _FilaResultado extends StatelessWidget {
         height: 34,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: Paleta.acentoSuave,
+          color: context.esquema.secondaryContainer,
           borderRadius: BorderRadius.circular(9),
         ),
-        child: const Icon(
+        child: Icon(
           Icons.menu_book_outlined,
           size: 17,
-          color: Paleta.acento,
+          color: context.esquema.primary,
         ),
       ),
-      title: Text(
-        subtema.nombre,
-        style: const TextStyle(fontSize: 14, height: 1.3),
-      ),
+      title: Text(subtema.nombre, style: context.textos.bodyMedium),
       subtitle: Text(
         "${curso.nombre} · ${tema.romano}. ${tema.nombre}"
         "${subtema.grupo != null ? " · ${subtema.grupo}" : ""}",
-        style: const TextStyle(fontSize: 11.5, color: Paleta.textoTenue),
+        style: context.textos.bodySmall!.copyWith(
+          color: context.esquema.onSurfaceVariant,
+        ),
       ),
       trailing: Text(
         subtema.codigo,
-        style: const TextStyle(fontSize: 10, color: Paleta.textoTenue),
+        style: context.textos.labelSmall!.copyWith(
+          color: context.esquema.onSurfaceVariant,
+        ),
       ),
       onTap: () => Navigator.of(context)
           .push(MaterialPageRoute(builder: (_) => PantallaCurso(curso: curso))),
@@ -199,7 +199,7 @@ class _EstadoVacio extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.search, size: 30, color: Paleta.textoTenue),
+          Icon(Icons.search, size: 30, color: context.esquema.onSurfaceVariant),
           const SizedBox(height: 14),
           Text(
             temario == null
@@ -208,19 +208,16 @@ class _EstadoVacio extends StatelessWidget {
                       "${temario!.totalSubtemas} subtemas del sílabo, "
                       "por su nombre o su código.",
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Paleta.textoSuave,
-              height: 1.55,
+            style: context.textos.bodyMedium!.copyWith(
+              color: context.esquema.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             "FIS-09 · Vallejo · Ley de Coulomb",
-            style: TextStyle(
-              fontSize: 11.5,
+            style: context.textos.bodySmall!.copyWith(
               fontFamily: "monospace",
-              color: Paleta.textoTenue,
+              color: context.esquema.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 22),
@@ -241,14 +238,16 @@ class _SinResultados extends StatelessWidget {
   const _SinResultados();
 
   @override
-  Widget build(BuildContext context) => const Center(
+  Widget build(BuildContext context) => Center(
     child: Padding(
       padding: EdgeInsets.all(28),
       child: Text(
         "Sin resultados. Prueba con menos palabras, o solo el código del "
         "curso.",
         textAlign: TextAlign.center,
-        style: TextStyle(fontSize: 13, color: Paleta.textoSuave, height: 1.5),
+        style: context.textos.bodyMedium!.copyWith(
+          color: context.esquema.onSurfaceVariant,
+        ),
       ),
     ),
   );

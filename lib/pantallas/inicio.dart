@@ -166,46 +166,40 @@ class _PantallaInicioState extends State<PantallaInicio> {
                   height: 34,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Paleta.acento,
+                    color: context.esquema.primary,
                     borderRadius: BorderRadius.circular(9),
                   ),
-                  child: const Text(
+                  child: Text(
                     "M",
-                    style: TextStyle(
-                      color: Paleta.acentoContraste,
+                    style: context.textos.headlineSmall!.copyWith(
+                      color: context.esquema.onPrimary,
                       fontWeight: FontWeight.w800,
-                      fontSize: 17,
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
-                const Text(
+                Text(
                   "Matrix U",
-                  style: TextStyle(
+                  style: context.textos.titleMedium!.copyWith(
                     fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                    color: Paleta.texto,
+                    color: context.esquema.onSurface,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 22),
-            const Text(
+            Text(
               "El examen de la UNSA,",
-              style: TextStyle(
-                fontSize: 27,
+              style: context.textos.displaySmall!.copyWith(
                 fontWeight: FontWeight.w800,
-                height: 1.15,
-                color: Paleta.texto,
+                color: context.esquema.onSurface,
               ),
             ),
-            const Text(
+            Text(
               "entero y ordenado.",
-              style: TextStyle(
-                fontSize: 27,
+              style: context.textos.displaySmall!.copyWith(
                 fontWeight: FontWeight.w800,
-                height: 1.15,
-                color: Paleta.acento,
+                color: context.esquema.primary,
               ),
             ),
             const SizedBox(height: 18),
@@ -267,13 +261,12 @@ class _PantallaInicioState extends State<PantallaInicio> {
                 },
               ),
             const SizedBox(height: 26),
-            const Text(
+            Text(
               "ACCESOS DIRECTOS",
-              style: TextStyle(
-                fontSize: 11,
+              style: context.textos.labelSmall!.copyWith(
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.6,
-                color: Paleta.textoTenue,
+                color: context.esquema.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 10),
@@ -330,17 +323,19 @@ class _AvisoSinCuenta extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: Paleta.superficie,
-      border: Border.all(color: Paleta.borde),
+      color: context.esquema.surfaceContainerLow,
+      border: Border.all(color: context.esquema.outlineVariant),
       borderRadius: BorderRadius.circular(12),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           "Con una cuenta gratis guardas tu progreso por subtema y puedes "
           "programar un horario de estudio que te avisa cuando toca.",
-          style: TextStyle(fontSize: 13, color: Paleta.textoSuave, height: 1.5),
+          style: context.textos.bodyMedium!.copyWith(
+            color: context.esquema.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 10),
         TextButton(
@@ -391,8 +386,8 @@ class _PanelPersonalVista extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Paleta.superficieAlta,
-              border: Border.all(color: Paleta.borde),
+              color: context.esquema.surfaceContainerLowest,
+              border: Border.all(color: context.esquema.outlineVariant),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Wrap(
@@ -403,17 +398,15 @@ class _PanelPersonalVista extends StatelessWidget {
                 if (racha != null && racha.diasActual > 0)
                   RichText(
                     text: TextSpan(
-                      style: const TextStyle(
-                        fontSize: 13.5,
-                        color: Paleta.textoSuave,
+                      style: context.textos.bodyMedium!.copyWith(
+                        color: context.esquema.onSurfaceVariant,
                       ),
                       children: [
                         TextSpan(
                           text: "${racha.diasActual} ",
-                          style: const TextStyle(
-                            fontSize: 21,
+                          style: context.textos.headlineSmall!.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: Paleta.texto,
+                            color: context.esquema.onSurface,
                           ),
                         ),
                         TextSpan(
@@ -424,9 +417,9 @@ class _PanelPersonalVista extends StatelessWidget {
                         // Sin esto la racha parece ya asegurada y no invita a
                         // estudiar hoy también.
                         if (!racha.estudiadoHoy)
-                          const TextSpan(
+                          TextSpan(
                             text: " · te falta hoy",
-                            style: TextStyle(color: Paleta.aviso),
+                            style: TextStyle(color: context.colores.aviso),
                           ),
                       ],
                     ),
@@ -434,10 +427,9 @@ class _PanelPersonalVista extends StatelessWidget {
                 if (repasos != null && repasos.pendientesHoy > 0)
                   Text(
                     "${repasos.pendientesHoy} ${repasos.pendientesHoy == 1 ? "repaso" : "repasos"} para hoy",
-                    style: const TextStyle(
-                      fontSize: 13.5,
+                    style: context.textos.labelLarge!.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: Paleta.acento,
+                      color: context.esquema.primary,
                     ),
                   ),
               ],
@@ -449,8 +441,10 @@ class _PanelPersonalVista extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Paleta.avisoSuave,
-              border: Border.all(color: Paleta.aviso.withValues(alpha: 0.4)),
+              color: context.colores.avisoContenedor,
+              border: Border.all(
+                color: context.colores.aviso.withValues(alpha: 0.4),
+              ),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -458,10 +452,8 @@ class _PanelPersonalVista extends StatelessWidget {
               children: [
                 RichText(
                   text: TextSpan(
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Paleta.aviso,
-                      height: 1.45,
+                    style: context.textos.bodyMedium!.copyWith(
+                      color: context.colores.aviso,
                     ),
                     children: [
                       const TextSpan(text: "Llevas "),
@@ -493,7 +485,7 @@ class _PanelPersonalVista extends StatelessWidget {
                     ),
                   ),
                   style: TextButton.styleFrom(
-                    foregroundColor: Paleta.aviso,
+                    foregroundColor: context.colores.aviso,
                     padding: EdgeInsets.zero,
                   ),
                   child: const Text("Practicarlo ahora"),
@@ -524,42 +516,40 @@ class _TarjetaProgreso extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
-      color: Paleta.superficieAlta,
-      border: Border.all(color: Paleta.borde),
+      color: context.esquema.surfaceContainerLowest,
+      border: Border.all(color: context.esquema.outlineVariant),
       borderRadius: BorderRadius.circular(12),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           "TU PROGRESO",
-          style: TextStyle(
-            fontSize: 10,
+          style: context.textos.labelSmall!.copyWith(
             fontWeight: FontWeight.w700,
-            color: Paleta.textoSuave,
+            color: context.esquema.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 8),
         if (diagnostico.vacio)
-          const Text(
+          Text(
             "Responde algunas preguntas y aquí verás tu acierto.",
-            style: TextStyle(
-              fontSize: 11.5,
-              color: Paleta.textoSuave,
-              height: 1.4,
+            style: context.textos.bodySmall!.copyWith(
+              color: context.esquema.onSurfaceVariant,
             ),
           )
         else
           RichText(
             text: TextSpan(
-              style: const TextStyle(fontSize: 11.5, color: Paleta.textoTenue),
+              style: context.textos.bodySmall!.copyWith(
+                color: context.esquema.onSurfaceVariant,
+              ),
               children: [
                 TextSpan(
                   text: "${diagnostico.aciertoGlobal} % ",
-                  style: const TextStyle(
-                    fontSize: 22,
+                  style: context.textos.headlineMedium!.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: Paleta.texto,
+                    color: context.esquema.onSurface,
                   ),
                 ),
                 TextSpan(
@@ -583,39 +573,34 @@ class _TarjetaProximoBloque extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Paleta.superficieAlta,
-        border: Border.all(color: Paleta.borde),
+        color: context.esquema.surfaceContainerLowest,
+        border: Border.all(color: context.esquema.outlineVariant),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "PRÓXIMO BLOQUE",
-            style: TextStyle(
-              fontSize: 10,
+            style: context.textos.labelSmall!.copyWith(
               fontWeight: FontWeight.w700,
-              color: Paleta.textoSuave,
+              color: context.esquema.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 8),
           if (p == null)
-            const Text(
+            Text(
               "No tienes ningún bloque programado todavía.",
-              style: TextStyle(
-                fontSize: 11.5,
-                color: Paleta.textoSuave,
-                height: 1.4,
+              style: context.textos.bodySmall!.copyWith(
+                color: context.esquema.onSurfaceVariant,
               ),
             )
           else
             Text(
               "${p.bloque.cursoNombre}\n"
               "${diasSemana[p.bloque.diaSemana]} ${formatearHora(p.bloque.horaInicio)}",
-              style: const TextStyle(
-                fontSize: 12,
-                color: Paleta.texto,
-                height: 1.4,
+              style: context.textos.bodySmall!.copyWith(
+                color: context.esquema.onSurface,
               ),
             ),
           const SizedBox(height: 8),
@@ -629,7 +614,7 @@ class _TarjetaProximoBloque extends StatelessWidget {
             ),
             child: Text(
               p != null ? "Editar horario →" : "Programar →",
-              style: const TextStyle(fontSize: 12),
+              style: context.textos.bodySmall,
             ),
           ),
         ],
@@ -653,7 +638,7 @@ class _AccesoDirecto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Paleta.superficieAlta,
+    color: context.esquema.surfaceContainerLowest,
     borderRadius: BorderRadius.circular(12),
     child: InkWell(
       borderRadius: BorderRadius.circular(12),
@@ -661,7 +646,7 @@ class _AccesoDirecto extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          border: Border.all(color: Paleta.borde),
+          border: Border.all(color: context.esquema.outlineVariant),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -673,27 +658,25 @@ class _AccesoDirecto extends StatelessWidget {
               height: 32,
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: Paleta.acentoSuave,
+                color: context.esquema.secondaryContainer,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icono, size: 16, color: Paleta.acento),
+              child: Icon(icono, size: 16, color: context.esquema.primary),
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   titulo,
-                  style: const TextStyle(
+                  style: context.textos.labelLarge!.copyWith(
                     fontWeight: FontWeight.w700,
-                    fontSize: 13.5,
-                    color: Paleta.texto,
+                    color: context.esquema.onSurface,
                   ),
                 ),
                 Text(
                   descripcion,
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    color: Paleta.textoTenue,
+                  style: context.textos.labelSmall!.copyWith(
+                    color: context.esquema.onSurfaceVariant,
                   ),
                 ),
               ],

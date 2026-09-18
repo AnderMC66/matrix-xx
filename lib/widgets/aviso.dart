@@ -22,10 +22,15 @@ import "../tema.dart";
 /// alrededor —el horario sin bloques, debajo de su cabecera— y no para ocupar
 /// el cuerpo entero.
 ///
-/// [esError] pinta el ícono en el granate de marca. Se reserva para el fallo
-/// que dice que algo está mal en la app misma —el catálogo local que no carga,
-/// ver [Aviso.contenidoLocal]— y no para el estado vacío ni para la red caída,
-/// que son situaciones normales y llevan gris.
+/// [esError] pinta el ícono con el color de error del tema. **Antes lo pintaba
+/// con el de marca**, que era el mismo: el granate hacía de acento y de error a
+/// la vez. Material 3 los deriva por separado, así que ahora un fallo se ve
+/// como un fallo y no como la marca.
+///
+/// Se reserva para el error que dice que algo está mal en la app misma —el
+/// catálogo local que no carga, ver [Aviso.contenidoLocal]— y no para el estado
+/// vacío ni para la red caída, que son situaciones normales y llevan el gris de
+/// texto secundario.
 class Aviso extends StatelessWidget {
   final IconData icono;
   final String titulo;
@@ -75,28 +80,22 @@ class Aviso extends StatelessWidget {
         Icon(
           icono,
           size: compacto ? 26 : 34,
-          color: esError ? Paleta.acento : Paleta.textoTenue,
+          color: esError
+              ? context.esquema.error
+              : context.esquema.onSurfaceVariant,
         ),
         SizedBox(height: compacto ? 10 : 14),
         Text(
           titulo,
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
-            color: Paleta.texto,
-          ),
+          style: context.textos.titleMedium,
         ),
         if (detalle.isNotEmpty) ...[
           const SizedBox(height: 8),
           Text(
             detalle,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Paleta.textoSuave,
-              fontSize: 13,
-              height: 1.55,
-            ),
+            style: context.textos.bodyMedium,
           ),
         ],
         if (accion case final a?) ...[
@@ -110,8 +109,8 @@ class Aviso extends StatelessWidget {
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
         decoration: BoxDecoration(
-          border: Border.all(color: Paleta.borde),
-          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: context.esquema.outlineVariant),
+          borderRadius: BorderRadius.circular(radioTarjeta),
         ),
         child: contenido,
       );

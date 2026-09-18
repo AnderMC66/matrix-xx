@@ -135,10 +135,9 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
       children: [
         Text(
           _registrando ? "Crea tu cuenta" : "Entra a Matrix U",
-          style: const TextStyle(
-            fontSize: 24,
+          style: context.textos.headlineMedium!.copyWith(
             fontWeight: FontWeight.w700,
-            color: Paleta.texto,
+            color: context.esquema.onSurface,
           ),
         ),
         const SizedBox(height: 6),
@@ -147,10 +146,8 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
               ? "Tu progreso, tus repasos y tus simulacros quedan guardados."
               : "Necesitas cuenta para practicar: la respuesta correcta la "
                     "resuelve el servidor.",
-          style: const TextStyle(
-            color: Paleta.textoSuave,
-            fontSize: 13.5,
-            height: 1.5,
+          style: context.textos.bodyMedium!.copyWith(
+            color: context.esquema.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 24),
@@ -218,12 +215,12 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
           onPressed: _enviando ? null : _enviar,
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
           child: _enviando
-              ? const SizedBox(
+              ? SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Paleta.acentoContraste,
+                    color: context.esquema.onPrimary,
                   ),
                 )
               : Text(_registrando ? "Crear cuenta" : "Entrar"),
@@ -248,7 +245,9 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
         if (!_registrando)
           TextButton(
             onPressed: _enviando ? null : _recuperar,
-            style: TextButton.styleFrom(foregroundColor: Paleta.textoSuave),
+            style: TextButton.styleFrom(
+              foregroundColor: context.esquema.onSurfaceVariant,
+            ),
             child: const Text("Olvidé mi contraseña"),
           ),
       ],
@@ -332,22 +331,19 @@ class _PantallaNuevaContrasenaState extends State<PantallaNuevaContrasena> {
     body: ListView(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
       children: [
-        const Text(
+        Text(
           "Elige tu contraseña nueva",
-          style: TextStyle(
-            fontSize: 22,
+          style: context.textos.headlineMedium!.copyWith(
             fontWeight: FontWeight.w700,
-            color: Paleta.texto,
+            color: context.esquema.onSurface,
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           "Al menos 8 caracteres. Este enlace sirve una sola vez: si sales "
           "ahora sin cambiarla, hay que pedir otro correo.",
-          style: TextStyle(
-            color: Paleta.textoSuave,
-            fontSize: 13.5,
-            height: 1.5,
+          style: context.textos.bodyMedium!.copyWith(
+            color: context.esquema.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 24),
@@ -376,12 +372,12 @@ class _PantallaNuevaContrasenaState extends State<PantallaNuevaContrasena> {
           onPressed: _enviando ? null : _enviar,
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
           child: _enviando
-              ? const SizedBox(
+              ? SizedBox(
                   width: 18,
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Paleta.acentoContraste,
+                    color: context.esquema.onPrimary,
                   ),
                 )
               : const Text("Guardar la contraseña"),
@@ -461,7 +457,7 @@ class _CampoState extends State<_Campo> {
                     ? Icons.visibility_off_outlined
                     : Icons.visibility_outlined,
                 size: 20,
-                color: Paleta.textoTenue,
+                color: context.esquema.onSurfaceVariant,
               ),
               onPressed: () => setState(() => _visible = !_visible),
             ),

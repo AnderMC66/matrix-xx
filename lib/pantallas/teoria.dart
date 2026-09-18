@@ -48,18 +48,18 @@ class _PantallaTeoriaState extends State<PantallaTeoria> {
                 ),
                 title: Text(
                   curso.nombre,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: Paleta.texto,
+                    color: context.esquema.onSurface,
                   ),
                 ),
                 subtitle: Text(
                   "${curso.conContenido} secciones",
-                  style: const TextStyle(color: Paleta.textoTenue),
+                  style: TextStyle(color: context.esquema.onSurfaceVariant),
                 ),
-                trailing: const Icon(
+                trailing: Icon(
                   Icons.chevron_right,
-                  color: Paleta.textoTenue,
+                  color: context.esquema.onSurfaceVariant,
                 ),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
@@ -101,11 +101,12 @@ class PantallaCursoTeoria extends StatelessWidget {
             ),
             title: Text(
               s.tituloConNumero,
-              style: TextStyle(
-                fontSize: s.nivel <= 2 ? 15 : 14,
-                fontWeight: s.nivel <= 2 ? FontWeight.w600 : FontWeight.w400,
-                color: Paleta.texto,
-              ),
+              // El nivel del árbol se lee en el peso y en la sangría, no en un
+              // punto de tamaño: 15 contra 14 no distinguía una sección de su
+              // subsección, solo hacía el índice irregular.
+              style: s.nivel <= 2
+                  ? context.textos.titleMedium
+                  : context.textos.bodyLarge,
             ),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
@@ -156,18 +157,16 @@ class PantallaSeccion extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(curso.nombre, style: const TextStyle(fontSize: 16)),
+        title: Text(curso.nombre, style: context.textos.bodyLarge),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           Text(
             s.tituloConNumero,
-            style: const TextStyle(
-              fontSize: 22,
+            style: context.textos.headlineMedium!.copyWith(
               fontWeight: FontWeight.w700,
-              color: Paleta.texto,
-              height: 1.3,
+              color: context.esquema.onSurface,
             ),
           ),
           const SizedBox(height: 16),
@@ -216,64 +215,66 @@ class _Bloque extends StatelessWidget {
   final BloqueTeoria bloque;
   const _Bloque({required this.bloque});
 
-  static const _cuerpo = TextStyle(
-    fontSize: 15.5,
-    height: 1.6,
-    color: Paleta.texto,
-  );
-
   @override
-  Widget build(BuildContext context) => switch (bloque) {
-    TituloTeoria(:final texto, :final nivel) => Padding(
-      padding: const EdgeInsets.only(top: 18, bottom: 6),
-      child: TextoConFormulas(
-        texto,
-        conMarcado: true,
-        estilo: TextStyle(
-          fontSize: nivel <= 1 ? 19 : (nivel == 2 ? 16.5 : 15.5),
-          fontWeight: FontWeight.w700,
-          height: 1.35,
-          color: Paleta.texto,
+  Widget build(BuildContext context) {
+    // **Era un `static const TextStyle` de 15,5 px**, y por serlo no podía
+    // saber en qué tema estaba: con modo oscuro habría pintado texto casi
+    // negro sobre fondo casi negro. Ahora es `bodyLarge` (16 px, interlineado
+    // 1,6), que es el cuerpo de lectura de toda la app — y la teoría es
+    // justamente lo que más se lee.
+    final cuerpo = context.textos.bodyLarge;
+    return switch (bloque) {
+      TituloTeoria(:final texto, :final nivel) => Padding(
+        padding: const EdgeInsets.only(top: 18, bottom: 6),
+        child: TextoConFormulas(
+          texto,
+          conMarcado: true,
+          // 19 / 16,5 / 15,5 eran tres tamaños a ojo, y el tercero quedaba a
+          // medio punto del cuerpo: un título que no se distingue de su párrafo
+          // no es un título. Ahora son dos escalones reales de la escala.
+          estilo: nivel <= 1
+              ? context.textos.headlineSmall
+              : context.textos.titleMedium,
         ),
       ),
-    ),
 
-    ParrafoTeoria(:final texto) => Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: TextoConFormulas(texto, conMarcado: true, estilo: _cuerpo),
-    ),
+      ParrafoTeoria(:final texto) => Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: TextoConFormulas(texto, conMarcado: true, estilo: cuerpo),
+      ),
 
-    ItemTeoria(:final texto, :final marca) => Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 26,
-            child: Text(
-              marca,
-              style: const TextStyle(
-                fontSize: 14.5,
-                height: 1.7,
-                color: Paleta.textoTenue,
-                fontWeight: FontWeight.w600,
+      ItemTeoria(:final texto, :final marca) => Padding(
+        padding: const EdgeInsets.only(left: 4, bottom: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 26,
+              child: Text(
+                marca,
+                // El interlineado se iguala al del cuerpo para que la viñeta
+                // quede alineada con su primera línea, no flotando encima.
+                style: context.textos.bodyLarge?.copyWith(
+                  color: context.esquema.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ),
-          Expanded(
-            child: TextoConFormulas(texto, conMarcado: true, estilo: _cuerpo),
-          ),
-        ],
+            Expanded(
+              child: TextoConFormulas(texto, conMarcado: true, estilo: cuerpo),
+            ),
+          ],
+        ),
       ),
-    ),
 
-    // Aparecen 3 827 veces en el corpus: en línea, compacta — un recuadro
-    // grande por figura convertiría la lectura en un campo de marcadores.
-    // Carga de verdad desde `Config.urlFiguraTeoria`; si no llega, cae al
-    // mismo aviso pequeño que había antes de esto (ver `figura_red.dart`).
-    FiguraTeoria(:final archivo, :final alt) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: FiguraRed(url: Config.urlFiguraTeoria(archivo), alt: alt),
-    ),
-  };
+      // Aparecen 3 827 veces en el corpus: en línea, compacta — un recuadro
+      // grande por figura convertiría la lectura en un campo de marcadores.
+      // Carga de verdad desde `Config.urlFiguraTeoria`; si no llega, cae al
+      // mismo aviso pequeño que había antes de esto (ver `figura_red.dart`).
+      FiguraTeoria(:final archivo, :final alt) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: FiguraRed(url: Config.urlFiguraTeoria(archivo), alt: alt),
+      ),
+    };
+  }
 }

@@ -91,18 +91,19 @@ class _PantallaPanelState extends State<PantallaPanel> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
               children: [
-                const Text(
+                Text(
                   "Revisión y soporte",
-                  style: TextStyle(
-                    fontSize: 20,
+                  style: context.textos.headlineSmall!.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: Paleta.texto,
+                    color: context.esquema.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   "Lo que hace falta mirar antes de que lo vea un alumno.",
-                  style: TextStyle(fontSize: 13, color: Paleta.textoSuave),
+                  style: context.textos.bodyMedium!.copyWith(
+                    color: context.esquema.onSurfaceVariant,
+                  ),
                 ),
                 const SizedBox(height: 20),
                 _TarjetaPanel(
@@ -195,7 +196,9 @@ class _TarjetaPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: destacada ? Paleta.acentoSuave : Paleta.superficie,
+    color: destacada
+        ? context.esquema.secondaryContainer
+        : context.esquema.surfaceContainerLow,
     borderRadius: BorderRadius.circular(12),
     child: InkWell(
       borderRadius: BorderRadius.circular(12),
@@ -203,7 +206,11 @@ class _TarjetaPanel extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          border: Border.all(color: destacada ? Paleta.acento : Paleta.borde),
+          border: Border.all(
+            color: destacada
+                ? context.esquema.primary
+                : context.esquema.outlineVariant,
+          ),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -214,32 +221,29 @@ class _TarjetaPanel extends StatelessWidget {
                 children: [
                   Text(
                     titulo,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Paleta.textoSuave,
+                    style: context.textos.bodyMedium!.copyWith(
+                      color: context.esquema.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     "$cifra",
-                    style: const TextStyle(
-                      fontSize: 28,
+                    style: context.textos.displaySmall!.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: Paleta.texto,
+                      color: context.esquema.onSurface,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     detalle,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: Paleta.textoTenue,
+                    style: context.textos.bodySmall!.copyWith(
+                      color: context.esquema.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Paleta.textoTenue),
+            Icon(Icons.chevron_right, color: context.esquema.onSurfaceVariant),
           ],
         ),
       ),
@@ -423,8 +427,8 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Paleta.superficie,
-        border: Border.all(color: Paleta.borde),
+        color: context.esquema.surfaceContainerLow,
+        border: Border.all(color: context.esquema.outlineVariant),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -439,17 +443,15 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
                   children: [
                     Text(
                       "${p.curso} · ${p.subtema}",
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Paleta.textoTenue,
+                      style: context.textos.labelSmall!.copyWith(
+                        color: context.esquema.onSurfaceVariant,
                       ),
                     ),
                     Text(
                       "${p.codigo ?? "#${p.id}"} · ${p.dificultad} · ${p.estado}"
                       "${p.auditada ? " · ya auditada" : ""}",
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Paleta.textoTenue,
+                      style: context.textos.labelSmall!.copyWith(
+                        color: context.esquema.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -462,13 +464,15 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Paleta.avisoSuave,
-                    border: Border.all(color: Paleta.aviso),
+                    color: context.colores.avisoContenedor,
+                    border: Border.all(color: context.colores.aviso),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     "${p.reportesAbiertos} ${p.reportesAbiertos == 1 ? "reporte" : "reportes"}",
-                    style: const TextStyle(fontSize: 10.5, color: Paleta.aviso),
+                    style: context.textos.labelSmall!.copyWith(
+                      color: context.colores.aviso,
+                    ),
                   ),
                 ),
             ],
@@ -490,14 +494,16 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
               padding: const EdgeInsets.all(10),
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
-                color: Paleta.avisoSuave,
-                border: Border.all(color: Paleta.aviso),
+                color: context.colores.avisoContenedor,
+                border: Border.all(color: context.colores.aviso),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text(
+              child: Text(
                 "El servidor no devolvió la clave de esta pregunta. No la "
                 "audites: no hay qué revisar.",
-                style: TextStyle(fontSize: 12, color: Paleta.aviso),
+                style: context.textos.bodySmall!.copyWith(
+                  color: context.colores.aviso,
+                ),
               ),
             ),
           ],
@@ -508,10 +514,12 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: a.letra == p.clave
-                      ? Paleta.exitoSuave
-                      : Paleta.superficieAlta,
+                      ? context.colores.exitoContenedor
+                      : context.esquema.surfaceContainerLowest,
                   border: Border.all(
-                    color: a.letra == p.clave ? Paleta.exito : Paleta.borde,
+                    color: a.letra == p.clave
+                        ? context.colores.exito
+                        : context.esquema.outlineVariant,
                   ),
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -523,8 +531,8 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
                         color: a.letra == p.clave
-                            ? Paleta.exito
-                            : Paleta.textoTenue,
+                            ? context.colores.exito
+                            : context.esquema.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -532,19 +540,19 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
                       child: TextoConFormulas(
                         a.textoMd,
                         conMarcado: true,
-                        estilo: const TextStyle(
-                          fontSize: 13.5,
-                          color: Paleta.texto,
-                          height: 1.4,
+                        estilo: context.textos.bodyMedium!.copyWith(
+                          color: context.esquema.onSurface,
                         ),
                       ),
                     ),
                     if (a.letra == p.clave)
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.only(left: 6),
                         child: Text(
                           "clave",
-                          style: TextStyle(fontSize: 10.5, color: Paleta.exito),
+                          style: context.textos.labelSmall!.copyWith(
+                            color: context.colores.exito,
+                          ),
                         ),
                       ),
                   ],
@@ -576,9 +584,11 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
               type: MaterialType.transparency,
               child: ExpansionTile(
                 tilePadding: EdgeInsets.zero,
-                title: const Text(
+                title: Text(
                   "Explicación",
-                  style: TextStyle(fontSize: 13, color: Paleta.textoSuave),
+                  style: context.textos.bodyMedium!.copyWith(
+                    color: context.esquema.onSurfaceVariant,
+                  ),
                 ),
                 children: [
                   Align(
@@ -586,10 +596,8 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
                     child: TextoConFormulas(
                       exp,
                       conMarcado: true,
-                      estilo: const TextStyle(
-                        fontSize: 13,
-                        color: Paleta.texto,
-                        height: 1.5,
+                      estilo: context.textos.bodyMedium!.copyWith(
+                        color: context.esquema.onSurface,
                       ),
                     ),
                   ),
@@ -604,21 +612,21 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
             children: [
               _BotonEstado(
                 texto: "Correcta, publicar",
-                color: Paleta.exito,
+                color: context.colores.exito,
                 activo: p.estado == "publicada",
                 deshabilitado: _enviando,
                 onPressed: () => _dictaminar("publicada"),
               ),
               _BotonEstado(
                 texto: "Dudosa, sacar de circulación",
-                color: Paleta.aviso,
+                color: context.colores.aviso,
                 activo: p.estado == "en_auditoria",
                 deshabilitado: _enviando,
                 onPressed: () => _dictaminar("en_auditoria"),
               ),
               _BotonEstado(
                 texto: "Retirar",
-                color: Paleta.textoSuave,
+                color: context.esquema.onSurfaceVariant,
                 activo: p.estado == "retirada",
                 deshabilitado: _enviando,
                 onPressed: () => _dictaminar("retirada"),
@@ -629,7 +637,9 @@ class _FichaPreguntaState extends State<_FichaPregunta> {
             const SizedBox(height: 6),
             Text(
               m,
-              style: const TextStyle(fontSize: 11.5, color: Paleta.textoSuave),
+              style: context.textos.bodySmall!.copyWith(
+                color: context.esquema.onSurfaceVariant,
+              ),
             ),
           ],
         ],
@@ -668,7 +678,7 @@ class _BotonEstado extends StatelessWidget {
       foregroundColor: color,
       side: BorderSide(color: color),
       visualDensity: VisualDensity.compact,
-      textStyle: const TextStyle(fontSize: 12),
+      textStyle: context.textos.bodySmall,
     ),
     child: Text(activo ? "$texto ·" : texto),
   );
@@ -832,8 +842,8 @@ class _FichaReporteState extends State<_FichaReporte> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Paleta.superficie,
-        border: Border.all(color: Paleta.borde),
+        color: context.esquema.surfaceContainerLow,
+        border: Border.all(color: context.esquema.outlineVariant),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -842,18 +852,24 @@ class _FichaReporteState extends State<_FichaReporte> {
           Text(
             "${r.preguntaCodigo ?? "pregunta #${r.preguntaId}"} · "
             "${fechaDiaMes(r.creadoEn)} · ${r.estado}",
-            style: const TextStyle(fontSize: 11, color: Paleta.textoTenue),
+            style: context.textos.labelSmall!.copyWith(
+              color: context.esquema.onSurfaceVariant,
+            ),
           ),
           const SizedBox(height: 4),
           Text(
             r.motivo,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            style: context.textos.labelLarge!.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
           ),
           if (r.detalle case final d? when d.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
               d,
-              style: const TextStyle(fontSize: 13, color: Paleta.textoSuave),
+              style: context.textos.bodyMedium!.copyWith(
+                color: context.esquema.onSurfaceVariant,
+              ),
             ),
           ],
           if (r.preguntaEnunciado case final e? when e.isNotEmpty) ...[
@@ -861,17 +877,16 @@ class _FichaReporteState extends State<_FichaReporte> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Paleta.superficieAlta,
-                border: Border.all(color: Paleta.borde),
+                color: context.esquema.surfaceContainerLowest,
+                border: Border.all(color: context.esquema.outlineVariant),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
                 e,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  color: Paleta.textoSuave,
+                style: context.textos.bodySmall!.copyWith(
+                  color: context.esquema.onSurfaceVariant,
                 ),
               ),
             ),
@@ -883,21 +898,21 @@ class _FichaReporteState extends State<_FichaReporte> {
             children: [
               _BotonEstado(
                 texto: "Lo estoy mirando",
-                color: Paleta.textoSuave,
+                color: context.esquema.onSurfaceVariant,
                 activo: r.estado == "en_revision",
                 deshabilitado: _enviando,
                 onPressed: () => _dictaminar("en_revision"),
               ),
               _BotonEstado(
                 texto: "Tenía razón",
-                color: Paleta.exito,
+                color: context.colores.exito,
                 activo: r.estado == "aceptado",
                 deshabilitado: _enviando,
                 onPressed: () => _dictaminar("aceptado"),
               ),
               _BotonEstado(
                 texto: "Sin error",
-                color: Paleta.textoSuave,
+                color: context.esquema.onSurfaceVariant,
                 activo: r.estado == "rechazado",
                 deshabilitado: _enviando,
                 onPressed: () => _dictaminar("rechazado"),
@@ -908,7 +923,9 @@ class _FichaReporteState extends State<_FichaReporte> {
             const SizedBox(height: 6),
             Text(
               m,
-              style: const TextStyle(fontSize: 11.5, color: Paleta.textoSuave),
+              style: context.textos.bodySmall!.copyWith(
+                color: context.esquema.onSurfaceVariant,
+              ),
             ),
           ],
         ],
@@ -987,16 +1004,14 @@ class _PantallaPanelUsuariosState extends State<PantallaPanelUsuarios> {
           separatorBuilder: (_, _) => const Divider(height: 1),
           itemBuilder: (context, i) {
             if (i == 0) {
-              return const Padding(
+              return Padding(
                 padding: EdgeInsets.only(bottom: 12),
                 child: Text(
                   "Un docente puede revisar preguntas y resolver reportes. Un "
                   "admin puede además cambiar roles. El último administrador "
                   "no se puede degradar.",
-                  style: TextStyle(
-                    fontSize: 12.5,
-                    color: Paleta.textoSuave,
-                    height: 1.5,
+                  style: context.textos.bodySmall!.copyWith(
+                    color: context.esquema.onSurfaceVariant,
                   ),
                 ),
               );
@@ -1091,31 +1106,27 @@ class _FilaPersonaState extends State<_FilaPersona> {
               children: [
                 Text(
                   p.nombre.isEmpty ? "—" : p.nombre,
-                  style: const TextStyle(
+                  style: context.textos.labelLarge!.copyWith(
                     fontWeight: FontWeight.w600,
-                    fontSize: 14,
                   ),
                 ),
                 Text(
                   p.correo,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Paleta.textoSuave,
+                  style: context.textos.bodySmall!.copyWith(
+                    color: context.esquema.onSurfaceVariant,
                   ),
                 ),
                 Text(
                   p.plan,
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: Paleta.textoTenue,
+                  style: context.textos.bodySmall!.copyWith(
+                    color: context.esquema.onSurfaceVariant,
                   ),
                 ),
                 if (_mensaje case final m?)
                   Text(
                     m,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      color: Paleta.textoSuave,
+                    style: context.textos.labelSmall!.copyWith(
+                      color: context.esquema.onSurfaceVariant,
                     ),
                   ),
               ],
@@ -1137,9 +1148,11 @@ class _FilaPersonaState extends State<_FilaPersona> {
                 ],
               ),
               if (widget.esUnoMismo)
-                const Text(
+                Text(
                   "(eres tú)",
-                  style: TextStyle(fontSize: 10.5, color: Paleta.textoTenue),
+                  style: context.textos.labelSmall!.copyWith(
+                    color: context.esquema.onSurfaceVariant,
+                  ),
                 ),
             ],
           ),

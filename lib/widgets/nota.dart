@@ -18,48 +18,63 @@ import "../tema.dart";
 /// de una pantalla cuando no hay nada que mostrar; `Nota` se intercala entre
 /// contenido que sí existe.
 ///
-/// El tamaño quedó en 13, que es el que usaban dos de las cuatro y el que se
-/// lee mejor a un párrafo de distancia del texto principal.
+/// El tamaño sale ahora de `bodyMedium` (14) en vez de un 13 escrito a mano.
+/// Los cuatro originales usaban 12,5 o 13 según el archivo, y ninguna de esas
+/// diferencias fue una decisión.
+/// Cada variante elige su par de colores del tema, no constantes.
+enum _Tono { aviso, error, exito }
+
 class Nota extends StatelessWidget {
   final String texto;
-  final Color color;
-  final Color fondo;
+  final _Tono _tono;
 
   /// Opcional. Solo lo llevan las notas que interrumpen una tarea —el error
   /// al entrar, el aviso de «revisa tu correo»—, donde el icono es lo que
   /// hace que se mire antes de seguir.
   final IconData? icono;
 
-  const Nota({
-    super.key,
-    required this.texto,
-    this.color = Paleta.aviso,
-    this.fondo = Paleta.avisoSuave,
-    this.icono,
-  });
+  const Nota({super.key, required this.texto, this.icono})
+    : _tono = _Tono.aviso;
 
   /// Algo salió mal y hay que reintentar.
+  ///
+  /// **Antes se pintaba con el granate de marca**, que era también el acento:
+  /// un error y la función estrella de la app se veían igual. Ahora usa el rol
+  /// `error` del tema, que Material 3 deriva aparte de la semilla.
   const Nota.error({super.key, required this.texto, this.icono})
-    : color = Paleta.acento,
-      fondo = Paleta.acentoSuave;
+    : _tono = _Tono.error;
 
   /// Algo salió bien pero todavía falta un paso fuera de la app.
   const Nota.exito({super.key, required this.texto, this.icono})
-    : color = Paleta.exito,
-      fondo = Paleta.exitoSuave;
+    : _tono = _Tono.exito;
 
   @override
   Widget build(BuildContext context) {
+    final (color, fondo) = switch (_tono) {
+      _Tono.aviso => (
+        context.colores.enAvisoContenedor,
+        context.colores.avisoContenedor,
+      ),
+      _Tono.error => (
+        context.esquema.onErrorContainer,
+        context.esquema.errorContainer,
+      ),
+      _Tono.exito => (
+        context.colores.enExitoContenedor,
+        context.colores.exitoContenedor,
+      ),
+    };
+
     final cuerpo = Text(
       texto,
-      style: TextStyle(fontSize: 13, height: 1.45, color: color),
+      style: context.textos.bodyMedium?.copyWith(color: color),
     );
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: fondo,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(radioChico),
       ),
       child: icono == null
           ? cuerpo

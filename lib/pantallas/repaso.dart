@@ -165,10 +165,9 @@ class _Portada extends StatelessWidget {
       children: [
         Text(
           falladas ? "Lo que sigues fallando" : "Toca repasar hoy",
-          style: const TextStyle(
-            fontSize: 21,
+          style: context.textos.headlineSmall!.copyWith(
             fontWeight: FontWeight.w700,
-            color: Paleta.texto,
+            color: context.esquema.onSurface,
           ),
         ),
         const SizedBox(height: 8),
@@ -179,28 +178,24 @@ class _Portada extends StatelessWidget {
               : "Repetición espaciada: cada acierto aleja la siguiente vez "
                     "que te la preguntamos; cada fallo la trae de vuelta "
                     "mañana.",
-          style: const TextStyle(
-            color: Paleta.textoSuave,
-            fontSize: 13.5,
-            height: 1.55,
+          style: context.textos.bodyMedium!.copyWith(
+            color: context.esquema.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 22),
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: Paleta.acentoSuave,
+            color: context.esquema.secondaryContainer,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Row(
             children: [
               Text(
                 "${preguntas.length}",
-                style: const TextStyle(
-                  fontSize: 34,
+                style: context.textos.displaySmall!.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: Paleta.acento,
-                  height: 1,
+                  color: context.esquema.primary,
                 ),
               ),
               const SizedBox(width: 14),
@@ -209,10 +204,8 @@ class _Portada extends StatelessWidget {
                   preguntas.length == 1
                       ? "pregunta esperándote"
                       : "preguntas esperándote",
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Paleta.acento,
-                    height: 1.35,
+                  style: context.textos.bodyMedium!.copyWith(
+                    color: context.esquema.primary,
                   ),
                 ),
               ),
@@ -223,7 +216,9 @@ class _Portada extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             "Además tienes ${r.pendientesHoy} programadas para hoy.",
-            style: const TextStyle(fontSize: 13, color: Paleta.textoTenue),
+            style: context.textos.bodyMedium!.copyWith(
+              color: context.esquema.onSurfaceVariant,
+            ),
           ),
         ],
         const SizedBox(height: 22),

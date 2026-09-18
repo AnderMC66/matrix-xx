@@ -120,7 +120,7 @@ class FiguraRed extends StatelessWidget {
                 url,
                 fit: BoxFit.contain,
                 semanticsLabel: _etiqueta,
-                placeholderBuilder: (_) => _girando(),
+                placeholderBuilder: (contexto) => _girando(contexto),
                 errorBuilder: (context, error, stack) => ausente,
               )
             : _conEtiqueta(
@@ -131,7 +131,7 @@ class FiguraRed extends StatelessWidget {
                   // que aparece progresivamente dentro de un hueco ya
                   // reservado solo se lee como parpadeo.
                   fadeInDuration: Duration.zero,
-                  placeholder: (context, _) => _girando(),
+                  placeholder: (context, _) => _girando(context),
                   errorWidget: (context, _, _) => ausente,
                 ),
               ),
@@ -139,8 +139,8 @@ class FiguraRed extends StatelessWidget {
     );
   }
 
-  Widget _girando() => Container(
-    color: Paleta.superficie,
+  Widget _girando(BuildContext context) => Container(
+    color: context.esquema.surfaceContainerLow,
     alignment: Alignment.center,
     child: const SizedBox(
       width: 22,
@@ -219,16 +219,15 @@ class _Ausente extends StatelessWidget {
           Icon(
             cargando ? Icons.hourglass_empty : Icons.image_outlined,
             size: 15,
-            color: Paleta.textoTenue,
+            color: context.esquema.onSurfaceVariant,
           ),
           const SizedBox(width: 7),
           Flexible(
             child: Text(
               texto,
-              style: const TextStyle(
-                fontSize: 12,
+              style: context.textos.bodySmall!.copyWith(
                 fontStyle: FontStyle.italic,
-                color: Paleta.textoTenue,
+                color: context.esquema.onSurfaceVariant,
               ),
             ),
           ),
@@ -241,8 +240,8 @@ class _Ausente extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Paleta.superficie,
-          border: Border.all(color: Paleta.borde),
+          color: context.esquema.surfaceContainerLow,
+          border: Border.all(color: context.esquema.outlineVariant),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Center(
@@ -253,16 +252,14 @@ class _Ausente extends StatelessWidget {
                 Icon(
                   cargando ? Icons.hourglass_empty : Icons.image_outlined,
                   size: 22,
-                  color: Paleta.textoTenue,
+                  color: context.esquema.onSurfaceVariant,
                 ),
                 const SizedBox(height: 8),
                 Text(
                   texto,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 12.5,
-                    height: 1.45,
-                    color: Paleta.textoSuave,
+                  style: context.textos.bodySmall!.copyWith(
+                    color: context.esquema.onSurfaceVariant,
                   ),
                 ),
               ],

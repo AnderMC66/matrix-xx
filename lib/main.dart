@@ -29,7 +29,14 @@ class AppMatrixU extends StatelessWidget {
   Widget build(BuildContext context) => MaterialApp(
     title: "Matrix U",
     debugShowCheckedModeBanner: false,
-    theme: construirTema(),
+    theme: construirTema(Brightness.light),
+    darkTheme: construirTema(Brightness.dark),
+    // Sigue lo que tenga puesto el sistema. **La app estaba fijada en claro**,
+    // y no por descuido: el granate de marca derivía a rosa en oscuro, así que
+    // un tema oscuro habría dejado de parecerse a la marca. Con el índigo eso
+    // ya no pasa —#C3C0FF sigue siendo azul— y quien estudia de noche, que en
+    // una app de admisión es medio mundo, deja de comerse una pantalla blanca.
+    themeMode: ThemeMode.system,
     home: const Arranque(),
   );
 }
@@ -236,7 +243,7 @@ class _SinConfigurar extends StatelessWidget {
         child: Text(
           Config.ayuda,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Paleta.textoSuave, height: 1.5),
+          style: context.textos.bodyMedium,
         ),
       ),
     ),
@@ -322,10 +329,7 @@ class _ArmazonState extends State<Armazon> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _titulos[_destino],
-          style: const TextStyle(fontWeight: FontWeight.w700),
-        ),
+        title: Text(_titulos[_destino]),
         actions: [
           // `Inicio` (`/`) tampoco vive en la barra móvil de la web —el
           // header con el logo que lleva ahí está oculto en móvil— así que
@@ -333,7 +337,7 @@ class _ArmazonState extends State<Armazon> {
           // Este ícono es la única forma de volver después.
           IconButton(
             tooltip: "Inicio",
-            icon: const Icon(Icons.home_outlined, color: Paleta.textoSuave),
+            icon: const Icon(Icons.home_outlined),
             onPressed: () => Navigator.of(
               context,
             ).push(MaterialPageRoute(builder: (_) => const PantallaInicio())),
@@ -345,7 +349,7 @@ class _ArmazonState extends State<Armazon> {
           // completo", así que no hace falta un segundo ícono para Temario.
           IconButton(
             tooltip: "Buscar en el temario",
-            icon: const Icon(Icons.search, color: Paleta.textoSuave),
+            icon: const Icon(Icons.search),
             onPressed: () => Navigator.of(
               context,
             ).push(MaterialPageRoute(builder: (_) => const PantallaBuscar())),
@@ -353,10 +357,7 @@ class _ArmazonState extends State<Armazon> {
           if (Config.configurado)
             IconButton(
               tooltip: hayCuenta ? "Cerrar sesión" : "Entrar",
-              icon: Icon(
-                hayCuenta ? Icons.logout : Icons.login,
-                color: Paleta.textoSuave,
-              ),
+              icon: Icon(hayCuenta ? Icons.logout : Icons.login),
               onPressed: () async {
                 if (hayCuenta) {
                   await _sesion.salir();
@@ -366,10 +367,10 @@ class _ArmazonState extends State<Armazon> {
               },
             ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(height: 1, color: Paleta.borde),
-        ),
+        // Sin la línea de 1 px que había: `scrolledUnderElevation` tiñe la
+        // barra sola cuando hay contenido debajo, que es cómo lo resuelve
+        // Material 3. Una raya fija separa también cuando no hay nada que
+        // separar.
       ),
       // Teoría y Práctica se quedan montadas; las otras tres se rehacen.
       //

@@ -247,19 +247,20 @@ class _PantallaHorarioState extends State<PantallaHorario> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       children: [
-        const Text(
+        Text(
           "Cuándo estudias cada curso",
-          style: TextStyle(
-            fontSize: 20,
+          style: context.textos.headlineSmall!.copyWith(
             fontWeight: FontWeight.w700,
-            color: Paleta.texto,
+            color: context.esquema.onSurface,
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
+        Text(
           "Programa un bloque semanal por curso. Mientras tengas la app "
           "abierta a esa hora, te avisamos.",
-          style: TextStyle(fontSize: 13, color: Paleta.textoSuave, height: 1.5),
+          style: context.textos.bodyMedium!.copyWith(
+            color: context.esquema.onSurfaceVariant,
+          ),
         ),
         if (_proximoAviso case final a?) ...[
           const SizedBox(height: 16),
@@ -317,23 +318,23 @@ class _AvisoProximo extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Paleta.acentoSuave,
+        color: context.esquema.secondaryContainer,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             Icons.notifications_active_outlined,
-            color: Paleta.acento,
+            color: context.esquema.primary,
             size: 20,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               texto,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: Paleta.acento,
+                color: context.esquema.primary,
               ),
             ),
           ),
@@ -376,8 +377,8 @@ class _FormularioBloque extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: Paleta.superficie,
-      border: Border.all(color: Paleta.borde),
+      color: context.esquema.surfaceContainerLow,
+      border: Border.all(color: context.esquema.outlineVariant),
       borderRadius: BorderRadius.circular(14),
     ),
     child: Column(
@@ -461,7 +462,12 @@ class _FormularioBloque extends StatelessWidget {
         ),
         if (error case final e?) ...[
           const SizedBox(height: 10),
-          Text(e, style: const TextStyle(color: Paleta.aviso, fontSize: 12.5)),
+          Text(
+            e,
+            style: context.textos.bodySmall!.copyWith(
+              color: context.colores.aviso,
+            ),
+          ),
         ],
         const SizedBox(height: 14),
         FilledButton(
@@ -495,17 +501,16 @@ class _BloqueDia extends StatelessWidget {
       children: [
         Text(
           nombre.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 11,
+          style: context.textos.labelSmall!.copyWith(
             fontWeight: FontWeight.w700,
             letterSpacing: 0.6,
-            color: Paleta.textoSuave,
+            color: context.esquema.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            border: Border.all(color: Paleta.borde),
+            border: Border.all(color: context.esquema.outlineVariant),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -522,17 +527,15 @@ class _BloqueDia extends StatelessWidget {
                           children: [
                             Text(
                               b.cursoNombre,
-                              style: const TextStyle(
+                              style: context.textos.labelLarge!.copyWith(
                                 fontWeight: FontWeight.w600,
-                                fontSize: 14,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               "${formatearHora(b.horaInicio)} · ${b.duracionMinutos} min",
-                              style: const TextStyle(
-                                fontSize: 12,
-                                color: Paleta.textoTenue,
+                              style: context.textos.bodySmall!.copyWith(
+                                color: context.esquema.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -543,7 +546,7 @@ class _BloqueDia extends StatelessWidget {
                             ? null
                             : () => onEliminar(b),
                         style: TextButton.styleFrom(
-                          foregroundColor: Paleta.aviso,
+                          foregroundColor: context.colores.aviso,
                         ),
                         child: Text(
                           eliminandoId == b.id ? "Quitando…" : "Quitar",

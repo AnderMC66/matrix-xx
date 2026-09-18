@@ -231,17 +231,18 @@ class _Cabecera extends StatelessWidget {
         perfil?.nombre?.trim().isNotEmpty ?? false
             ? perfil!.nombre!
             : "Tu progreso",
-        style: const TextStyle(
-          fontSize: 23,
+        style: context.textos.headlineMedium!.copyWith(
           fontWeight: FontWeight.w700,
-          color: Paleta.texto,
+          color: context.esquema.onSurface,
         ),
       ),
       if (correo != null) ...[
         const SizedBox(height: 4),
         Text(
           correo!,
-          style: const TextStyle(fontSize: 13, color: Paleta.textoTenue),
+          style: context.textos.bodyMedium!.copyWith(
+            color: context.esquema.onSurfaceVariant,
+          ),
         ),
       ],
       if (perfil case final p?) ...[
@@ -270,17 +271,19 @@ class _Etiqueta extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
     decoration: BoxDecoration(
-      color: Paleta.superficieAlta,
-      border: Border.all(color: Paleta.borde),
+      color: context.esquema.surfaceContainerLowest,
+      border: Border.all(color: context.esquema.outlineVariant),
       borderRadius: BorderRadius.circular(9),
     ),
     child: RichText(
       text: TextSpan(
-        style: const TextStyle(fontSize: 12.5, color: Paleta.texto),
+        style: context.textos.bodySmall!.copyWith(
+          color: context.esquema.onSurface,
+        ),
         children: [
           TextSpan(
             text: "$clave ",
-            style: const TextStyle(color: Paleta.textoTenue),
+            style: TextStyle(color: context.esquema.onSurfaceVariant),
           ),
           TextSpan(
             text: valor,
@@ -301,7 +304,7 @@ class _PanelStaff extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Paleta.acentoSuave,
+    color: context.esquema.secondaryContainer,
     borderRadius: BorderRadius.circular(12),
     child: InkWell(
       borderRadius: BorderRadius.circular(12),
@@ -312,24 +315,26 @@ class _PanelStaff extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Paleta.acento),
+          border: Border.all(color: context.esquema.primary),
         ),
         child: Row(
           children: [
-            const Icon(Icons.shield_outlined, size: 18, color: Paleta.acento),
+            Icon(
+              Icons.shield_outlined,
+              size: 18,
+              color: context.esquema.primary,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 "Panel de $rol",
-                style: const TextStyle(
-                  fontSize: 13,
+                style: context.textos.labelLarge!.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: Paleta.acento,
-                  height: 1.45,
+                  color: context.esquema.primary,
                 ),
               ),
             ),
-            const Icon(Icons.chevron_right, size: 18, color: Paleta.acento),
+            Icon(Icons.chevron_right, size: 18, color: context.esquema.primary),
           ],
         ),
       ),
@@ -349,9 +354,9 @@ class _Reportes extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
-      color: Paleta.superficieAlta,
+      color: context.esquema.surfaceContainerLowest,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Paleta.borde),
+      border: Border.all(color: context.esquema.outlineVariant),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,10 +365,9 @@ class _Reportes extends StatelessWidget {
           reportes.length == 1
               ? "Revisaron tu reporte"
               : "Revisaron ${reportes.length} de tus reportes",
-          style: const TextStyle(
+          style: context.textos.labelLarge!.copyWith(
             fontWeight: FontWeight.w700,
-            fontSize: 14,
-            color: Paleta.texto,
+            color: context.esquema.onSurface,
           ),
         ),
         const SizedBox(height: 10),
@@ -376,17 +380,17 @@ class _Reportes extends StatelessWidget {
                 Icon(
                   r.aceptado ? Icons.check_circle_outline : Icons.info_outline,
                   size: 15,
-                  color: r.aceptado ? Paleta.exito : Paleta.textoTenue,
+                  color: r.aceptado
+                      ? context.colores.exito
+                      : context.esquema.onSurfaceVariant,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     "${r.preguntaCodigo ?? "Pregunta"} · ${r.motivo} — "
                     "${r.aceptado ? "aceptado" : r.estado}",
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      color: Paleta.textoSuave,
-                      height: 1.4,
+                    style: context.textos.bodySmall!.copyWith(
+                      color: context.esquema.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -421,12 +425,10 @@ class _TarjetaRacha extends StatelessWidget {
           // «dos días seguidos», que le pedía al alumno el doble de lo que
           // hace falta para ver su primer resultado — justo lo contrario de
           // lo que una racha intenta provocar.
-          ? const Text(
+          ? Text(
               "Responde preguntas hoy y aquí arranca tu racha.",
-              style: TextStyle(
-                fontSize: 12.5,
-                color: Paleta.textoSuave,
-                height: 1.45,
+              style: context.textos.bodySmall!.copyWith(
+                color: context.esquema.onSurfaceVariant,
               ),
             )
           : Column(
@@ -438,19 +440,16 @@ class _TarjetaRacha extends StatelessWidget {
                   children: [
                     Text(
                       "${r.diasActual}",
-                      style: const TextStyle(
-                        fontSize: 32,
+                      style: context.textos.displaySmall!.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: Paleta.texto,
-                        height: 1,
+                        color: context.esquema.onSurface,
                       ),
                     ),
                     const SizedBox(width: 6),
                     Text(
                       r.diasActual == 1 ? "día" : "días",
-                      style: const TextStyle(
-                        fontSize: 12.5,
-                        color: Paleta.textoTenue,
+                      style: context.textos.bodySmall!.copyWith(
+                        color: context.esquema.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -461,19 +460,15 @@ class _TarjetaRacha extends StatelessWidget {
                       ? "Ya estudiaste hoy."
                       : "Todavía no estudias hoy: responde algo para no "
                             "cortarla.",
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: Paleta.textoTenue,
-                    height: 1.4,
+                  style: context.textos.bodySmall!.copyWith(
+                    color: context.esquema.onSurfaceVariant,
                   ),
                 ),
                 if (r.diasMaxima > r.diasActual)
                   Text(
                     "Tu mejor racha fue de ${r.diasMaxima} días.",
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: Paleta.textoTenue,
-                      height: 1.4,
+                    style: context.textos.bodySmall!.copyWith(
+                      color: context.esquema.onSurfaceVariant,
                     ),
                   ),
               ],
@@ -492,12 +487,10 @@ class _TarjetaRepasos extends StatelessWidget {
     return _Panel(
       titulo: "REPASOS",
       child: r == null || r.sinHistorial
-          ? const Text(
+          ? Text(
               "Cada pregunta que respondes entra en el calendario de repaso.",
-              style: TextStyle(
-                fontSize: 12.5,
-                color: Paleta.textoSuave,
-                height: 1.45,
+              style: context.textos.bodySmall!.copyWith(
+                color: context.esquema.onSurfaceVariant,
               ),
             )
           : Column(
@@ -505,20 +498,16 @@ class _TarjetaRepasos extends StatelessWidget {
               children: [
                 Text(
                   "${r.pendientesHoy}",
-                  style: const TextStyle(
-                    fontSize: 32,
+                  style: context.textos.displaySmall!.copyWith(
                     fontWeight: FontWeight.w800,
-                    color: Paleta.texto,
-                    height: 1,
+                    color: context.esquema.onSurface,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   "para hoy, de ${r.totalProgramados} programados",
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: Paleta.textoTenue,
-                    height: 1.4,
+                  style: context.textos.bodySmall!.copyWith(
+                    color: context.esquema.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -544,19 +533,19 @@ class _ProximoBloque extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (proximo == null)
-            const Text(
+            Text(
               "No tienes ningún bloque programado todavía. Programa un "
               "horario semanal por curso y te avisamos cuando toca.",
-              style: TextStyle(
-                fontSize: 12.5,
-                color: Paleta.textoSuave,
-                height: 1.45,
+              style: context.textos.bodySmall!.copyWith(
+                color: context.esquema.onSurfaceVariant,
               ),
             )
           else
             RichText(
               text: TextSpan(
-                style: const TextStyle(fontSize: 13.5, color: Paleta.texto),
+                style: context.textos.bodyMedium!.copyWith(
+                  color: context.esquema.onSurface,
+                ),
                 children: [
                   TextSpan(
                     text: proximo.bloque.cursoNombre,
@@ -566,7 +555,7 @@ class _ProximoBloque extends StatelessWidget {
                     text:
                         " — ${diasSemana[proximo.bloque.diaSemana]} "
                         "${formatearHora(proximo.bloque.horaInicio)}",
-                    style: const TextStyle(color: Paleta.textoSuave),
+                    style: TextStyle(color: context.esquema.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -599,20 +588,19 @@ class _Panel extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
-      color: Paleta.superficieAlta,
+      color: context.esquema.surfaceContainerLowest,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Paleta.borde),
+      border: Border.all(color: context.esquema.outlineVariant),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           titulo,
-          style: const TextStyle(
-            fontSize: 10.5,
+          style: context.textos.labelSmall!.copyWith(
             fontWeight: FontWeight.w700,
             letterSpacing: 0.7,
-            color: Paleta.textoSuave,
+            color: context.esquema.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 10),
@@ -633,16 +621,18 @@ class _SeccionDiagnostico extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 34),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Paleta.borde, style: BorderStyle.solid),
+          border: Border.all(
+            color: context.esquema.outlineVariant,
+            style: BorderStyle.solid,
+          ),
         ),
-        child: const Column(
+        child: Column(
           children: [
             Text(
               "Tu diagnóstico está vacío",
-              style: TextStyle(
+              style: context.textos.titleMedium!.copyWith(
                 fontWeight: FontWeight.w700,
-                fontSize: 15,
-                color: Paleta.texto,
+                color: context.esquema.onSurface,
               ),
             ),
             SizedBox(height: 8),
@@ -650,10 +640,8 @@ class _SeccionDiagnostico extends StatelessWidget {
               "En cuanto respondas preguntas, aquí aparece en qué subtemas "
               "estás perdiendo puntos y cuáles ya dominas.",
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: Paleta.textoSuave,
-                height: 1.5,
+              style: context.textos.bodyMedium!.copyWith(
+                color: context.esquema.onSurfaceVariant,
               ),
             ),
           ],
@@ -664,21 +652,20 @@ class _SeccionDiagnostico extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           "Tu diagnóstico",
-          style: TextStyle(
-            fontSize: 19,
+          style: context.textos.headlineSmall!.copyWith(
             fontWeight: FontWeight.w700,
-            color: Paleta.texto,
+            color: context.esquema.onSurface,
           ),
         ),
         const SizedBox(height: 14),
         Container(
           padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             border: Border(
-              top: BorderSide(color: Paleta.borde),
-              bottom: BorderSide(color: Paleta.borde),
+              top: BorderSide(color: context.esquema.outlineVariant),
+              bottom: BorderSide(color: context.esquema.outlineVariant),
             ),
           ),
           child: Row(
@@ -726,11 +713,10 @@ class _Rotulo extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
     texto,
-    style: const TextStyle(
-      fontSize: 11,
+    style: context.textos.labelSmall!.copyWith(
       fontWeight: FontWeight.w700,
       letterSpacing: 0.8,
-      color: Paleta.textoTenue,
+      color: context.esquema.onSurfaceVariant,
     ),
   );
 }
@@ -753,20 +739,24 @@ class _Metrica extends StatelessWidget {
       children: [
         Text(
           valor,
-          style: TextStyle(
-            fontSize: destacado ? 26 : 22,
-            fontWeight: FontWeight.w800,
-            color: destacado ? Paleta.acento : Paleta.texto,
-            height: 1.1,
-          ),
+          // Dos escalones de la escala en vez de 26/22, que eran vecinos: a
+          // cuatro píxeles de diferencia nadie ve «esta cifra importa más». El
+          // color hace el trabajo que el tamaño no llegaba a hacer.
+          style:
+              (destacado
+                      ? context.textos.displaySmall
+                      : context.textos.headlineMedium)!
+                  .copyWith(
+                    color: destacado
+                        ? context.esquema.primary
+                        : context.esquema.onSurface,
+                  ),
         ),
         const SizedBox(height: 4),
         Text(
           etiqueta,
-          style: const TextStyle(
-            fontSize: 11,
-            color: Paleta.textoTenue,
-            height: 1.3,
+          style: context.textos.labelSmall!.copyWith(
+            color: context.esquema.onSurfaceVariant,
           ),
         ),
       ],
@@ -794,7 +784,7 @@ class _FilaPrioridad extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Paleta.superficieAlta,
+    color: context.esquema.surfaceContainerLowest,
     borderRadius: BorderRadius.circular(10),
     child: InkWell(
       borderRadius: BorderRadius.circular(10),
@@ -811,16 +801,15 @@ class _FilaPrioridad extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Paleta.borde),
+          border: Border.all(color: context.esquema.outlineVariant),
         ),
         child: Row(
           children: [
             Text(
               "$puesto",
-              style: const TextStyle(
-                fontSize: 16,
+              style: context.textos.titleMedium!.copyWith(
                 fontWeight: FontWeight.w800,
-                color: Paleta.textoTenue,
+                color: context.esquema.onSurfaceVariant,
               ),
             ),
             const SizedBox(width: 12),
@@ -832,20 +821,17 @@ class _FilaPrioridad extends StatelessWidget {
                     subtema.nombre,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13.5,
+                    style: context.textos.labelLarge!.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: Paleta.texto,
-                      height: 1.3,
+                      color: context.esquema.onSurface,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     "${subtema.codigo} · ${subtema.cursoNombre}",
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 11.5,
-                      color: Paleta.textoTenue,
+                    style: context.textos.bodySmall!.copyWith(
+                      color: context.esquema.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -853,7 +839,11 @@ class _FilaPrioridad extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             _Marcador(subtema: subtema),
-            const Icon(Icons.chevron_right, size: 16, color: Paleta.textoTenue),
+            Icon(
+              Icons.chevron_right,
+              size: 16,
+              color: context.esquema.onSurfaceVariant,
+            ),
           ],
         ),
       ),
@@ -879,7 +869,7 @@ class _BloqueCurso extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Paleta.borde),
+        border: Border.all(color: context.esquema.outlineVariant),
       ),
       child: Theme(
         // El divisor por defecto del `ExpansionTile` dibuja una línea encima
@@ -891,15 +881,16 @@ class _BloqueCurso extends StatelessWidget {
           shape: const Border(),
           title: Text(
             curso,
-            style: const TextStyle(
-              fontSize: 14.5,
+            style: context.textos.labelLarge!.copyWith(
               fontWeight: FontWeight.w700,
-              color: Paleta.texto,
+              color: context.esquema.onSurface,
             ),
           ),
           subtitle: Text(
             "$correctas de $respondidas · $promedio %",
-            style: const TextStyle(fontSize: 12, color: Paleta.textoTenue),
+            style: context.textos.bodySmall!.copyWith(
+              color: context.esquema.onSurfaceVariant,
+            ),
           ),
           children: [
             for (final s in subtemas)
@@ -913,19 +904,16 @@ class _BloqueCurso extends StatelessWidget {
                         children: [
                           Text(
                             s.nombre,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              color: Paleta.texto,
-                              height: 1.3,
+                            style: context.textos.bodyMedium!.copyWith(
+                              color: context.esquema.onSurface,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             "${s.codigo} · ${s.temaNombre}",
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Paleta.textoTenue,
+                            style: context.textos.labelSmall!.copyWith(
+                              color: context.esquema.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -954,26 +942,30 @@ class _Marcador extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pct = subtema.porcentaje;
+    // Verde · ámbar · rojo, que es la escala que alguien espera de un
+    // diagnóstico. El tramo malo usaba el color de marca porque era el mismo
+    // que el de error; separados, le toca el de error.
     final color = pct >= umbralBien
-        ? Paleta.exito
+        ? context.colores.exito
         : pct < umbralFlojo
-        ? Paleta.acento
-        : Paleta.aviso;
+        ? context.esquema.error
+        : context.colores.aviso;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         Text(
           "${pct.round()} %",
-          style: TextStyle(
-            fontSize: 13.5,
+          style: context.textos.labelLarge!.copyWith(
             fontWeight: FontWeight.w700,
             color: color,
           ),
         ),
         Text(
           "${subtema.correctas}/${subtema.respondidas}",
-          style: const TextStyle(fontSize: 11, color: Paleta.textoTenue),
+          style: context.textos.labelSmall!.copyWith(
+            color: context.esquema.onSurfaceVariant,
+          ),
         ),
       ],
     );
@@ -1037,8 +1029,8 @@ class _EliminarCuentaState extends State<_EliminarCuenta> {
       icon: const Icon(Icons.delete_outline, size: 16),
       label: Text(_borrando ? "Borrando…" : "Eliminar mi cuenta"),
       style: TextButton.styleFrom(
-        foregroundColor: Paleta.textoTenue,
-        textStyle: const TextStyle(fontSize: 12.5),
+        foregroundColor: context.esquema.onSurfaceVariant,
+        textStyle: context.textos.bodySmall,
         padding: const EdgeInsets.symmetric(horizontal: 8),
       ),
     ),
@@ -1078,14 +1070,14 @@ class _DialogoEliminarState extends State<_DialogoEliminar> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "Se borra para siempre, y con ella:\n\n"
             "· tu racha y tu diagnóstico por subtema\n"
             "· los repasos que tenías programados\n"
             "· tus simulacros rendidos y sus puntajes\n"
             "· tu horario de estudio\n\n"
             "No se puede deshacer. Escribe $_palabra para confirmar.",
-            style: TextStyle(fontSize: 13.5, height: 1.5),
+            style: context.textos.bodyMedium,
           ),
           const SizedBox(height: 14),
           TextField(
@@ -1112,7 +1104,13 @@ class _DialogoEliminarState extends State<_DialogoEliminar> {
         ),
         FilledButton(
           onPressed: coincide ? () => Navigator.of(context).pop(true) : null,
-          style: FilledButton.styleFrom(backgroundColor: Paleta.acento),
+          // Rojo de error y no el de marca: es irreversible y borra todo el
+          // progreso. Un botón destructivo del color de la app invita a
+          // pulsarlo.
+          style: FilledButton.styleFrom(
+            backgroundColor: context.esquema.error,
+            foregroundColor: context.esquema.onError,
+          ),
           child: const Text("Eliminar"),
         ),
       ],

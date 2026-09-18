@@ -143,10 +143,15 @@ class TextoConFormulas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final estiloBase =
-        estilo ??
-        DefaultTextStyle.of(context).style
-            .copyWith(fontSize: 16, height: 1.6, color: Paleta.texto);
+    // `bodyLarge` es el cuerpo de lectura de la app: 16 px, interlineado 1,6.
+    // Estaba escrito a mano con esos mismos números, que es como se empieza a
+    // tener dos fuentes de verdad para lo mismo.
+    final estiloBase = estilo ?? context.textos.bodyLarge!;
+
+    // Se resuelve una vez aquí, donde hay contexto, y viaja como argumento:
+    // el fallback de una fórmula rota corre dentro de `flutter_math`, fuera
+    // del árbol, y allí no hay `context` que consultar.
+    final colores = context.colores;
 
     final trozos = partir(texto);
     final hayBloque = trozos.any((t) => t is TrozoFormula && t.enBloque);
@@ -157,7 +162,7 @@ class TextoConFormulas extends StatelessWidget {
       return RichText(
         text: TextSpan(
           style: estiloBase,
-          children: trozos.map((t) => _span(t, estiloBase)).toList(),
+          children: trozos.map((t) => _span(t, estiloBase, colores)).toList(),
         ),
       );
     }
@@ -182,11 +187,11 @@ class TextoConFormulas extends StatelessWidget {
         filas.add(
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Center(child: _formula(t.tex, estiloBase, true)),
+            child: Center(child: _formula(t.tex, estiloBase, true, colores)),
           ),
         );
       } else {
-        acumulado.add(_span(t, estiloBase));
+        acumulado.add(_span(t, estiloBase, colores));
       }
     }
     volcar();
@@ -197,7 +202,7 @@ class TextoConFormulas extends StatelessWidget {
     );
   }
 
-  InlineSpan _span(Trozo t, TextStyle estiloBase) {
+  InlineSpan _span(Trozo t, TextStyle estiloBase, ColoresApp colores) {
     if (t is TrozoTexto) {
       return conMarcado
           ? TextSpan(children: spansConMarcado(t.texto, estiloBase))
@@ -206,11 +211,19 @@ class TextoConFormulas extends StatelessWidget {
     final f = t as TrozoFormula;
     return WidgetSpan(
       alignment: PlaceholderAlignment.middle,
-      child: _formula(f.tex, estiloBase, false),
+      child: _formula(f.tex, estiloBase, false, colores),
     );
   }
 
-  Widget _formula(String tex, TextStyle estiloBase, bool enBloque) {
+  /// [colores] llega resuelto y no se lee de un `context` aquí dentro:
+  /// `onErrorFallback` es un callback que `flutter_math` invoca cuando le da la
+  /// gana, fuera del árbol, y ahí no hay contexto que consultar.
+  Widget _formula(
+    String tex,
+    TextStyle estiloBase,
+    bool enBloque,
+    ColoresApp colores,
+  ) {
     return Math.tex(
       tex,
       textStyle: estiloBase.copyWith(
@@ -223,8 +236,8 @@ class TextoConFormulas extends StatelessWidget {
           legibilizar(tex),
           style: estiloBase.copyWith(
             fontFamily: "monospace",
-            color: Paleta.aviso,
-            backgroundColor: Paleta.avisoSuave,
+            color: colores.aviso,
+            backgroundColor: colores.avisoContenedor,
           ),
         );
       },

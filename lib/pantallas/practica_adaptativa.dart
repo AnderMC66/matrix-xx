@@ -163,20 +163,17 @@ class _PantallaPracticaAdaptativaState
               curso != null
                   ? "${curso.nombre}, a tu medida"
                   : "Lo que más te conviene ahora",
-              style: const TextStyle(
-                fontSize: 20,
+              style: context.textos.headlineSmall!.copyWith(
                 fontWeight: FontWeight.w700,
-                color: Paleta.texto,
+                color: context.esquema.onSurface,
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               "Elegimos las preguntas por ti: empiezan por los subtemas "
               "donde peor vas, y lo que ya dominas no vuelve a salir.",
-              style: TextStyle(
-                fontSize: 13,
-                color: Paleta.textoSuave,
-                height: 1.5,
+              style: context.textos.bodyMedium!.copyWith(
+                color: context.esquema.onSurfaceVariant,
               ),
             ),
             if (curso == null && datos.desatendidos.isNotEmpty) ...[
@@ -270,24 +267,22 @@ class _AvisoMasFlojoState extends State<_AvisoMasFlojo> {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(14),
     decoration: BoxDecoration(
-      color: Paleta.superficie,
-      border: Border.all(color: Paleta.borde),
+      color: context.esquema.surfaceContainerLow,
+      border: Border.all(color: context.esquema.outlineVariant),
       borderRadius: BorderRadius.circular(12),
     ),
     child: RichText(
       text: TextSpan(
-        style: const TextStyle(
-          fontSize: 13.5,
-          height: 1.5,
-          color: Paleta.textoSuave,
+        style: context.textos.bodyMedium!.copyWith(
+          color: context.esquema.onSurfaceVariant,
         ),
         children: [
           const TextSpan(text: "Tu curso más flojo ahora es "),
           TextSpan(
             text: widget.curso.nombre,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: Paleta.acento,
+              color: context.esquema.primary,
             ),
             recognizer: _pulsar,
           ),
@@ -350,7 +345,7 @@ class _NadaPendiente extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 34),
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: Paleta.borde),
+      border: Border.all(color: context.esquema.outlineVariant),
     ),
     child: Column(
       children: [
@@ -358,10 +353,9 @@ class _NadaPendiente extends StatelessWidget {
           curso != null
               ? "Nada pendiente en ${curso!.nombre}"
               : "Nada pendiente por ahora",
-          style: const TextStyle(
+          style: context.textos.titleMedium!.copyWith(
             fontWeight: FontWeight.w700,
-            fontSize: 15,
-            color: Paleta.texto,
+            color: context.esquema.onSurface,
           ),
           textAlign: TextAlign.center,
         ),
@@ -374,10 +368,8 @@ class _NadaPendiente extends StatelessWidget {
                     "${curso != null ? " que hay de este curso" : " del banco"}."
                     " Vuelve por los repasos programados para no olvidarlo.",
           textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Paleta.textoSuave,
-            height: 1.5,
+          style: context.textos.bodyMedium!.copyWith(
+            color: context.esquema.onSurfaceVariant,
           ),
         ),
         // La cobertura del sílabo es lo que impide leer esto como «curso
@@ -391,10 +383,8 @@ class _NadaPendiente extends StatelessWidget {
             "subtemas del sílabo en ${curso!.nombre}. Lo que falta hay que "
             "estudiarlo en la teoría.",
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 12.5,
-              color: Paleta.aviso,
-              height: 1.45,
+            style: context.textos.bodySmall!.copyWith(
+              color: context.colores.aviso,
             ),
           ),
         ],

@@ -56,18 +56,18 @@ class _PantallaPracticaState extends State<PantallaPractica> {
                 ),
                 title: Text(
                   curso.nombre,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: Paleta.texto,
+                    color: context.esquema.onSurface,
                   ),
                 ),
                 subtitle: Text(
                   "${curso.total} ${curso.total == 1 ? "pregunta" : "preguntas"}",
-                  style: const TextStyle(color: Paleta.textoTenue),
+                  style: TextStyle(color: context.esquema.onSurfaceVariant),
                 ),
-                trailing: const Icon(
+                trailing: Icon(
                   Icons.chevron_right,
-                  color: Paleta.textoTenue,
+                  color: context.esquema.onSurfaceVariant,
                 ),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(
@@ -96,7 +96,7 @@ class _TarjetaAdaptativa extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Material(
-    color: Paleta.acentoSuave,
+    color: context.esquema.secondaryContainer,
     borderRadius: BorderRadius.circular(12),
     child: InkWell(
       borderRadius: BorderRadius.circular(12),
@@ -106,7 +106,7 @@ class _TarjetaAdaptativa extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            const Icon(Icons.auto_awesome, color: Paleta.acento, size: 22),
+            Icon(Icons.auto_awesome, color: context.esquema.primary, size: 22),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -116,18 +116,20 @@ class _TarjetaAdaptativa extends StatelessWidget {
                     "Práctica adaptativa",
                     style: TextStyle(
                       fontWeight: FontWeight.w700,
-                      color: Paleta.acento,
+                      color: context.esquema.primary,
                     ),
                   ),
                   SizedBox(height: 2),
                   Text(
                     "Elegimos las preguntas por ti: primero donde peor vas",
-                    style: TextStyle(fontSize: 12, color: Paleta.acento),
+                    style: context.textos.bodySmall!.copyWith(
+                      color: context.esquema.primary,
+                    ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: Paleta.acento),
+            Icon(Icons.chevron_right, color: context.esquema.primary),
           ],
         ),
       ),
@@ -180,9 +182,7 @@ class _PantallaPracticaSubtemaState extends State<PantallaPracticaSubtema> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: Text(widget.nombre, style: const TextStyle(fontSize: 16)),
-    ),
+    appBar: AppBar(title: Text(widget.nombre, style: context.textos.bodyLarge)),
     body: FutureBuilder<List<Pregunta>>(
       future: _preguntas,
       builder: (context, snap) {
@@ -249,38 +249,34 @@ class _PortadaSubtema extends StatelessWidget {
       children: [
         Text(
           nombre,
-          style: const TextStyle(
-            fontSize: 20,
+          style: context.textos.headlineSmall!.copyWith(
             fontWeight: FontWeight.w700,
-            color: Paleta.texto,
-            height: 1.3,
+            color: context.esquema.onSurface,
           ),
         ),
         const SizedBox(height: 6),
         Text(
           "$codigo · $curso",
-          style: const TextStyle(fontSize: 12.5, color: Paleta.textoTenue),
+          style: context.textos.bodySmall!.copyWith(
+            color: context.esquema.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 20),
         Text(
           n == 1
               ? "Hay 1 pregunta de este subtema."
               : "Hay $n preguntas de este subtema.",
-          style: const TextStyle(
-            fontSize: 14.5,
-            color: Paleta.texto,
-            height: 1.5,
+          style: context.textos.bodyMedium!.copyWith(
+            color: context.esquema.onSurface,
           ),
         ),
         if (n < 3) ...[
           const SizedBox(height: 8),
-          const Text(
+          Text(
             "Son pocas: úsalas para comprobar si lo tienes, no para "
             "estudiarlo entero.",
-            style: TextStyle(
-              fontSize: 12.5,
-              color: Paleta.textoSuave,
-              height: 1.45,
+            style: context.textos.bodySmall!.copyWith(
+              color: context.esquema.onSurfaceVariant,
             ),
           ),
         ],
@@ -317,19 +313,19 @@ class _Encabezado extends StatelessWidget {
       children: [
         Text(
           "${banco.total} preguntas resueltas y verificadas",
-          style: const TextStyle(
-            fontSize: 13,
-            color: Paleta.textoSuave,
-            height: 1.5,
+          style: context.textos.bodyMedium!.copyWith(
+            color: context.esquema.onSurfaceVariant,
           ),
         ),
         if (banco.sonEjemplos)
-          const Padding(
+          Padding(
             padding: EdgeInsets.only(top: 8),
             child: Text(
               "Estás viendo el banco de ejemplo: no hay archivos reales "
               "sincronizados.",
-              style: TextStyle(fontSize: 12.5, color: Paleta.aviso),
+              style: context.textos.bodySmall!.copyWith(
+                color: context.colores.aviso,
+              ),
             ),
           ),
       ],
@@ -496,13 +492,13 @@ class _SesionPracticaState extends State<SesionPractica> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.titulo, style: const TextStyle(fontSize: 16)),
+        title: Text(widget.titulo, style: context.textos.bodyLarge),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),
           child: LinearProgressIndicator(
             value: (_indice + 1) / widget.preguntas.length,
             minHeight: 4,
-            backgroundColor: Paleta.borde,
+            backgroundColor: context.esquema.outlineVariant,
           ),
         ),
       ),
@@ -514,15 +510,16 @@ class _SesionPracticaState extends State<SesionPractica> {
             children: [
               Text(
                 "${_indice + 1} de ${widget.preguntas.length}",
-                style: const TextStyle(
-                  fontSize: 12,
+                style: context.textos.labelMedium!.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: Paleta.textoTenue,
+                  color: context.esquema.onSurfaceVariant,
                 ),
               ),
               Text(
                 _pregunta.subtemaNombre,
-                style: const TextStyle(fontSize: 12, color: Paleta.textoTenue),
+                style: context.textos.bodySmall!.copyWith(
+                  color: context.esquema.onSurfaceVariant,
+                ),
                 overflow: TextOverflow.ellipsis,
               ),
             ],
@@ -557,10 +554,8 @@ class _SesionPracticaState extends State<SesionPractica> {
                 "La app no guarda las respuestas correctas a propósito: si "
                 "viajaran en el binario, cualquiera podría extraer el banco "
                 "resuelto.",
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Paleta.textoSuave,
-                  height: 1.45,
+                style: context.textos.bodySmall!.copyWith(
+                  color: context.esquema.onSurfaceVariant,
                 ),
               ),
             ],
@@ -635,11 +630,20 @@ class _Alternativa extends StatelessWidget {
     final (borde, fondo) = switch ((correccion, esClave, falloAqui)) {
       (null, _, _) =>
         marcada
-            ? (Paleta.acento, Paleta.acentoSuave)
-            : (Paleta.borde, Paleta.superficieAlta),
-      (_, true, _) => (Paleta.exito, Paleta.exitoSuave),
-      (_, _, true) => (Paleta.acento, Paleta.acentoSuave),
-      _ => (Paleta.borde, Paleta.superficieAlta),
+            ? (context.esquema.primary, context.esquema.secondaryContainer)
+            : (
+                context.esquema.outlineVariant,
+                context.esquema.surfaceContainerLowest,
+              ),
+      (_, true, _) => (context.colores.exito, context.colores.exitoContenedor),
+      // `error`, no la marca. Con el granate eran el mismo color, así que la
+      // alternativa fallada se pintaba con el color de la app: el alumno veía
+      // su error del mismo tono que el botón de «Empezar».
+      (_, _, true) => (context.esquema.error, context.esquema.errorContainer),
+      _ => (
+        context.esquema.outlineVariant,
+        context.esquema.surfaceContainerLowest,
+      ),
     };
 
     return Material(
@@ -665,17 +669,18 @@ class _Alternativa extends StatelessWidget {
                 height: 26,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: borde == Paleta.borde ? Paleta.superficie : borde,
+                  color: borde == context.esquema.outlineVariant
+                      ? context.esquema.surfaceContainerLow
+                      : borde,
                   shape: BoxShape.circle,
                 ),
                 child: Text(
                   alternativa.letra.etiqueta,
-                  style: TextStyle(
-                    fontSize: 12,
+                  style: context.textos.labelMedium!.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: borde == Paleta.borde
-                        ? Paleta.textoSuave
-                        : Paleta.acentoContraste,
+                    color: borde == context.esquema.outlineVariant
+                        ? context.esquema.onSurfaceVariant
+                        : context.esquema.onPrimary,
                   ),
                 ),
               ),
@@ -683,10 +688,8 @@ class _Alternativa extends StatelessWidget {
               Expanded(
                 child: TextoConFormulas(
                   alternativa.texto,
-                  estilo: const TextStyle(
-                    fontSize: 15,
-                    height: 1.45,
-                    color: Paleta.texto,
+                  estilo: context.textos.bodyLarge!.copyWith(
+                    color: context.esquema.onSurface,
                   ),
                 ),
               ),
@@ -708,7 +711,9 @@ class _Veredicto extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: bien ? Paleta.exitoSuave : Paleta.acentoSuave,
+        color: bien
+            ? context.colores.exitoContenedor
+            : context.esquema.secondaryContainer,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -719,7 +724,7 @@ class _Veredicto extends StatelessWidget {
               Icon(
                 bien ? Icons.check_circle_outline : Icons.cancel_outlined,
                 size: 20,
-                color: bien ? Paleta.exito : Paleta.acento,
+                color: bien ? context.colores.exito : context.esquema.error,
               ),
               const SizedBox(width: 8),
               Text(
@@ -728,7 +733,7 @@ class _Veredicto extends StatelessWidget {
                     : "La respuesta era ${correccion.clave.etiqueta}",
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: bien ? Paleta.exito : Paleta.acento,
+                  color: bien ? context.colores.exito : context.esquema.error,
                 ),
               ),
             ],
@@ -738,10 +743,8 @@ class _Veredicto extends StatelessWidget {
             const SizedBox(height: 12),
             TextoConFormulas(
               texto,
-              estilo: const TextStyle(
-                fontSize: 14.5,
-                height: 1.55,
-                color: Paleta.texto,
+              estilo: context.textos.bodyMedium!.copyWith(
+                color: context.esquema.onSurface,
               ),
             ),
           ],
@@ -775,16 +778,17 @@ class _Resumen extends StatelessWidget {
           children: [
             Text(
               "$pct %",
-              style: const TextStyle(
-                fontSize: 44,
+              style: context.textos.displayMedium!.copyWith(
                 fontWeight: FontWeight.w800,
-                color: Paleta.acento,
+                color: context.esquema.primary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               "$aciertos de $total correctas",
-              style: const TextStyle(fontSize: 15, color: Paleta.textoSuave),
+              style: context.textos.bodyLarge!.copyWith(
+                color: context.esquema.onSurfaceVariant,
+              ),
             ),
             const SizedBox(height: 28),
             FilledButton(
@@ -893,8 +897,8 @@ class _ReporteState extends State<_Reporte> {
         icon: const Icon(Icons.flag_outlined, size: 15),
         label: const Text("Reportar un error en esta pregunta"),
         style: TextButton.styleFrom(
-          foregroundColor: Paleta.textoTenue,
-          textStyle: const TextStyle(fontSize: 12.5),
+          foregroundColor: context.esquema.onSurfaceVariant,
+          textStyle: context.textos.bodySmall,
           padding: const EdgeInsets.symmetric(horizontal: 8),
         ),
       ),
@@ -903,9 +907,9 @@ class _ReporteState extends State<_Reporte> {
     _FaseReporte.abierto => Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Paleta.superficieAlta,
+        color: context.esquema.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Paleta.borde),
+        border: Border.all(color: context.esquema.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -946,7 +950,9 @@ class _ReporteState extends State<_Reporte> {
             const SizedBox(height: 4),
             Text(
               e,
-              style: const TextStyle(fontSize: 12.5, color: Paleta.aviso),
+              style: context.textos.bodySmall!.copyWith(
+                color: context.colores.aviso,
+              ),
             ),
           ],
           const SizedBox(height: 10),
@@ -974,14 +980,20 @@ class _ReporteState extends State<_Reporte> {
     // merece saber que su reporte sigue en la cola, no un error rojo.
     _FaseReporte.enviado || _FaseReporte.yaExistia => Row(
       children: [
-        const Icon(Icons.check_circle_outline, size: 16, color: Paleta.exito),
+        Icon(
+          Icons.check_circle_outline,
+          size: 16,
+          color: context.colores.exito,
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
             _fase == _FaseReporte.yaExistia
                 ? "Ya habías reportado esta pregunta: sigue en la cola."
                 : "Reporte enviado. ¡Gracias por ayudar a mejorar!",
-            style: const TextStyle(fontSize: 13, color: Paleta.exito),
+            style: context.textos.bodyMedium!.copyWith(
+              color: context.colores.exito,
+            ),
           ),
         ),
       ],

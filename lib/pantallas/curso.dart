@@ -60,7 +60,7 @@ class _PantallaCursoState extends State<PantallaCurso> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(curso.nombre, style: const TextStyle(fontSize: 16)),
+        title: Text(curso.nombre, style: context.textos.bodyLarge),
       ),
       body: FutureBuilder<(ResumenCurso, Map<String, int>)>(
         future: _carga,
@@ -81,28 +81,25 @@ class _PantallaCursoState extends State<PantallaCurso> {
             children: [
               Text(
                 curso.areaNombre,
-                style: const TextStyle(
-                  fontSize: 11,
+                style: context.textos.labelSmall!.copyWith(
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0.6,
-                  color: Paleta.textoTenue,
+                  color: context.esquema.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 curso.nombre,
-                style: const TextStyle(
-                  fontSize: 22,
+                style: context.textos.headlineMedium!.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: Paleta.texto,
+                  color: context.esquema.onSurface,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 "${curso.temas.length} temas · ${curso.totalSubtemas} subtemas · ${curso.codigo}",
-                style: const TextStyle(
-                  fontSize: 12.5,
-                  color: Paleta.textoSuave,
+                style: context.textos.bodySmall!.copyWith(
+                  color: context.esquema.onSurfaceVariant,
                 ),
               ),
               if (curso.nota case final nota? when nota.isNotEmpty) ...[
@@ -134,9 +131,8 @@ class _PantallaCursoState extends State<PantallaCurso> {
                 const SizedBox(height: 8),
                 Text(
                   "${resumen.subtemasConPreguntas} de ${curso.totalSubtemas} subtemas tienen preguntas.",
-                  style: const TextStyle(
-                    fontSize: 11.5,
-                    color: Paleta.textoTenue,
+                  style: context.textos.bodySmall!.copyWith(
+                    color: context.esquema.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -171,7 +167,7 @@ class _Tema extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
-        border: Border.all(color: Paleta.borde),
+        border: Border.all(color: context.esquema.outlineVariant),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -179,9 +175,11 @@ class _Tema extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(14),
-            decoration: const BoxDecoration(
-              color: Paleta.superficie,
-              border: Border(bottom: BorderSide(color: Paleta.borde)),
+            decoration: BoxDecoration(
+              color: context.esquema.surfaceContainerLow,
+              border: Border(
+                bottom: BorderSide(color: context.esquema.outlineVariant),
+              ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,15 +189,14 @@ class _Tema extends StatelessWidget {
                   height: 30,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Paleta.superficieAlta,
+                    color: context.esquema.surfaceContainerLowest,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     tema.romano,
-                    style: const TextStyle(
-                      fontSize: 11,
+                    style: context.textos.labelSmall!.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: Paleta.textoSuave,
+                      color: context.esquema.onSurfaceVariant,
                     ),
                   ),
                 ),
@@ -210,11 +207,9 @@ class _Tema extends StatelessWidget {
                     children: [
                       Text(
                         tema.nombre,
-                        style: const TextStyle(
-                          fontSize: 14.5,
+                        style: context.textos.labelLarge!.copyWith(
                           fontWeight: FontWeight.w700,
-                          color: Paleta.texto,
-                          height: 1.3,
+                          color: context.esquema.onSurface,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -237,9 +232,9 @@ class _Tema extends StatelessWidget {
                               height: 6,
                               child: LinearProgressIndicator(
                                 value: proporcion,
-                                backgroundColor: Paleta.borde,
-                                valueColor: const AlwaysStoppedAnimation(
-                                  Paleta.acento,
+                                backgroundColor: context.esquema.outlineVariant,
+                                valueColor: AlwaysStoppedAnimation(
+                                  context.esquema.primary,
                                 ),
                               ),
                             ),
@@ -248,9 +243,8 @@ class _Tema extends StatelessWidget {
                           Flexible(
                             child: Text(
                               "$conPreguntas/$total con preguntas",
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Paleta.textoTenue,
+                              style: context.textos.labelSmall!.copyWith(
+                                color: context.esquema.onSurfaceVariant,
                               ),
                             ),
                           ),
@@ -264,14 +258,13 @@ class _Tema extends StatelessWidget {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: Paleta.avisoSuave,
+                            color: context.colores.avisoContenedor,
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: const Text(
+                          child: Text(
                             "sin desglose en el sílabo",
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              color: Paleta.aviso,
+                            style: context.textos.labelSmall!.copyWith(
+                              color: context.colores.aviso,
                             ),
                           ),
                         ),
@@ -281,9 +274,8 @@ class _Tema extends StatelessWidget {
                 ),
                 Text(
                   tema.codigo,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Paleta.textoTenue,
+                  style: context.textos.labelSmall!.copyWith(
+                    color: context.esquema.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -332,11 +324,10 @@ class _ListaSubtemas extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 6),
                     child: Text(
                       grupo,
-                      style: const TextStyle(
-                        fontSize: 10.5,
+                      style: context.textos.labelSmall!.copyWith(
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.5,
-                        color: Paleta.textoSuave,
+                        color: context.esquema.onSurfaceVariant,
                       ),
                     ),
                   ),
@@ -372,8 +363,8 @@ class _FilaSubtema extends StatelessWidget {
             child: Container(
               width: 4,
               height: 4,
-              decoration: const BoxDecoration(
-                color: Paleta.bordeFuerte,
+              decoration: BoxDecoration(
+                color: context.esquema.outline,
                 shape: BoxShape.circle,
               ),
             ),
@@ -381,10 +372,8 @@ class _FilaSubtema extends StatelessWidget {
           Expanded(
             child: Text(
               subtema.nombre,
-              style: const TextStyle(
-                fontSize: 13.5,
-                height: 1.35,
-                color: Paleta.texto,
+              style: context.textos.bodyMedium!.copyWith(
+                color: context.esquema.onSurface,
               ),
             ),
           ),
@@ -394,12 +383,14 @@ class _FilaSubtema extends StatelessWidget {
               margin: const EdgeInsets.only(right: 6),
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Paleta.acentoSuave,
+                color: context.esquema.secondaryContainer,
                 borderRadius: BorderRadius.circular(5),
               ),
-              child: const Text(
+              child: Text(
                 "capacidad",
-                style: TextStyle(fontSize: 10, color: Paleta.acento),
+                style: context.textos.labelSmall!.copyWith(
+                  color: context.esquema.primary,
+                ),
               ),
             ),
           ],
@@ -408,13 +399,16 @@ class _FilaSubtema extends StatelessWidget {
           if (n > 0) ...[
             Text(
               "$n",
-              style: const TextStyle(
-                fontSize: 11,
+              style: context.textos.labelSmall!.copyWith(
                 fontWeight: FontWeight.w600,
-                color: Paleta.textoSuave,
+                color: context.esquema.onSurfaceVariant,
               ),
             ),
-            const Icon(Icons.chevron_right, size: 15, color: Paleta.textoTenue),
+            Icon(
+              Icons.chevron_right,
+              size: 15,
+              color: context.esquema.onSurfaceVariant,
+            ),
           ],
         ],
       ),

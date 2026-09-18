@@ -604,6 +604,73 @@ en español para valores que nadie ha visto es exactamente el error que produjo
 la clave ausente convertida en «A». Cuando se tengan a mano, es un cambio
 pequeño: añadir los dos campos al modelo y una línea bajo cada pregunta.
 
+## El tema: por qué el granate se fue
+
+La app usaba una paleta de quince constantes escritas a mano y **puenteaba el
+sistema de temas de Flutter**: 209 `TextStyle` a mano, 191 `fontSize` literales
+con 26 tamaños distintos —10, 10,5, 11, 11,5, 12, 12,5…— y `Theme.of(context)`
+aparecido una sola vez en todo `lib/`. De ahí el aspecto plano: sin elevación
+tonal, sin capas de estado al pulsar y sin los treinta roles de color que
+Material 3 deriva solos.
+
+Hoy hay un `ColorScheme.fromSeed(seedColor: #4F46E5)` con variante `fidelity`,
+ocho tamaños de letra y **dos temas**, claro y oscuro, siguiendo el del sistema.
+
+### El granate era el color del error
+
+`error: Paleta.acento`. El mismo valor hacía de marca y de error, así que la
+alternativa que el alumno fallaba, el tramo malo del diagnóstico, un puntaje
+por debajo de 60 y el botón de borrar la cuenta se pintaban con el color de la
+app. En una app donde se falla constantemente, la marca era el color del
+fracaso, y nadie podía notarlo porque no había con qué compararlo.
+
+Material 3 deriva `error` aparte de la semilla, así que separarlos fue gratis
+— lo que costó trabajo fue decidir, en los seis sitios donde `Paleta.acento`
+significaba «fallo», cuál de los dos colores se quería.
+
+### Y no sobrevivía al modo oscuro
+
+`ColorScheme.fromSeed` convierte #8A1538 en **#FFB2BD**, un rosa. Esto ya estaba
+escrito en `tema.dart` —«en oscuro el granate se aclaraba a un rosa que no es la
+marca»— y era la razón de que la app estuviera fijada en claro, replicando a la
+web. El índigo aguanta: #3525CD en claro, #C3C0FF en oscuro, azul en los dos.
+
+**Esto rompe la paridad visual con la web**, que sigue en granate y en claro
+fijo. Fue una decisión del usuario, no un descuido: quien estudia de noche —en
+una app de admisión, medio mundo— dejaba de comerse una pantalla blanca.
+`tema_contraste_test.dart` comprueba que la semilla siga aguantando el oscuro,
+para que el próximo cambio de color no repita la historia sin enterarse.
+
+### Lo que hace que no parezca una plantilla
+
+`fidelity` tiñe también los grises con la semilla: `surface` salía #FCF8FF y las
+tarjetas #F0ECF9, las dos lavanda. **Eso —y no el color de acento— es lo que
+hace reconocible al instante un tema de M3 sin tocar.** Las superficies se
+neutralizan a mano; el índigo se queda donde es acento.
+
+Lo mismo con la densidad: interlineado del cuerpo 1,45 y no el 1,6 de lectura
+larga, barra inferior de 68 dp y no los 80 de M3, radios de 10/12/20 y no de
+12/16/28. El mínimo táctil de 48 dp se sigue cumpliendo por área de toque
+aunque el botón pintado mida 46.
+
+### El contraste se comprueba, no se supone
+
+`tema_contraste_test.dart` calcula el ratio WCAG real y exige 4,5:1 en **los dos
+modos**, para los pares de M3 y sobre todo para los tokens propios —éxito y
+aviso—, que los eligió una persona y no los deriva ningún algoritmo. Esos viven
+en un `ThemeExtension` y no en constantes porque tienen que cambiar con el tema:
+un verde que se lee sobre blanco desaparece sobre #101115.
+
+Ya sirvió dos veces: pilló un borde que quedaba en 1,26:1 sobre blanco
+—invisible— y el `errorContainer` oscuro de M3 (#93000A), que al lado del ámbar
+y el verde se leía como una alarma en vez de como una nota.
+
+### Lo que queda pendiente del cambio
+
+**El ícono del launcher sigue siendo el lockup granate** y ya no pega con nada
+de lo que hay dentro. Se regenera cambiando `assets/marca/icono.png` y
+corriendo `dart run flutter_launcher_icons`.
+
 ## Lo que de verdad falta no es código: es banco de preguntas
 
 El porte está completo y los tests pasan, y eso hace fácil leer «terminado»

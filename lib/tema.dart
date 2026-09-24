@@ -1,3 +1,4 @@
+import "package:flutter/cupertino.dart" show CupertinoPageTransitionsBuilder;
 import "package:flutter/material.dart";
 
 /// El tema de la app: un `ColorScheme` de Material 3 derivado de una semilla,
@@ -68,35 +69,52 @@ ColorScheme _esquema(Brightness brillo) {
   );
   return brillo == Brightness.light
       ? base.copyWith(
-          surface: const Color(0xFFFFFFFF),
+          // `systemGroupedBackground`: el lienzo NO es blanco. Es el gris
+          // sobre el que flotan las tarjetas blancas, y es lo que hace que
+          // una lista agrupada de iOS se lea como tarjetas y no como bloques
+          // pegados al fondo.
+          surface: const Color(0xFFF2F2F7),
+          // Las tarjetas, blancas puras. El contraste entre #FFFFFF y
+          // #F2F2F7 es todo lo que separa una fila de su fondo: ni bordes ni
+          // sombras duras.
           surfaceContainerLowest: const Color(0xFFFFFFFF),
-          surfaceContainerLow: const Color(0xFFF7F7F9),
-          surfaceContainer: const Color(0xFFF1F1F4),
-          surfaceContainerHigh: const Color(0xFFEBEBEF),
-          surfaceContainerHighest: const Color(0xFFE5E5EA),
-          onSurface: const Color(0xFF16171B),
-          onSurfaceVariant: const Color(0xFF55575F),
-          outline: const Color(0xFF8B8D95),
-          // #DDDEE3 daba 1,26:1 sobre la superficie clara: un borde que no
-          // se ve no separa nada. Lo caza `tema_contraste_test.dart`.
-          outlineVariant: const Color(0xFFD2D3DA),
+          surfaceContainerLow: const Color(0xFFFFFFFF),
+          // `tertiarySystemFill`: el relleno de los campos de texto.
+          surfaceContainer: const Color(0xFFE5E5EA),
+          surfaceContainerHigh: const Color(0xFFE5E5EA),
+          surfaceContainerHighest: const Color(0xFFD1D1D6),
+          onSurface: const Color(0xFF000000),
+          // **#636366 y no el #8E8E93 de iOS.** Sobre #F2F2F7, el gris de
+          // sistema de Apple da 2,85:1 y WCAG AA pide 4,5:1 para texto
+          // pequeno. Apple se lo permite porque sus reglas de contraste son
+          // otras; aqui el texto secundario es casi todo de 12-14 px y se lee
+          // en un micro con el brillo bajo. El #8E8E93 sigue disponible en
+          // [ColoresApp.grisSutil] para lo decorativo.
+          onSurfaceVariant: const Color(0xFF636366),
+          // **`outline` dibuja bordes de CONTROL** —el de un boton secundario—
+          // y WCAG 1.4.11 le pide 3:1. El separador de iOS (#C6C6C8) da 1,53:1
+          // y no vale para eso; vive aparte, en [ColoresApp.separador], porque
+          // ahi si es decorativo: dentro de una tarjeta agrupada quien separa
+          // las filas es la tarjeta, y la linea solo insinua.
+          outline: const Color(0xFF79797E),
+          outlineVariant: const Color(0xFFD6D6DB),
         )
       : base.copyWith(
-          surface: const Color(0xFF101115),
-          surfaceContainerLowest: const Color(0xFF0A0B0E),
-          surfaceContainerLow: const Color(0xFF16171C),
-          surfaceContainer: const Color(0xFF1A1B21),
-          surfaceContainerHigh: const Color(0xFF212229),
-          surfaceContainerHighest: const Color(0xFF282A32),
-          onSurface: const Color(0xFFE7E8EC),
-          onSurfaceVariant: const Color(0xFFA9ABB4),
-          outline: const Color(0xFF70727B),
-          outlineVariant: const Color(0xFF2F313A),
-          // El `errorContainer` oscuro de M3 es #93000A, un rojo saturado que
-          // al lado del ámbar y el verde —los dos contenedores apagados— se
-          // lee como una alarma y no como una nota. Se baja al mismo registro:
-          // fondo profundo, texto claro. El rol `error` a secas no se toca,
-          // que es el que de verdad tiene que gritar.
+          // Negro puro: es lo que hace que en un OLED la tarjeta #1C1C1E
+          // parezca elevada sin pintar ni una sombra.
+          surface: const Color(0xFF000000),
+          surfaceContainerLowest: const Color(0xFF1C1C1E),
+          surfaceContainerLow: const Color(0xFF1C1C1E),
+          surfaceContainer: const Color(0xFF2C2C2E),
+          surfaceContainerHigh: const Color(0xFF2C2C2E),
+          surfaceContainerHighest: const Color(0xFF3A3A3C),
+          onSurface: const Color(0xFFFFFFFF),
+          // #9A9AA0 y no el #8E8E93 literal: sobre negro el de Apple cumple
+          // de sobra (6,6:1), pero sobre el relleno de campo #2C2C2E se queda
+          // en 4,27:1. Dos puntos mas claro y pasa en los dos fondos.
+          onSurfaceVariant: const Color(0xFF9A9AA0),
+          outline: const Color(0xFF6E6E73),
+          outlineVariant: const Color(0xFF3A3A3C),
           errorContainer: const Color(0xFF4A1116),
           onErrorContainer: const Color(0xFFFFB4AB),
         );
@@ -126,6 +144,22 @@ class ColoresApp extends ThemeExtension<ColoresApp> {
   final Color avisoContenedor;
   final Color enAvisoContenedor;
 
+  /// El `systemGrey` literal de iOS (#8E8E93), **solo para lo decorativo**:
+  /// marcadores de posicion, iconos apagados, el chevron de una fila.
+  ///
+  /// No es para texto que haya que leer. Sobre el fondo claro da 2,85:1 y WCAG
+  /// AA pide 4,5:1; para eso esta `onSurfaceVariant`, que en claro es mas
+  /// profundo justo por esto.
+  final Color grisSutil;
+
+  /// La linea entre filas de una tarjeta agrupada (#C6C6C8 / #38383A).
+  ///
+  /// Deliberadamente por debajo del 3:1 que WCAG pide a los bordes de control,
+  /// y no es un descuido: aqui no delimita nada que se pueda pulsar. Lo que
+  /// agrupa es la tarjeta blanca sobre el fondo gris; la linea solo evita que
+  /// dos filas se lean como un parrafo. Un separador al 3:1 seria una raya.
+  final Color separador;
+
   const ColoresApp({
     required this.exito,
     required this.exitoContenedor,
@@ -133,6 +167,8 @@ class ColoresApp extends ThemeExtension<ColoresApp> {
     required this.aviso,
     required this.avisoContenedor,
     required this.enAvisoContenedor,
+    required this.grisSutil,
+    required this.separador,
   });
 
   static const claro = ColoresApp(
@@ -142,6 +178,8 @@ class ColoresApp extends ThemeExtension<ColoresApp> {
     aviso: Color(0xFF8A5A00), // 5,0:1 sobre #FCF8FF
     avisoContenedor: Color(0xFFFBEBC8),
     enAvisoContenedor: Color(0xFF3D2800), // 11,6:1 sobre su contenedor
+    grisSutil: Color(0xFF8E8E93),
+    separador: Color(0xFFC6C6C8),
   );
 
   static const oscuro = ColoresApp(
@@ -151,6 +189,8 @@ class ColoresApp extends ThemeExtension<ColoresApp> {
     aviso: Color(0xFFF1C27A), // 10,9:1 sobre #13121B
     avisoContenedor: Color(0xFF40300A),
     enAvisoContenedor: Color(0xFFFFE2B0),
+    grisSutil: Color(0xFF8E8E93),
+    separador: Color(0xFF38383A),
   );
 
   @override
@@ -161,6 +201,8 @@ class ColoresApp extends ThemeExtension<ColoresApp> {
     Color? aviso,
     Color? avisoContenedor,
     Color? enAvisoContenedor,
+    Color? grisSutil,
+    Color? separador,
   }) => ColoresApp(
     exito: exito ?? this.exito,
     exitoContenedor: exitoContenedor ?? this.exitoContenedor,
@@ -168,6 +210,8 @@ class ColoresApp extends ThemeExtension<ColoresApp> {
     aviso: aviso ?? this.aviso,
     avisoContenedor: avisoContenedor ?? this.avisoContenedor,
     enAvisoContenedor: enAvisoContenedor ?? this.enAvisoContenedor,
+    grisSutil: grisSutil ?? this.grisSutil,
+    separador: separador ?? this.separador,
   );
 
   @override
@@ -188,6 +232,8 @@ class ColoresApp extends ThemeExtension<ColoresApp> {
         otro.enAvisoContenedor,
         t,
       )!,
+      grisSutil: Color.lerp(grisSutil, otro.grisSutil, t)!,
+      separador: Color.lerp(separador, otro.separador, t)!,
     );
   }
 }
@@ -214,14 +260,34 @@ extension TemaDeContexto on BuildContext {
 /// Los medios puntos que había —12,5 · 13,5 · 14,5 · 15,5— no distinguían
 /// nada: a esa diferencia el ojo no llega, y lo único que conseguían era que
 /// dos cosas del mismo rango parecieran de rangos distintos por accidente.
+/// La tipografia de iOS es mas apretada de lo que Flutter pone por defecto.
+///
+/// SF Pro lleva *tracking* negativo en los tamanos grandes y casi nulo en el
+/// cuerpo; Roboto viene con tracking positivo. Ese solo ajuste es la mitad de
+/// lo que hace que un titulo «parezca de iOS», y no cuesta ninguna fuente.
+///
+/// **SF Pro no se puede empaquetar en una app de Android**: la licencia de
+/// Apple la limita a sus plataformas. La alternativa honesta es Inter, que es
+/// casi indistinguible en pantalla; hay que bajarla como asset. Mientras no
+/// este, la del sistema con estas metricas se acerca bastante. Ver LEEME.md.
 TextTheme _tipografia(ColorScheme c) => TextTheme(
+  // *Large Title* de iOS: 34 px, peso fuerte, tracking negativo. Es la pieza
+  // mas reconocible del lenguaje — la cabecera grande que se encoge al hacer
+  // scroll.
+  displayLarge: TextStyle(
+    fontSize: 34,
+    fontWeight: FontWeight.w700,
+    height: 1.15,
+    letterSpacing: -0.9,
+    color: c.onSurface,
+  ),
   // La cifra que ES la pantalla: el puntaje al acabar un simulacro, el
   // porcentaje de una tanda. Se lee de pie, en el micro, de un vistazo.
   displayMedium: TextStyle(
     fontSize: 38,
-    fontWeight: FontWeight.w800,
+    fontWeight: FontWeight.w700,
     height: 1.05,
-    letterSpacing: -1,
+    letterSpacing: -1.2,
     color: c.primary,
   ),
   // Cifras destacadas dentro de una tarjeta: la racha, un contador.
@@ -263,7 +329,12 @@ TextTheme _tipografia(ColorScheme c) => TextTheme(
   // alternativas, avisos— separa tanto que en una pantalla cabe la mitad. La
   // teoría recupera su aire con el espaciado entre bloques, que es donde
   // corresponde.
-  bodyLarge: TextStyle(fontSize: 16, height: 1.45, color: c.onSurface),
+  bodyLarge: TextStyle(
+    fontSize: 16,
+    height: 1.45,
+    letterSpacing: -0.2,
+    color: c.onSurface,
+  ),
   // Texto secundario: descripciones, detalles de un aviso.
   bodyMedium: TextStyle(fontSize: 14, height: 1.4, color: c.onSurfaceVariant),
   // Metadatos: «14 sep · aceptado», «3 de 20».
@@ -272,7 +343,7 @@ TextTheme _tipografia(ColorScheme c) => TextTheme(
   labelLarge: TextStyle(
     fontSize: 14,
     fontWeight: FontWeight.w600,
-    letterSpacing: 0.1,
+    letterSpacing: -0.1,
     color: c.onSurface,
   ),
   labelMedium: TextStyle(
@@ -290,16 +361,37 @@ TextTheme _tipografia(ColorScheme c) => TextTheme(
   ),
 );
 
-/// Radios contenidos: 10 para lo pequeño, 12 para tarjetas, 20 para diálogos.
+/// Radios al gusto de iOS: 12 para campos, 18 para tarjetas agrupadas,
+/// 14 para el boton prominente y 28 para hojas modales.
 ///
-/// **Eran 12 / 16 / 28 y se veían blandos.** El redondeo generoso de M3 por
-/// defecto funciona en una app de fotos o de música; en una de estudio, que es
-/// texto denso en listas largas, convierte cada elemento en una píldora y hace
-/// que todo parezca del mismo peso. Con esquinas más cerradas la lista se lee
-/// como una lista.
-const radioChico = 10.0;
-const radioTarjeta = 12.0;
-const radioGrande = 20.0;
+/// iOS usa esquinas continuas (*squircle*) mas que circulares; Flutter no las
+/// trae de serie y la diferencia a estos tamanos es de un pixel o dos, asi que
+/// se usa `BorderRadius.circular` y se compensa con radios algo mayores.
+const radioCampo = 12.0;
+const radioTarjeta = 18.0;
+const radioBoton = 14.0;
+const radioHoja = 28.0;
+
+/// La sombra de una tarjeta agrupada: muy difusa y muy tenue.
+///
+/// Es lo contrario de la sombra de Material: nada de un borde oscuro pegado al
+/// contenedor, sino un halo ancho que apenas se ve y que solo sirve para
+/// despegar la tarjeta del gris del fondo. En oscuro no se pinta —sobre negro
+/// una sombra no existe— y el relieve lo da el propio #1C1C1E.
+List<BoxShadow> sombraTarjeta(Brightness brillo) => brillo == Brightness.dark
+    ? const []
+    : const [
+        BoxShadow(
+          color: Color(0x0F000000),
+          blurRadius: 24,
+          offset: Offset(0, 8),
+          spreadRadius: -4,
+        ),
+      ];
+
+/// Alias que conservan los nombres anteriores para el resto de pantallas.
+const radioChico = radioCampo;
+const radioGrande = radioHoja;
 
 ThemeData construirTema([Brightness brillo = Brightness.light]) {
   final c = _esquema(brillo);
@@ -327,6 +419,23 @@ ThemeData construirTema([Brightness brillo = Brightness.light]) {
 
   return base.copyWith(
     scaffoldBackgroundColor: c.surface,
+
+    // **Deslizar desde el borde para volver, tambien en Android.**
+    //
+    // `CupertinoPageTransitionsBuilder` no solo cambia la animacion —la nueva
+    // pantalla entra desde la derecha y la anterior se va con parallax—: trae
+    // el gesto de arrastre desde el borde izquierdo, que es lo que un usuario
+    // de iOS busca con el pulgar antes de mirar si hay flecha.
+    //
+    // Se aplica a las dos plataformas a proposito. En Android convive con el
+    // boton de atras del sistema y con el gesto predictivo: no sustituye a
+    // ninguno, se suma.
+    pageTransitionsTheme: const PageTransitionsTheme(
+      builders: {
+        TargetPlatform.android: CupertinoPageTransitionsBuilder(),
+        TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+      },
+    ),
     extensions: [
       brillo == Brightness.light ? ColoresApp.claro : ColoresApp.oscuro,
     ],
@@ -337,6 +446,14 @@ ThemeData construirTema([Brightness brillo = Brightness.light]) {
       // El tinte de superficie al hacer scroll es de M3 y estaba apagado. Es lo
       // que separa la barra del contenido sin pintar una línea: la barra se
       // tiñe sola cuando hay algo debajo.
+      //
+      // Pero M3 tiñe con `primary`, y con la semilla índigo eso pintaba una
+      // franja lila sobre la barra en cuanto se bajaba un dedo. En iOS la
+      // barra al hacer scroll no se tiñe de la marca: se vuelve un gris
+      // neutro y algo traslúcido. `onSurface` da exactamente eso —negro al
+      // 5 % sobre #F2F2F7 en claro, blanco al 5 % sobre negro en oscuro— sin
+      // renunciar a la separación.
+      surfaceTintColor: c.onSurface,
       scrolledUnderElevation: 3,
       elevation: 0,
       centerTitle: false,
@@ -344,14 +461,14 @@ ThemeData construirTema([Brightness brillo = Brightness.light]) {
     ),
 
     cardTheme: CardThemeData(
-      color: c.surface,
-      // Elevación 0 con un borde tenue: en M3 las tarjetas se separan por tono,
-      // no por sombra. Una sombra sobre una superficie ya teñida se lee como
-      // suciedad.
+      color: c.surfaceContainerLowest,
+      // Sin borde y sin elevacion de Material: la tarjeta se separa del fondo
+      // porque el fondo NO es blanco (#F2F2F7), no porque lleve una linea.
+      // La sombra difusa la pone quien dibuja el contenedor, con
+      // `sombraTarjeta`, para poder omitirla en oscuro.
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(radioTarjeta),
-        side: BorderSide(color: c.outlineVariant),
       ),
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
@@ -365,14 +482,14 @@ ThemeData construirTema([Brightness brillo = Brightness.light]) {
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         textStyle: textos.labelLarge,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radioChico),
+          borderRadius: BorderRadius.circular(radioBoton),
         ),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size(64, 46),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        minimumSize: const Size(64, 50),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         textStyle: textos.labelLarge,
         side: BorderSide(color: c.outline),
         shape: RoundedRectangleBorder(
@@ -428,7 +545,7 @@ ThemeData construirTema([Brightness brillo = Brightness.light]) {
 
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: c.surfaceContainerHighest,
+      fillColor: c.surfaceContainer,
       // Sin borde visible en reposo y con uno de acento al enfocar: es el campo
       // de M3, y deja el formulario mucho más tranquilo que cinco rectángulos.
       border: OutlineInputBorder(
@@ -439,9 +556,13 @@ ThemeData construirTema([Brightness brillo = Brightness.light]) {
         borderRadius: BorderRadius.circular(radioChico),
         borderSide: BorderSide.none,
       ),
+      // Un anillo fino al enfocar, no los 2 px de Material. iOS no lo pinta
+      // en absoluto, pero un campo enfocado sin ninguna senal visible es un
+      // fallo de accesibilidad para quien navega con teclado: se deja el
+      // minimo que se ve.
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(radioChico),
-        borderSide: BorderSide(color: c.primary, width: 2),
+        borderRadius: BorderRadius.circular(radioCampo),
+        borderSide: BorderSide(color: c.primary, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(radioChico),

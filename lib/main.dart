@@ -16,6 +16,7 @@ import "pantallas/simulacro.dart";
 import "pantallas/teoria.dart";
 import "tema.dart";
 import "widgets/aviso.dart";
+import "widgets/ios.dart";
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -405,36 +406,48 @@ class _ArmazonState extends State<Armazon> {
           _servidor(4, PantallaProgreso(key: ValueKey(hayCuenta))),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _destino,
-        onDestinationSelected: (i) => setState(() => _destino = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.replay_outlined),
-            selectedIcon: Icon(Icons.replay),
-            label: "Repaso",
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.menu_book_outlined),
-            selectedIcon: Icon(Icons.menu_book),
-            label: "Teoría",
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.edit_outlined),
-            selectedIcon: Icon(Icons.edit),
-            label: "Práctica",
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.timer_outlined),
-            selectedIcon: Icon(Icons.timer),
-            label: "Simulacro",
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.insights_outlined),
-            selectedIcon: Icon(Icons.insights),
-            label: "Progreso",
-          ),
-        ],
+      // **La barra flota sobre el contenido, no lo empuja.**
+      //
+      // `extendBody` deja que la lista se dibuje POR DEBAJO de la barra, y
+      // `BarraDifuminada` la desenfoca. Es lo que hace que en iOS se intuya
+      // que hay contenido pasando por detrás en vez de que la pantalla acabe
+      // en un zocalo opaco.
+      //
+      // Cada pantalla que scrollea deja hueco al final con su propio padding
+      // inferior, para que la ultima fila no quede debajo del cristal.
+      extendBody: true,
+      bottomNavigationBar: BarraDifuminada(
+        hijo: NavigationBar(
+          selectedIndex: _destino,
+          onDestinationSelected: (i) => setState(() => _destino = i),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.replay_outlined),
+              selectedIcon: Icon(Icons.replay),
+              label: "Repaso",
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.menu_book_outlined),
+              selectedIcon: Icon(Icons.menu_book),
+              label: "Teoría",
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.edit_outlined),
+              selectedIcon: Icon(Icons.edit),
+              label: "Práctica",
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.timer_outlined),
+              selectedIcon: Icon(Icons.timer),
+              label: "Simulacro",
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.insights_outlined),
+              selectedIcon: Icon(Icons.insights),
+              label: "Progreso",
+            ),
+          ],
+        ),
       ),
     );
   }

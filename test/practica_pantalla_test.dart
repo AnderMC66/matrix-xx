@@ -261,4 +261,49 @@ void main() {
       reason: "la clave la tiene el servidor: sin cuenta no hay corrección",
     );
   });
+
+  testWidgets("un nombre de subtema largo no desborda la cabecera", (
+    tester,
+  ) async {
+    // Salio en el movil: «Figuras literarias: metafora, simil, hiperbole,
+    // anafora e hiperbaton» saco la franja amarilla de desborde y pego el
+    // «3 de 28» al nombre. El `Text` llevaba `ellipsis`, pero suelto en un
+    // `Row` no tiene ancho que respetar y toma el suyo intrinseco.
+    tester.view
+      ..physicalSize = const Size(960, 1704) // 320x568 a x3
+      ..devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    final larga = _preguntas(1).map((p) => Pregunta(
+      codigo: p.codigo,
+      enunciado: p.enunciado,
+      imagen: null,
+      dificultad: p.dificultad,
+      alternativas: p.alternativas,
+      subtemaCodigo: p.subtemaCodigo,
+      subtemaNombre:
+          "Figuras literarias: metáfora, símil, hipérbole, anáfora e "
+          "hipérbaton",
+      temaNombre: p.temaNombre,
+      cursoNombre: p.cursoNombre,
+      cursoSlug: p.cursoSlug,
+    )).toList();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: construirTema(),
+        home: SesionPractica(
+          titulo: "Literatura",
+          preguntas: larga,
+          repositorio: RepositorioPractica(cliente: cliente),
+          sesion: Sesion(cliente: cliente),
+        ),
+      ),
+    );
+    await asentar(tester);
+
+    // Flutter reporta el desborde como excepcion del arbol: sin recogerla el
+    // test pasa y el recuadro amarillo solo lo ve quien abre la app.
+    expect(tester.takeException(), isNull);
+  });
 }

@@ -162,6 +162,10 @@ void main() {
       final lineas = fuente.split("\n");
       for (var i = 0; i < lineas.length; i++) {
         final linea = lineas[i];
+        // Los comentarios no son código: el arreglo de `inicio.dart` explica
+        // el fallo citando la forma mala, y sin esto el propio comentario que
+        // documenta el arreglo hacía fallar la comprobación.
+        if (linea.trimLeft().startsWith("//")) continue;
         final m = RegExp(r"setState\(\(\)\s*=>\s*(_[A-Za-z0-9]+)\s*=")
             .firstMatch(linea);
         if (m == null || !campos.contains(m[1])) continue;

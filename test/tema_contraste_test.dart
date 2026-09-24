@@ -122,6 +122,28 @@ void main() {
         );
       });
 
+      test("el veredicto de práctica, en sus dos caras", () {
+        // `_Veredicto` pinta el título —«Correcta» o «La respuesta era D»— con
+        // `exito` y con `error` SOBRE su contenedor, no sobre la superficie.
+        // Es el par que de verdad se ve, y el que faltaba: la caja de fallo
+        // estuvo pintada con `secondaryContainer`, el lila de la marca, con el
+        // título en rojo encima.
+        exigir(
+          "exito / exitoContenedor",
+          propios.exito,
+          propios.exitoContenedor,
+        );
+        exigir("error / errorContainer", c.error, c.errorContainer);
+        // La explicación va en negro sobre las dos cajas, no en el color del
+        // veredicto: ver la nota en `_Veredicto`.
+        exigir(
+          "onSurface / exitoContenedor",
+          c.onSurface,
+          propios.exitoContenedor,
+        );
+        exigir("onSurface / errorContainer", c.onSurface, c.errorContainer);
+      });
+
       test("el error se lee sobre la superficie, no solo sobre su contenedor", () {
         // Se usa como color de texto suelto —el mensaje bajo un campo— así que
         // el par que importa es contra la superficie.

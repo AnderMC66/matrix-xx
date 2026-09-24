@@ -515,12 +515,22 @@ class _SesionPracticaState extends State<SesionPractica> {
                   color: context.esquema.onSurfaceVariant,
                 ),
               ),
-              Text(
-                _pregunta.subtemaNombre,
-                style: context.textos.bodySmall!.copyWith(
-                  color: context.esquema.onSurfaceVariant,
+              const SizedBox(width: 12),
+              // `ellipsis` solo recorta si el `Text` tiene un ancho que
+              // respetar. Suelto en un `Row` toma su ancho intrinseco y
+              // desborda: los nombres largos de subtema —«Figuras literarias:
+              // metafora, simil, hiperbole, anafora e hiperbaton»— sacaban la
+              // franja amarilla en pantalla. `Expanded` le da el hueco que
+              // sobra, y ahi si se recorta.
+              Expanded(
+                child: Text(
+                  _pregunta.subtemaNombre,
+                  textAlign: TextAlign.end,
+                  style: context.textos.bodySmall!.copyWith(
+                    color: context.esquema.onSurfaceVariant,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -711,9 +721,15 @@ class _Veredicto extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
+        // Fallar tiene su propio color, y no es el de la marca.
+        // `secondaryContainer` sale del mismo tono que la marca —lila con la
+        // semilla indigo—, asi que la caja de «la respuesta era D» se veia
+        // igual de amable que un acierto, con el titulo en rojo flotando
+        // encima. Aciertos en verde, fallos en rojo: es la unica senal que el
+        // alumno lee de un vistazo.
         color: bien
             ? context.colores.exitoContenedor
-            : context.esquema.secondaryContainer,
+            : context.esquema.errorContainer,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -743,6 +759,10 @@ class _Veredicto extends StatelessWidget {
             const SizedBox(height: 12),
             TextoConFormulas(
               texto,
+              // Negro en las dos cajas. El rojo es del veredicto —«La
+              // respuesta era D»—, no de la explicacion: un parrafo entero en
+              // rojo se lee como si todo lo que dice estuviera mal, que es
+              // justo lo contrario de lo que hace ahi.
               estilo: context.textos.bodyMedium!.copyWith(
                 color: context.esquema.onSurface,
               ),

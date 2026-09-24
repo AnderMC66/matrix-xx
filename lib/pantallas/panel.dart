@@ -195,60 +195,72 @@ class _TarjetaPanel extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: destacada
-        ? context.esquema.secondaryContainer
-        : context.esquema.surfaceContainerLow,
-    borderRadius: BorderRadius.circular(12),
-    child: InkWell(
+  Widget build(BuildContext context) {
+    // El relleno cambia con `destacada`, asi que el color del texto tiene que
+    // cambiar con el: la tarjeta destacada se pintaba en `secondaryContainer`
+    // —lila con la semilla indigo— y dejaba el titulo y el detalle en
+    // `onSurfaceVariant`, un gris pensado para el fondo claro. Sobre el lila
+    // se quedaba corto de contraste. Cada relleno con su pareja.
+    final esquema = context.esquema;
+    final fondo = destacada
+        ? esquema.secondaryContainer
+        : esquema.surfaceContainerLow;
+    final encima = destacada ? esquema.onSecondaryContainer : esquema.onSurface;
+    final encimaTenue = destacada
+        ? esquema.onSecondaryContainer
+        : esquema.onSurfaceVariant;
+
+    return Material(
+      color: fondo,
       borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: destacada
-                ? context.esquema.primary
-                : context.esquema.outlineVariant,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    titulo,
-                    style: context.textos.bodyMedium!.copyWith(
-                      color: context.esquema.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    "$cifra",
-                    style: context.textos.displaySmall!.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: context.esquema.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    detalle,
-                    style: context.textos.bodySmall!.copyWith(
-                      color: context.esquema.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: destacada ? esquema.primary : esquema.outlineVariant,
             ),
-            Icon(Icons.chevron_right, color: context.esquema.onSurfaceVariant),
-          ],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      titulo,
+                      style: context.textos.bodyMedium!.copyWith(
+                        color: encimaTenue,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "$cifra",
+                      style: context.textos.displaySmall!.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: encima,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      detalle,
+                      style: context.textos.bodySmall!.copyWith(
+                        color: encimaTenue,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right, color: encimaTenue),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 // ============================================================================

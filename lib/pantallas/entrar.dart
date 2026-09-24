@@ -2,6 +2,7 @@ import "package:flutter/material.dart";
 
 import "../datos/sesion.dart";
 import "../tema.dart";
+import "../widgets/ios.dart";
 import "../widgets/nota.dart";
 
 /// `/entrar` — acceso y registro en una sola pantalla, como en la web.
@@ -130,129 +131,225 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
-      children: [
-        Text(
-          _registrando ? "Crea tu cuenta" : "Entra a Matrix U",
-          style: context.textos.headlineMedium!.copyWith(
-            fontWeight: FontWeight.w700,
-            color: context.esquema.onSurface,
+    // `AutofillGroup` envuelve el formulario entero: es lo que permite al
+    // gestor del sistema rellenar correo y contraseña de una sola vez.
+    return AutofillGroup(
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 40),
+        children: [
+          const SizedBox(height: 24),
+          _Marca(registrando: _registrando),
+          const SizedBox(height: 28),
+
+          // ---- El formulario, como un grupo de iOS -------------------------
+          //
+          // Los campos van pegados dentro de UNA tarjeta, separados por una
+          // línea con sangría. Es la diferencia visual más grande con Material,
+          // donde cada campo es una caja suelta: aquí los tres se leen como
+          // una cosa —«tus datos»— y no como tres preguntas seguidas.
+          GrupoInset(
+            sangriaSeparador: 52,
+            filas: [
+              if (_registrando)
+                CampoIOS(
+                  controlador: _nombre,
+                  etiqueta: "Nombre",
+                  icono: Icons.person_outline,
+                  capitalizar: true,
+                  autocompletar: const [AutofillHints.name],
+                ),
+              CampoIOS(
+                controlador: _correo,
+                etiqueta: "Correo",
+                icono: Icons.alternate_email,
+                teclado: TextInputType.emailAddress,
+                autocompletar: const [AutofillHints.username],
+              ),
+              CampoIOS(
+                controlador: _contrasena,
+                etiqueta: "Contraseña",
+                icono: Icons.lock_outline,
+                oculto: true,
+                alEnviar: _enviando ? null : _enviar,
+                // `newPassword` al registrarse para que el gestor ofrezca
+                // generar una; `password` al entrar para que ofrezca la
+                // guardada.
+                autocompletar: _registrando
+                    ? const [AutofillHints.newPassword]
+                    : const [AutofillHints.password],
+              ),
+            ],
           ),
+
+          if (_registrando && _areas != null) ...[
+            const SizedBox(height: 20),
+            GrupoInset(
+              titulo: "Área de postulación",
+              filas: [
+                for (final a in _areas!)
+                  FilaInset(
+                    titulo: a.nombre,
+                    // Marca de verificación en vez de un desplegable: con
+                    // cinco opciones, un `Dropdown` esconde cuatro detrás de
+                    // un toque. Es el patrón de selección de iOS.
+                    alFinal: _area == a.id
+                        ? Icon(
+                            Icons.check,
+                            size: 20,
+                            color: context.esquema.primary,
+                          )
+                        : null,
+                    onTap: () =>
+                        setState(() => _area = _area == a.id ? null : a.id),
+                  ),
+              ],
+            ),
+          ],
+
+          // ---- Avisos -----------------------------------------------------
+          if (_error case final e?) ...[
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Nota.error(texto: e, icono: Icons.error_outline),
+            ),
+          ],
+          if (_aviso case final a?) ...[
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Nota.exito(
+                texto: a,
+                icono: Icons.mark_email_unread_outlined,
+              ),
+            ),
+          ],
+
+          // ---- Acciones ---------------------------------------------------
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Column(
+              children: [
+                BotonPrincipal(
+                  texto: _registrando ? "Crear cuenta" : "Entrar",
+                  cargando: _enviando,
+                  onPressed: _enviar,
+                ),
+                const SizedBox(height: 10),
+                BotonSecundario(
+                  texto: _registrando
+                      ? "Ya tengo cuenta"
+                      : "No tengo cuenta, quiero registrarme",
+                  onPressed: _enviando
+                      ? null
+                      : () => setState(() {
+                          _registrando = !_registrando;
+                          _error = null;
+                          _aviso = null;
+                        }),
+                ),
+              ],
+            ),
+          ),
+
+          // Solo al entrar: quien se está registrando todavía no tiene
+          // contraseña que olvidar, y el enlace ahí solo sería ruido.
+          if (!_registrando) ...[
+            const SizedBox(height: 4),
+            Center(
+              child: TextButton(
+                onPressed: _enviando ? null : _recuperar,
+                style: TextButton.styleFrom(
+                  foregroundColor: context.esquema.onSurfaceVariant,
+                ),
+                child: const Text("Olvidé mi contraseña"),
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 16),
+          // **No hay «entrar con Google» ni acceso institucional**, y no es un
+          // olvido: este proyecto no tiene ningún proveedor OAuth dado de alta
+          // en Supabase. Un botón que no autentica es peor que ninguno.
+          // Añadirlo son tres cosas: el proveedor en el panel, el
+          // `intent-filter` —que ya existe, ver el manifiesto— y
+          // `signInWithOAuth`. Ver LEEME.md.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              _registrando
+                  ? "Al crear la cuenta guardas tu progreso, tus repasos y tus "
+                        "simulacros en el servidor."
+                  : "La respuesta correcta la resuelve el servidor, no la app: "
+                        "por eso practicar necesita cuenta.",
+              textAlign: TextAlign.center,
+              style: context.textos.bodySmall,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// La cabecera: logotipo, *Large Title* y subtítulo.
+///
+/// El logo es un glifo dentro de un cuadrado redondeado y no una imagen: la
+/// marca de esta app es un lockup con texto que a 56 px no se leería. Un
+/// símbolo simple aguanta cualquier tamaño y no depende de un asset.
+class _Marca extends StatelessWidget {
+  final bool registrando;
+  const _Marca({required this.registrando});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: context.esquema.primary,
+            borderRadius: BorderRadius.circular(16),
+            // El halo del color de marca: es lo que hace que el cuadro se lea
+            // como un objeto y no como un recorte pegado.
+            boxShadow: [
+              BoxShadow(
+                color: context.esquema.primary.withValues(alpha: 0.28),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Text(
+            "M",
+            style: context.textos.displaySmall?.copyWith(
+              color: context.esquema.onPrimary,
+              fontSize: 30,
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          registrando ? "Crea tu cuenta" : "Hola de nuevo",
+          style: context.textos.displayLarge,
         ),
         const SizedBox(height: 6),
         Text(
-          _registrando
-              ? "Tu progreso, tus repasos y tus simulacros quedan guardados."
-              : "Necesitas cuenta para practicar: la respuesta correcta la "
-                    "resuelve el servidor.",
-          style: context.textos.bodyMedium!.copyWith(
+          registrando
+              ? "Un correo y una contraseña. Nada más."
+              : "Entra para seguir donde lo dejaste.",
+          style: context.textos.bodyLarge?.copyWith(
             color: context.esquema.onSurfaceVariant,
           ),
         ),
-        const SizedBox(height: 24),
-
-        if (_registrando) ...[
-          _Campo(
-            controlador: _nombre,
-            etiqueta: "Nombre",
-            icono: Icons.person_outline,
-            capitalizar: true,
-            autocompletar: const [AutofillHints.name],
-          ),
-          const SizedBox(height: 12),
-        ],
-
-        _Campo(
-          controlador: _correo,
-          etiqueta: "Correo",
-          icono: Icons.mail_outline,
-          teclado: TextInputType.emailAddress,
-          autocompletar: const [AutofillHints.username],
-        ),
-        const SizedBox(height: 12),
-        _Campo(
-          controlador: _contrasena,
-          etiqueta: "Contraseña",
-          icono: Icons.lock_outline,
-          oculto: true,
-          alEnviar: _enviando ? null : _enviar,
-          // `newPassword` al registrarse para que el gestor ofrezca generar
-          // una, `password` al entrar para que ofrezca la guardada.
-          autocompletar: _registrando
-              ? const [AutofillHints.newPassword]
-              : const [AutofillHints.password],
-        ),
-
-        if (_registrando && _areas != null) ...[
-          const SizedBox(height: 12),
-          DropdownButtonFormField<int>(
-            initialValue: _area,
-            decoration: const InputDecoration(
-              labelText: "Área de postulación (opcional)",
-              prefixIcon: Icon(Icons.school_outlined, size: 20),
-              border: OutlineInputBorder(),
-            ),
-            items: [
-              for (final a in _areas!)
-                DropdownMenuItem(value: a.id, child: Text(a.nombre)),
-            ],
-            onChanged: (v) => setState(() => _area = v),
-          ),
-        ],
-
-        if (_error != null) ...[
-          const SizedBox(height: 16),
-          Nota.error(texto: _error!, icono: Icons.error_outline),
-        ],
-        if (_aviso != null) ...[
-          const SizedBox(height: 16),
-          Nota.exito(texto: _aviso!, icono: Icons.mark_email_unread_outlined),
-        ],
-
-        const SizedBox(height: 20),
-        FilledButton(
-          onPressed: _enviando ? null : _enviar,
-          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-          child: _enviando
-              ? SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: context.esquema.onPrimary,
-                  ),
-                )
-              : Text(_registrando ? "Crear cuenta" : "Entrar"),
-        ),
-        const SizedBox(height: 8),
-        TextButton(
-          onPressed: _enviando
-              ? null
-              : () => setState(() {
-                  _registrando = !_registrando;
-                  _error = null;
-                  _aviso = null;
-                }),
-          child: Text(
-            _registrando
-                ? "Ya tengo cuenta"
-                : "No tengo cuenta, quiero registrarme",
-          ),
-        ),
-        // Solo al entrar: quien se está registrando todavía no tiene
-        // contraseña que olvidar, y el enlace ahí solo sería ruido.
-        if (!_registrando)
-          TextButton(
-            onPressed: _enviando ? null : _recuperar,
-            style: TextButton.styleFrom(
-              foregroundColor: context.esquema.onSurfaceVariant,
-            ),
-            child: const Text("Olvidé mi contraseña"),
-          ),
       ],
-    );
-  }
+    ),
+  );
 }
 
 /// Poner una contraseña nueva, al volver del enlace del correo.
@@ -347,7 +444,7 @@ class _PantallaNuevaContrasenaState extends State<PantallaNuevaContrasena> {
           ),
         ),
         const SizedBox(height: 24),
-        _Campo(
+        CampoIOS(
           controlador: _nueva,
           etiqueta: "Contraseña nueva",
           icono: Icons.lock_outline,
@@ -355,7 +452,7 @@ class _PantallaNuevaContrasenaState extends State<PantallaNuevaContrasena> {
           autocompletar: const [AutofillHints.newPassword],
         ),
         const SizedBox(height: 12),
-        _Campo(
+        CampoIOS(
           controlador: _repetida,
           etiqueta: "Repítela",
           icono: Icons.lock_reset_outlined,
@@ -383,84 +480,6 @@ class _PantallaNuevaContrasenaState extends State<PantallaNuevaContrasena> {
               : const Text("Guardar la contraseña"),
         ),
       ],
-    ),
-  );
-}
-
-/// Un campo del formulario.
-///
-/// Es `StatefulWidget` por una sola cosa: el ojo de «ver la contraseña», que
-/// tiene que recordar si está abierto. **No es un adorno.** El campo va
-/// enmascarado, el teclado del móvil no corrige y la contraseña mínima son 8
-/// caracteres: sin forma de mirar lo escrito, un dedo que resbala se lee en
-/// pantalla como «Correo o contraseña incorrectos», que manda al alumno a
-/// dudar del correo. Es el fallo de acceso más común que hay y el más barato
-/// de quitar.
-///
-/// [autocompletar] conecta el campo con el gestor de contraseñas del sistema
-/// (`autofillHints`). Sin eso, Android no ofrece guardar ni rellenar nada, y
-/// quien usa un gestor tiene que copiar y pegar a mano entre dos apps.
-class _Campo extends StatefulWidget {
-  final TextEditingController controlador;
-  final String etiqueta;
-  final IconData icono;
-  final bool oculto;
-  final bool capitalizar;
-  final TextInputType? teclado;
-  final VoidCallback? alEnviar;
-  final List<String>? autocompletar;
-
-  const _Campo({
-    required this.controlador,
-    required this.etiqueta,
-    required this.icono,
-    this.oculto = false,
-    this.capitalizar = false,
-    this.teclado,
-    this.alEnviar,
-    this.autocompletar,
-  });
-
-  @override
-  State<_Campo> createState() => _CampoState();
-}
-
-class _CampoState extends State<_Campo> {
-  bool _visible = false;
-
-  @override
-  Widget build(BuildContext context) => TextField(
-    controller: widget.controlador,
-    obscureText: widget.oculto && !_visible,
-    keyboardType: widget.teclado,
-    autocorrect: false,
-    autofillHints: widget.autocompletar,
-    textCapitalization: widget.capitalizar
-        ? TextCapitalization.words
-        : TextCapitalization.none,
-    textInputAction: widget.alEnviar != null
-        ? TextInputAction.done
-        : TextInputAction.next,
-    onSubmitted: widget.alEnviar == null ? null : (_) => widget.alEnviar!(),
-    decoration: InputDecoration(
-      labelText: widget.etiqueta,
-      prefixIcon: Icon(widget.icono, size: 20),
-      border: const OutlineInputBorder(),
-      suffixIcon: !widget.oculto
-          ? null
-          : IconButton(
-              // El tooltip es también la etiqueta que lee el lector de
-              // pantalla: un ojo sin nombre se anuncia como «botón».
-              tooltip: _visible ? "Ocultar la contraseña" : "Ver la contraseña",
-              icon: Icon(
-                _visible
-                    ? Icons.visibility_off_outlined
-                    : Icons.visibility_outlined,
-                size: 20,
-                color: context.esquema.onSurfaceVariant,
-              ),
-              onPressed: () => setState(() => _visible = !_visible),
-            ),
     ),
   );
 }

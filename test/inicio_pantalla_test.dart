@@ -233,11 +233,14 @@ void main() {
       await entrar();
       await montar(tester);
 
-      expect(
-        find.textContaining("días seguidos", findRichText: true),
-        findsOneWidget,
-      );
-      expect(find.textContaining("5 repasos para hoy"), findsOneWidget);
+      // La cifra y su etiqueta son dos `Text` distintos: el numero manda a
+      // 38 px y la palabra solo lo clasifica. Antes iban en un `RichText`
+      // unico, de ahi que estas aserciones cambiaran de forma — lo que se
+      // comprueba sigue siendo lo mismo.
+      expect(find.text("3"), findsOneWidget);
+      expect(find.text("días seguidos"), findsOneWidget);
+      expect(find.text("5"), findsOneWidget);
+      expect(find.text("repasos para hoy"), findsOneWidget);
     });
 
     testWidgets("sin racha ni repasos no se pinta una caja vacía", (
@@ -256,11 +259,11 @@ void main() {
       await entrar();
       await montar(tester);
 
-      expect(
-        find.textContaining("días seguidos", findRichText: true),
-        findsNothing,
-      );
-      expect(find.textContaining("repasos para hoy"), findsNothing);
+      // Con las tres cifras a cero no se pinta ninguna: a quien abre la app
+      // por primera vez, tres ceros en fila no le informan, le dicen que va
+      // mal antes de haber empezado.
+      expect(find.text("días seguidos"), findsNothing);
+      expect(find.text("repasos para hoy"), findsNothing);
       // Pero la portada sigue completa.
       expect(find.text("Practicar"), findsOneWidget);
     });
@@ -285,6 +288,38 @@ void main() {
       await asentar(tester);
 
       expect(find.textContaining("No se pudo cargar tu panel"), findsNothing);
+    });
+  });
+
+  group("entrar con la portada ya abierta", () {
+    testWidgets("la portada se entera y pide su panel", (tester) async {
+      // `PantallaEntrar` se abre ENCIMA de la portada. Al cerrarse tras un
+      // acceso correcto, la portada seguía pintando «Crear cuenta o entrar»
+      // con la sesión ya iniciada: leía `hayCuenta` una vez, en `initState`.
+      await montar(tester);
+      expect(find.textContaining("Crear cuenta o entrar"), findsOneWidget);
+
+      await entrar();
+      await asentar(tester);
+
+      expect(find.textContaining("Crear cuenta o entrar"), findsNothing);
+      expect(
+        espia.de("/rest/v1/rpc/racha_estudio"),
+        hasLength(1),
+        reason: "el panel es de quien acaba de entrar: hay que pedirlo",
+      );
+    });
+
+    testWidgets("salir devuelve la portada sin panel", (tester) async {
+      await entrar();
+      await montar(tester);
+      expect(find.text("días seguidos"), findsOneWidget);
+
+      await cliente.auth.signOut();
+      await asentar(tester);
+
+      expect(find.textContaining("Crear cuenta o entrar"), findsOneWidget);
+      expect(find.text("días seguidos"), findsNothing);
     });
   });
 

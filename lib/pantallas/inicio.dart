@@ -1,25 +1,39 @@
+import "dart:async";
+
 import "package:flutter/material.dart";
+import "package:supabase_flutter/supabase_flutter.dart" show AuthState;
 
 import "../datos/horario.dart";
 import "../datos/progreso.dart";
 import "../datos/repaso.dart";
+
 import "../datos/sesion.dart";
 import "../main.dart" show Armazon;
 import "../tema.dart";
 import "../widgets/aviso.dart";
+import "../widgets/ios.dart";
 import "buscar.dart";
 import "entrar.dart";
 import "horario.dart";
 import "practica_adaptativa.dart";
 
-/// `/` — la portada.
+/// `/` — la portada, que hace de panel del alumno.
 ///
 /// Réplica de `src/app/page.tsx`. En la web tampoco vive en la barra móvil
 /// —el header con el logo que llevaría ahí está oculto en pantallas
 /// pequeñas—, así que en la práctica se ve al abrir la app por primera vez y
-/// se vuelve por un enlace explícito después. Aquí es igual: `Arranque` la
-/// muestra primero, y el ícono de casa en el `AppBar` del resto de la app es
-/// el enlace explícito de vuelta.
+/// se vuelve por un enlace explícito después.
+///
+/// **Está montada como una pantalla de ajustes de iOS**: cabecera con *Large
+/// Title* y, debajo, grupos de tarjeta blanca sobre fondo gris. No es
+/// decoración — un panel es exactamente eso: bloques de cosas relacionadas que
+/// hay que poder recorrer con el pulgar sin leerlo todo.
+///
+/// **Las cifras que enseña no son las de un expediente.** No hay «cursos
+/// activos» ni «promedio» ni «próximas entregas»: esta app no es un aula
+/// virtual, es preparación para un examen de admisión. Lo que mueve el estudio
+/// aquí es el acierto por subtema, la constancia y qué toca repasar hoy, y eso
+/// es lo que se pinta.
 class PantallaInicio extends StatefulWidget {
   /// Sesión y repositorios inyectables, igual que en `PantallaHorario`.
   ///
@@ -46,11 +60,57 @@ class PantallaInicio extends StatefulWidget {
 class _PantallaInicioState extends State<PantallaInicio> {
   late final _sesion = widget.sesion ?? Sesion();
   Future<_PanelPersonal>? _carga;
+  StreamSubscription<AuthState>? _escucha;
+
+  /// De quién es el panel que hay en pantalla, o `null` si no hay sesión.
+  String? _duenoDelPanel;
 
   @override
   void initState() {
     super.initState();
-    if (_sesion.hayCuenta) _carga = _pedir();
+    if (_sesion.hayCuenta) {
+      _carga = _pedir();
+      _duenoDelPanel = _sesion.usuario!.id;
+    }
+
+    // **Sin esto, entrar no cambiaba nada de esta pantalla.**
+    //
+    // La portada leia `hayCuenta` una sola vez, aqui, y `PantallaEntrar` se
+    // abre ENCIMA de ella: al cerrarse tras un acceso correcto, esta seguia
+    // pintando «Crear cuenta o entrar» con la sesion ya iniciada. Habia que
+    // salir y volver para que se enterara.
+    //
+    // Escuchar el flujo de auth lo cubre entero —entrar, salir, y la sesion
+    // temporal del enlace de recuperacion— y no solo el caso del boton, que es
+    // lo que arreglaria un `await` sobre el `push`.
+    _escucha = _sesion.cambios.listen((_) {
+      if (!mounted) return;
+
+      // Solo cuando cambia DE QUIEN es la sesion.
+      //
+      // El flujo emite mucho mas que entrar y salir: al suscribirse suelta ya
+      // un `initialSession`, y despues un `tokenRefreshed` cada hora. Sin este
+      // filtro, abrir la app con sesion pedia el panel dos veces —seis
+      // peticiones por duplicado— y el `Future` que quedaba huerfano llegaba
+      // con su error a nadie, que en depuracion es un error rojo.
+      final ahora = _sesion.usuario?.id;
+      if (ahora == _duenoDelPanel) return;
+      _duenoDelPanel = ahora;
+
+      // La peticion se arma FUERA de `setState` y el cuerpo va entre llaves:
+      // con flecha, un `setState` que asigna un `Future` lo DEVUELVE, y
+      // Flutter lo rechaza en tiempo de ejecucion.
+      final nueva = ahora == null ? null : _pedir();
+      setState(() {
+        _carga = nueva;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _escucha?.cancel();
+    super.dispose();
   }
 
   void _recargarPanel() {
@@ -64,15 +124,16 @@ class _PantallaInicioState extends State<PantallaInicio> {
     final repasos = widget.repasos ?? RepositorioRepaso();
     final horarioRepo = widget.horario ?? RepositorioHorario();
 
-    // Las cinco a la vez: ninguna depende de otra, y encadenarlas sumaba
-    // cinco latencias antes de que la portada enseñara nada. Ver la nota
-    // equivalente en `progreso.dart`.
+    // Las seis a la vez: ninguna depende de otra, y encadenarlas sumaba seis
+    // latencias antes de que la portada enseñara nada. Ver la nota equivalente
+    // en `progreso.dart`.
     final resultados = await Future.wait([
       progreso.diagnostico(),
       progreso.racha(),
       repasos.resumen(),
       horarioRepo.obtener(),
       progreso.cursosDesatendidos(),
+      progreso.perfil(),
     ]);
 
     final diagnostico = resultados[0] as Diagnostico;
@@ -80,6 +141,7 @@ class _PantallaInicioState extends State<PantallaInicio> {
     final resumenRepasos = resultados[2] as ResumenRepasos?;
     final horario = resultados[3] as List<BloqueHorario>;
     final desatendidos = resultados[4] as List<CursoDesatendido>;
+    final perfil = resultados[5] as Perfil?;
 
     // Aviso dirigido: el curso más flojo que además lleva días sin tocarse.
     // El umbral de 2 días evita regañar a quien practicó ayer; el de 70 %
@@ -100,6 +162,7 @@ class _PantallaInicioState extends State<PantallaInicio> {
       repasos: resumenRepasos,
       proximo: proximoBloque(horario, DateTime.now()),
       descuidado: descuidado,
+      perfil: perfil,
     );
   }
 
@@ -107,207 +170,150 @@ class _PantallaInicioState extends State<PantallaInicio> {
     MaterialPageRoute(builder: (_) => Armazon(destinoInicial: destino)),
   );
 
-  /// Los seis accesos de la portada, en el orden en que se leen.
-  List<Widget> _accesos() => [
-    _AccesoDirecto(
-      icono: Icons.edit_outlined,
-      titulo: "Practicar",
-      descripcion: "Preguntas resueltas",
-      onTap: () => _irAPestana(2),
-    ),
-    _AccesoDirecto(
-      icono: Icons.replay_outlined,
-      titulo: "Repaso",
-      descripcion: "Lo que toca hoy",
-      onTap: () => _irAPestana(0),
-    ),
-    _AccesoDirecto(
-      icono: Icons.adjust_outlined,
-      titulo: "Adaptativa",
-      descripcion: "Tus puntos flojos",
-      onTap: () => Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => const AdaptativaConBarra())),
-    ),
-    _AccesoDirecto(
-      icono: Icons.menu_book_outlined,
-      titulo: "Teoría",
-      descripcion: "Curso por curso",
-      onTap: () => _irAPestana(1),
-    ),
-    _AccesoDirecto(
-      icono: Icons.timer_outlined,
-      titulo: "Simulacros",
-      descripcion: "Cronometrados",
-      onTap: () => _irAPestana(3),
-    ),
-    _AccesoDirecto(
-      icono: Icons.search,
-      titulo: "Buscar",
-      descripcion: "Por nombre o código",
-      onTap: () =>
-          Navigator.of(context)
-              .push(MaterialPageRoute(builder: (_) => const PantallaBuscar())),
-    ),
-  ];
+  void _abrir(Widget pantalla) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => pantalla));
+
+  /// Los seis accesos, como filas de una lista agrupada.
+  ///
+  /// **Eran una rejilla de baldosas y ahora son filas**, y se gana en dos
+  /// cosas: cada una puede llevar una frase entera de explicación sin partirse
+  /// en cuatro líneas —que era el desborde documentado de la rejilla con la
+  /// letra del sistema al máximo—, y la lista crece sin que haya que decidir
+  /// qué hacer con un número impar de elementos. El icono en pastilla de color
+  /// es lo que permite distinguirlas de un vistazo sin leer.
+  Widget _accesos(BuildContext context) => GrupoInset(
+    titulo: "Ir a",
+    sangriaSeparador: 58,
+    filas: [
+      FilaInset(
+        icono: Icons.edit_outlined,
+        colorIcono: context.esquema.primary,
+        titulo: "Practicar",
+        subtitulo: "Preguntas resueltas y verificadas",
+        onTap: () => _irAPestana(2),
+      ),
+      FilaInset(
+        icono: Icons.replay_outlined,
+        colorIcono: context.colores.exito,
+        titulo: "Repaso",
+        subtitulo: "Lo que toca hoy",
+        onTap: () => _irAPestana(0),
+      ),
+      FilaInset(
+        icono: Icons.adjust_outlined,
+        colorIcono: context.colores.aviso,
+        titulo: "Adaptativa",
+        subtitulo: "Tus puntos flojos, elegidos por ti",
+        onTap: () => _abrir(const AdaptativaConBarra()),
+      ),
+      FilaInset(
+        icono: Icons.menu_book_outlined,
+        colorIcono: context.esquema.primary,
+        titulo: "Teoría",
+        subtitulo: "Curso por curso, y sin conexión",
+        onTap: () => _irAPestana(1),
+      ),
+      FilaInset(
+        icono: Icons.timer_outlined,
+        colorIcono: context.esquema.error,
+        titulo: "Simulacros",
+        subtitulo: "Cronometrados, como el de verdad",
+        onTap: () => _irAPestana(3),
+      ),
+      FilaInset(
+        icono: Icons.search,
+        colorIcono: context.colores.grisSutil,
+        titulo: "Buscar",
+        subtitulo: "Por nombre o código de subtema",
+        onTap: () => _abrir(const PantallaBuscar()),
+      ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
-    final accesos = _accesos();
+    final hayCuenta = _sesion.hayCuenta;
 
     return Scaffold(
       body: SafeArea(
+        bottom: false,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+          padding: const EdgeInsets.only(bottom: 32),
           children: [
-            Row(
-              children: [
-                Container(
-                  width: 34,
-                  height: 34,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: context.esquema.primary,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: Text(
-                    "M",
-                    style: context.textos.headlineSmall!.copyWith(
-                      color: context.esquema.onPrimary,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  "Matrix U",
-                  style: context.textos.titleMedium!.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: context.esquema.onSurface,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 22),
-            Text(
-              "El examen de la UNSA,",
-              style: context.textos.displaySmall!.copyWith(
-                fontWeight: FontWeight.w800,
-                color: context.esquema.onSurface,
+            const SizedBox(height: 8),
+
+            // ---- Cabecera -------------------------------------------------
+            if (!hayCuenta)
+              const TituloGrande(
+                texto: "Matrix U",
+                subtitulo: "El examen de la UNSA, entero y ordenado.",
+              )
+            else
+              FutureBuilder<_PanelPersonal>(
+                future: _carga,
+                builder: (context, snap) {
+                  // Si el panel falla, la cabecera NO falla con el: se queda
+                  // sin nombre y ya. El aviso de que algo no cargo lo da el
+                  // bloque de abajo, una vez, y no dos.
+                  if (snap.hasError) return const _Saludo(perfil: null);
+                  return _Saludo(perfil: snap.data?.perfil);
+                },
               ),
-            ),
-            Text(
-              "entero y ordenado.",
-              style: context.textos.displaySmall!.copyWith(
-                fontWeight: FontWeight.w800,
-                color: context.esquema.primary,
-              ),
-            ),
-            const SizedBox(height: 18),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                FilledButton(
-                  onPressed: () => _irAPestana(2),
-                  child: const Text("Empezar a practicar"),
-                ),
-                OutlinedButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PantallaBuscar()),
-                  ),
-                  child: const Text("Buscar un subtema"),
-                ),
-              ],
-            ),
-            const SizedBox(height: 22),
-            if (!_sesion.hayCuenta)
-              _AvisoSinCuenta(
-                onEntrar: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (contextoRuta) => Scaffold(
-                      appBar: AppBar(title: const Text("Acceso")),
-                      body: PantallaEntrar(
-                        alEntrar: () => Navigator.of(contextoRuta).pop(),
+
+            const SizedBox(height: 8),
+
+            if (!hayCuenta) ...[
+              _SinCuenta(
+                onEntrar: () => _abrir(
+                  Scaffold(
+                    appBar: AppBar(title: const Text("Acceso")),
+                    body: Builder(
+                      builder: (ctx) => PantallaEntrar(
+                        alEntrar: () => Navigator.of(ctx).pop(),
                       ),
                     ),
                   ),
                 ),
-              )
-            else
+              ),
+              const SizedBox(height: 24),
+            ] else ...[
               FutureBuilder<_PanelPersonal>(
                 future: _carga,
                 builder: (context, snap) {
                   // Callarse aquí sería lo peor: el alumno con sesión sabe que
                   // su panel existe —lo vio ayer— y verlo desaparecer sin una
                   // palabra se lee como que perdió la racha, no como que el
-                  // servidor no contestó. Con Reintentar, además, no hace falta
-                  // salir de Inicio y volver a entrar.
+                  // servidor no contestó.
                   if (snap.hasError) {
-                    return Aviso(
-                      icono: Icons.cloud_off_outlined,
-                      titulo: "No se pudo cargar tu panel",
-                      detalle:
-                          "Tu racha, tus repasos y tu diagnóstico se calculan "
-                          "en el servidor, y ahora mismo no responde.",
-                      accion: ("Reintentar", _recargarPanel),
-                      compacto: true,
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Aviso(
+                        icono: Icons.cloud_off_outlined,
+                        titulo: "No se pudo cargar tu panel",
+                        detalle:
+                            "Tu racha, tus repasos y tu diagnóstico se "
+                            "calculan en el servidor, y ahora mismo no "
+                            "responde.",
+                        accion: ("Reintentar", _recargarPanel),
+                        compacto: true,
+                      ),
                     );
                   }
                   // Mientras carga no va un spinner: el panel entra debajo de
-                  // la portada, que ya es contenido, y un giro de dos líneas
-                  // ahí solo hace saltar todo lo de abajo cuando resuelve.
-                  if (!snap.hasData) return const SizedBox.shrink();
-                  return _PanelPersonalVista(datos: snap.data!);
+                  // la cabecera, que ya es contenido, y un giro ahí solo hace
+                  // saltar todo lo de abajo cuando resuelve.
+                  if (!snap.hasData) return const SizedBox(height: 8);
+                  return _PanelPersonalVista(
+                    datos: snap.data!,
+                    alAbrirHorario: () => _abrir(const HorarioConBarra()),
+                    alAbrirAdaptativa: () => _abrir(const AdaptativaConBarra()),
+                  );
                 },
               ),
-            const SizedBox(height: 26),
-            Text(
-              "ACCESOS DIRECTOS",
-              style: context.textos.labelSmall!.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.6,
-                color: context.esquema.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 10),
-            // Dos por fila, y **sin fijar la altura**.
-            //
-            // Esto era un `GridView.count(childAspectRatio: 1.35)`, y ese número
-            // decide la ALTURA de cada baldosa a partir de su ancho: unos 101 px
-            // a 320 px de pantalla, pasara lo que pasara. Dentro crece un cuadro
-            // de icono de 32 px fijos más dos líneas de texto que SÍ escalan con
-            // el tipo de letra del sistema. Con la letra normal sobraban 11 px;
-            // desde ×1,3 —muy por debajo del ×2 que ofrece Accesibilidad en
-            // Android— el texto ya no cabía y las seis baldosas desbordaban a la
-            // vez.
-            //
-            // Dividir la proporción por la escala tapaba el caso hasta ×1,5 y
-            // volvía a desbordar 29 px en ×2: el ancho de la baldosa no cambia,
-            // así que a letra muy grande la descripción se parte en más líneas
-            // de las que cualquier proporción fija prevé. La única forma de que
-            // no vuelva es no fijar la altura: cada fila mide lo que mida su
-            // contenido, y el `IntrinsicHeight` iguala las dos baldosas de la
-            // fila para que sigan pareciendo una rejilla.
-            for (var i = 0; i < accesos.length; i += 2)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(child: accesos[i]),
-                      const SizedBox(width: 8),
-                      // Con un número impar de accesos, el hueco mantiene la
-                      // última baldosa a su ancho en vez de estirarla al doble.
-                      Expanded(
-                        child: i + 1 < accesos.length
-                            ? accesos[i + 1]
-                            : const SizedBox.shrink(),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              const SizedBox(height: 24),
+            ],
+
+            _accesos(context),
           ],
         ),
       ),
@@ -315,49 +321,84 @@ class _PantallaInicioState extends State<PantallaInicio> {
   }
 }
 
-class _AvisoSinCuenta extends StatelessWidget {
-  final VoidCallback onEntrar;
-  const _AvisoSinCuenta({required this.onEntrar});
+/// La cabecera con sesión: saludo, nombre e iniciales.
+///
+/// El saludo cambia con la hora porque una app de estudio se abre a las siete
+/// de la mañana y a las once de la noche, y decir «buenos días» a medianoche
+/// es de las cosas que delatan que nadie lo miró.
+class _Saludo extends StatelessWidget {
+  final Perfil? perfil;
+  const _Saludo({required this.perfil});
+
+  String get _momento {
+    final h = DateTime.now().hour;
+    if (h < 6) return "Buenas noches";
+    if (h < 13) return "Buenos días";
+    if (h < 20) return "Buenas tardes";
+    return "Buenas noches";
+  }
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: context.esquema.surfaceContainerLow,
-      border: Border.all(color: context.esquema.outlineVariant),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Con una cuenta gratis guardas tu progreso por subtema y puedes "
-          "programar un horario de estudio que te avisa cuando toca.",
-          style: context.textos.bodyMedium!.copyWith(
-            color: context.esquema.onSurfaceVariant,
-          ),
+  Widget build(BuildContext context) {
+    final nombre = perfil?.nombre?.trim();
+    final primero = (nombre == null || nombre.isEmpty)
+        ? null
+        : nombre.split(RegExp(r"\s+")).first;
+
+    return TituloGrande(
+      texto: primero == null ? "Matrix U" : "$_momento,\n$primero",
+      subtitulo: primero == null
+          ? "El examen de la UNSA, entero y ordenado."
+          : null,
+      alFinal: AvatarIniciales(nombre: nombre, tamano: 44),
+    );
+  }
+}
+
+/// La invitación a registrarse, para quien llega sin cuenta.
+class _SinCuenta extends StatelessWidget {
+  final VoidCallback onEntrar;
+  const _SinCuenta({required this.onEntrar});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        color: context.esquema.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(radioTarjeta),
+        boxShadow: sombraTarjeta(Theme.of(context).brightness),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Con una cuenta gratis guardas tu progreso por subtema y puedes "
+              "programar un horario de estudio que te avisa cuando toca.",
+              style: context.textos.bodyLarge,
+            ),
+            const SizedBox(height: 16),
+            BotonPrincipal(
+              texto: "Crear cuenta o entrar →",
+              onPressed: onEntrar,
+            ),
+          ],
         ),
-        const SizedBox(height: 10),
-        TextButton(
-          onPressed: onEntrar,
-          style: TextButton.styleFrom(padding: EdgeInsets.zero),
-          child: const Text("Crear cuenta o entrar →"),
-        ),
-      ],
+      ),
     ),
   );
 }
 
-/// Lo que ve solo quien tiene sesión: acierto global (misma fuente que el
-/// diagnóstico de Progreso, resumida a una cifra), constancia, un aviso
-/// dirigido si hay un curso flojo desatendido, y el próximo bloque de
-/// horario. Ninguna de estas cifras se inventa si no hay datos reales.
+/// Lo que ve solo quien tiene sesión.
 class _PanelPersonal {
   final Diagnostico diagnostico;
   final Racha? racha;
   final ResumenRepasos? repasos;
   final ({BloqueHorario bloque, DateTime cuando})? proximo;
   final CursoDesatendido? descuidado;
+  final Perfil? perfil;
 
   const _PanelPersonal({
     required this.diagnostico,
@@ -365,142 +406,126 @@ class _PanelPersonal {
     required this.repasos,
     required this.proximo,
     required this.descuidado,
+    required this.perfil,
   });
 }
 
 class _PanelPersonalVista extends StatelessWidget {
   final _PanelPersonal datos;
-  const _PanelPersonalVista({required this.datos});
+  final VoidCallback alAbrirHorario;
+  final VoidCallback alAbrirAdaptativa;
+
+  const _PanelPersonalVista({
+    required this.datos,
+    required this.alAbrirHorario,
+    required this.alAbrirAdaptativa,
+  });
 
   @override
   Widget build(BuildContext context) {
     final racha = datos.racha;
     final repasos = datos.repasos;
-    final mostrarConstancia =
-        (racha?.diasActual ?? 0) > 0 || (repasos?.pendientesHoy ?? 0) > 0;
+    final diag = datos.diagnostico;
+    final pendientes = repasos?.pendientesHoy ?? 0;
+    final dias = racha?.diasActual ?? 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (mostrarConstancia) ...[
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: context.esquema.surfaceContainerLowest,
-              border: Border.all(color: context.esquema.outlineVariant),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Wrap(
-              spacing: 18,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                if (racha != null && racha.diasActual > 0)
-                  RichText(
-                    text: TextSpan(
-                      style: context.textos.bodyMedium!.copyWith(
-                        color: context.esquema.onSurfaceVariant,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: "${racha.diasActual} ",
-                          style: context.textos.headlineSmall!.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: context.esquema.onSurface,
-                          ),
-                        ),
-                        TextSpan(
-                          text: racha.diasActual == 1
-                              ? "día seguido"
-                              : "días seguidos",
-                        ),
-                        // Sin esto la racha parece ya asegurada y no invita a
-                        // estudiar hoy también.
-                        if (!racha.estudiadoHoy)
-                          TextSpan(
-                            text: " · te falta hoy",
-                            style: TextStyle(color: context.colores.aviso),
-                          ),
-                      ],
-                    ),
-                  ),
-                if (repasos != null && repasos.pendientesHoy > 0)
-                  Text(
-                    "${repasos.pendientesHoy} ${repasos.pendientesHoy == 1 ? "repaso" : "repasos"} para hoy",
-                    style: context.textos.labelLarge!.copyWith(
-                      fontWeight: FontWeight.w600,
+        // ---- Las tres cifras ---------------------------------------------
+        //
+        // Acierto, constancia y lo pendiente de hoy. El acierto sale como «—»
+        // y no como «0 %» cuando no hay respuestas: un cero medido y un
+        // «todavía nada» son cosas distintas, y esta app no rellena huecos.
+        //
+        // **Con las tres a cero no se pinta nada.** A quien abre la app por
+        // primera vez, tres ceros en fila no le informan: le dicen que va mal
+        // antes de haber empezado. Cuando haya algo que contar, aparecen.
+        if (!diag.vacio || dias > 0 || pendientes > 0)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            // `IntrinsicHeight` para que las tres midan lo mismo: «repasos
+            // para hoy» parte en dos lineas y sin esto la tercera cuelga por
+            // debajo. Tres cifras del mismo rango tienen que verse del mismo
+            // peso.
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _Cifra(
+                      valor: diag.vacio ? "—" : "${diag.aciertoGlobal} %",
+                      etiqueta: "Acierto",
                       color: context.esquema.primary,
                     ),
                   ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-        if (datos.descuidado case final d?) ...[
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: context.colores.avisoContenedor,
-              border: Border.all(
-                color: context.colores.aviso.withValues(alpha: 0.4),
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: context.textos.bodyMedium!.copyWith(
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _Cifra(
+                      valor: "$dias",
+                      etiqueta: dias == 1 ? "día seguido" : "días seguidos",
+                      color: context.colores.exito,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _Cifra(
+                      valor: "$pendientes",
+                      etiqueta: pendientes == 1
+                          ? "repaso para hoy"
+                          : "repasos para hoy",
                       color: context.colores.aviso,
                     ),
-                    children: [
-                      const TextSpan(text: "Llevas "),
-                      TextSpan(
-                        text: "${d.diasSinPracticar} días",
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      const TextSpan(text: " sin practicar "),
-                      TextSpan(
-                        text: d.nombre,
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      TextSpan(
-                        text: ", tu curso más flojo (${d.porcentaje} %).",
-                      ),
-                    ],
                   ),
-                ),
-                const SizedBox(height: 6),
-                TextButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => Scaffold(
-                        appBar: AppBar(
-                          title: const Text("Práctica adaptativa"),
-                        ),
-                        body: PantallaPracticaAdaptativa(cursoSlug: d.slug),
-                      ),
-                    ),
-                  ),
-                  style: TextButton.styleFrom(
-                    foregroundColor: context.colores.aviso,
-                    padding: EdgeInsets.zero,
-                  ),
-                  child: const Text("Practicarlo ahora"),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-        ],
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: _TarjetaProgreso(diagnostico: datos.diagnostico)),
-            const SizedBox(width: 10),
-            Expanded(child: _TarjetaProximoBloque(proximo: datos.proximo)),
+
+        // ---- Lo que toca --------------------------------------------------
+        const SizedBox(height: 20),
+        GrupoInset(
+          titulo: "Lo que toca",
+          sangriaSeparador: 58,
+          filas: [
+            if (racha != null && racha.arrancada && !racha.estudiadoHoy)
+              FilaInset(
+                icono: Icons.local_fire_department_outlined,
+                colorIcono: context.colores.aviso,
+                titulo: "Te falta hoy",
+                subtitulo:
+                    "Llevas ${racha.diasActual} días seguidos: responde algo "
+                    "para no cortarla.",
+                onTap: alAbrirAdaptativa,
+              ),
+            if (datos.descuidado case final c?)
+              FilaInset(
+                icono: Icons.trending_down,
+                colorIcono: context.esquema.error,
+                titulo: c.nombre,
+                subtitulo:
+                    "${c.porcentaje} % de acierto y ${c.diasSinPracticar} "
+                    "días sin tocarlo.",
+                onTap: alAbrirAdaptativa,
+              ),
+            if (datos.proximo case final p?)
+              FilaInset(
+                icono: Icons.schedule,
+                colorIcono: context.esquema.primary,
+                titulo: p.bloque.cursoNombre,
+                subtitulo:
+                    "${diasSemana[p.bloque.diaSemana]} a las "
+                    "${formatearHora(p.bloque.horaInicio)}",
+                onTap: alAbrirHorario,
+              )
+            else
+              FilaInset(
+                icono: Icons.schedule,
+                colorIcono: context.esquema.primary,
+                titulo: "Programa un horario",
+                subtitulo: "Te avisamos cuando toque estudiar.",
+                onTap: alAbrirHorario,
+              ),
           ],
         ),
       ],
@@ -508,181 +533,46 @@ class _PanelPersonalVista extends StatelessWidget {
   }
 }
 
-class _TarjetaProgreso extends StatelessWidget {
-  final Diagnostico diagnostico;
-  const _TarjetaProgreso({required this.diagnostico});
+/// Una cifra grande con su etiqueta debajo, dentro de una tarjeta.
+///
+/// Es la pieza de resumen de iOS: el número manda y la palabra solo lo
+/// clasifica. Por eso la etiqueta va en gris pequeño y no compite.
+class _Cifra extends StatelessWidget {
+  final String valor;
+  final String etiqueta;
+  final Color color;
 
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: context.esquema.surfaceContainerLowest,
-      border: Border.all(color: context.esquema.outlineVariant),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "TU PROGRESO",
-          style: context.textos.labelSmall!.copyWith(
-            fontWeight: FontWeight.w700,
-            color: context.esquema.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (diagnostico.vacio)
-          Text(
-            "Responde algunas preguntas y aquí verás tu acierto.",
-            style: context.textos.bodySmall!.copyWith(
-              color: context.esquema.onSurfaceVariant,
-            ),
-          )
-        else
-          RichText(
-            text: TextSpan(
-              style: context.textos.bodySmall!.copyWith(
-                color: context.esquema.onSurfaceVariant,
-              ),
-              children: [
-                TextSpan(
-                  text: "${diagnostico.aciertoGlobal} % ",
-                  style: context.textos.headlineMedium!.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: context.esquema.onSurface,
-                  ),
-                ),
-                TextSpan(
-                  text: "de acierto en ${diagnostico.respondidas} preguntas",
-                ),
-              ],
-            ),
-          ),
-      ],
-    ),
-  );
-}
-
-class _TarjetaProximoBloque extends StatelessWidget {
-  final ({BloqueHorario bloque, DateTime cuando})? proximo;
-  const _TarjetaProximoBloque({required this.proximo});
-
-  @override
-  Widget build(BuildContext context) {
-    final p = proximo;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: context.esquema.surfaceContainerLowest,
-        border: Border.all(color: context.esquema.outlineVariant),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "PRÓXIMO BLOQUE",
-            style: context.textos.labelSmall!.copyWith(
-              fontWeight: FontWeight.w700,
-              color: context.esquema.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 8),
-          if (p == null)
-            Text(
-              "No tienes ningún bloque programado todavía.",
-              style: context.textos.bodySmall!.copyWith(
-                color: context.esquema.onSurfaceVariant,
-              ),
-            )
-          else
-            Text(
-              "${p.bloque.cursoNombre}\n"
-              "${diasSemana[p.bloque.diaSemana]} ${formatearHora(p.bloque.horaInicio)}",
-              style: context.textos.bodySmall!.copyWith(
-                color: context.esquema.onSurface,
-              ),
-            ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const HorarioConBarra())),
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              visualDensity: VisualDensity.compact,
-            ),
-            child: Text(
-              p != null ? "Editar horario →" : "Programar →",
-              style: context.textos.bodySmall,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AccesoDirecto extends StatelessWidget {
-  final IconData icono;
-  final String titulo;
-  final String descripcion;
-  final VoidCallback onTap;
-
-  const _AccesoDirecto({
-    required this.icono,
-    required this.titulo,
-    required this.descripcion,
-    required this.onTap,
+  const _Cifra({
+    required this.valor,
+    required this.etiqueta,
+    required this.color,
   });
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: context.esquema.surfaceContainerLowest,
-    borderRadius: BorderRadius.circular(12),
-    child: InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          border: Border.all(color: context.esquema.outlineVariant),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: context.esquema.secondaryContainer,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icono, size: 16, color: context.esquema.primary),
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: BoxDecoration(
+      color: context.esquema.surfaceContainerLowest,
+      borderRadius: BorderRadius.circular(radioTarjeta),
+      boxShadow: sombraTarjeta(Theme.of(context).brightness),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+      child: Column(
+        children: [
+          FittedBox(
+            child: Text(
+              valor,
+              maxLines: 1,
+              style: context.textos.displaySmall?.copyWith(color: color),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  titulo,
-                  style: context.textos.labelLarge!.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: context.esquema.onSurface,
-                  ),
-                ),
-                Text(
-                  descripcion,
-                  style: context.textos.labelSmall!.copyWith(
-                    color: context.esquema.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            etiqueta,
+            textAlign: TextAlign.center,
+            style: context.textos.bodySmall,
+          ),
+        ],
       ),
     ),
   );

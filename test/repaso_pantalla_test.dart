@@ -22,6 +22,7 @@ import "package:matr_u/data/repositories/progreso.dart";
 import "package:matr_u/data/repositories/repaso.dart";
 import "package:matr_u/data/repositories/sesion.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/features/practice/view_models/repaso.dart";
 import "package:matr_u/ui/features/practice/views/practica_adaptativa.dart";
 import "package:matr_u/ui/features/practice/views/repaso.dart";
 import "package:supabase/supabase.dart";
@@ -194,8 +195,10 @@ void main() {
     Future<void> montarRepaso(WidgetTester tester) => montar(
       tester,
       PantallaRepaso(
-        repositorio: RepositorioRepaso(cliente: cliente),
-        sesion: Sesion(cliente: cliente),
+        modelo: ModeloRepaso(
+          repositorio: RepositorioRepaso(cliente: cliente),
+          sesion: Sesion(cliente: cliente),
+        ),
       ),
     );
 

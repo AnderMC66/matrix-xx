@@ -1,11 +1,11 @@
 import "package:flutter/material.dart";
 import "package:matr_u/core/utils/fechas.dart";
-import "package:matr_u/data/repositories/repaso.dart";
-import "package:matr_u/data/repositories/sesion.dart";
 import "package:matr_u/domain/models/preguntas.dart";
 import "package:matr_u/domain/models/repaso.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/core/vista_modelo.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
+import "package:matr_u/ui/features/practice/view_models/repaso.dart";
 import "package:matr_u/ui/features/practice/views/practica.dart";
 
 /// `/repaso` — dos formas de repasar en una pantalla.
@@ -20,123 +20,94 @@ import "package:matr_u/ui/features/practice/views/practica.dart";
 /// exactamente como la web reutiliza `<SesionPractica>` aquí: un repaso *es*
 /// una práctica, solo cambia de dónde sale la lista de preguntas.
 class PantallaRepaso extends StatefulWidget {
-  /// Repositorio y sesión inyectables, igual que en `PantallaHorario`. Los dos
-  /// resuelven `Supabase.instance.client` en su constructor. En producción
-  /// nadie los pasa.
-  final RepositorioRepaso? repositorio;
-  final Sesion? sesion;
+  /// El modelo de vista, inyectable. Si no llega, la pantalla construye el
+  /// suyo con los repositorios de producción — el mismo patrón `?? X()` de
+  /// siempre, ahora un nivel más arriba.
+  final ModeloRepaso? modelo;
 
-  const PantallaRepaso({super.key, this.repositorio, this.sesion});
+  const PantallaRepaso({super.key, this.modelo});
 
   @override
   State<PantallaRepaso> createState() => _PantallaRepasoState();
 }
 
-enum _Modo { programadas, falladas }
-
 class _PantallaRepasoState extends State<PantallaRepaso> {
-  late final _repo = widget.repositorio ?? RepositorioRepaso();
-  late final _sesion = widget.sesion ?? Sesion();
+  late final ModeloRepaso _modelo = widget.modelo ?? ModeloRepaso();
 
-  _Modo _modo = _Modo.programadas;
-  Future<(List<Pregunta>, ResumenRepasos?)>? _carga;
+  /// Solo se libera el que construyó esta pantalla. El inyectado es de quien
+  /// lo pasó —un test, casi siempre— y puede querer leerlo después.
+  late final bool _esMio = widget.modelo == null;
 
   @override
   void initState() {
     super.initState();
-    _recargar();
-  }
-
-  void _recargar() {
-    if (!_sesion.hayCuenta) return;
-    setState(() {
-      // Las dos a la vez: la lista de preguntas y el resumen del calendario
-      // no dependen entre sí, y encadenarlas sumaba dos latencias antes de
-      // pintar nada. Misma razón que en Progreso, Inicio y Simulacro.
-      _carga = () async {
-        final resultados = await Future.wait([
-          switch (_modo) {
-            _Modo.falladas => _repo.falladas(),
-            _Modo.programadas => _repo.pendientes(),
-          },
-          _repo.resumen(),
-        ]);
-        return (
-          resultados[0] as List<Pregunta>,
-          resultados[1] as ResumenRepasos?,
-        );
-      }();
-    });
+    _modelo.cargar();
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (!_sesion.hayCuenta) {
-      return const _SinCuenta(
-        titulo: "El repaso necesita tu cuenta",
-        detalle:
-            "La repetición espaciada se calcula con tu historial de "
-            "respuestas, que vive en el servidor.",
-      );
-    }
-
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: Row(
-            children: [
-              for (final m in _Modo.values)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: ChoiceChip(
-                    label: Text(
-                      m == _Modo.programadas ? "Programadas hoy" : "Falladas",
-                    ),
-                    selected: _modo == m,
-                    onSelected: (_) {
-                      if (_modo == m) return;
-                      _modo = m;
-                      _recargar();
-                    },
-                  ),
-                ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: FutureBuilder<(List<Pregunta>, ResumenRepasos?)>(
-            future: _carga,
-            builder: (context, snap) {
-              if (snap.hasError) {
-                return Aviso(
-                  icono: Icons.cloud_off_outlined,
-                  titulo: "No se pudo cargar el repaso",
-                  detalle: "${snap.error}",
-                  accion: ("Reintentar", _recargar),
-                );
-              }
-              if (!snap.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final (preguntas, resumen) = snap.data!;
-              if (preguntas.isEmpty) {
-                return _Vacio(modo: _modo, resumen: resumen);
-              }
-
-              return _Portada(
-                modo: _modo,
-                preguntas: preguntas,
-                resumen: resumen,
-                alTerminar: _recargar,
-              );
-            },
-          ),
-        ),
-      ],
-    );
+  void dispose() {
+    if (_esMio) _modelo.dispose();
+    super.dispose();
   }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _modelo,
+    builder: (context, _) {
+      if (!_modelo.hayCuenta) {
+        return const _SinCuenta(
+          titulo: "El repaso necesita tu cuenta",
+          detalle:
+              "La repetición espaciada se calcula con tu historial de "
+              "respuestas, que vive en el servidor.",
+        );
+      }
+
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: Row(
+              children: [
+                for (final m in ModoRepaso.values)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(
+                        m == ModoRepaso.programadas
+                            ? "Programadas hoy"
+                            : "Falladas",
+                      ),
+                      selected: _modelo.modo == m,
+                      onSelected: (_) => _modelo.cambiarModo(m),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: SegunEstado<DatosRepaso>(
+              estado: _modelo.datos,
+              tituloDelFallo: "No se pudo cargar el repaso",
+              alReintentar: _modelo.cargar,
+              cuandoListo: (datos) {
+                final (preguntas, resumen) = datos;
+                if (preguntas.isEmpty) {
+                  return _Vacio(modo: _modelo.modo, resumen: resumen);
+                }
+                return _Portada(
+                  modo: _modelo.modo,
+                  preguntas: preguntas,
+                  resumen: resumen,
+                  alTerminar: _modelo.cargar,
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    },
+  );
 }
 
 /// La antesala de la tanda: cuántas hay y qué significan, con el botón que
@@ -144,7 +115,7 @@ class _PantallaRepasoState extends State<PantallaRepaso> {
 /// la cabecera de la página ya explica el modo; aquí esa cabecera no existe,
 /// y entrar de golpe a una pregunta sin decir cuántas hay desorienta.
 class _Portada extends StatelessWidget {
-  final _Modo modo;
+  final ModoRepaso modo;
   final List<Pregunta> preguntas;
   final ResumenRepasos? resumen;
   final VoidCallback alTerminar;
@@ -158,7 +129,7 @@ class _Portada extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final falladas = modo == _Modo.falladas;
+    final falladas = modo == ModoRepaso.falladas;
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -249,14 +220,14 @@ class _Portada extends StatelessWidget {
 /// objetivo. El mensaje lo dice así y ofrece la siguiente acción útil, en vez
 /// de dejar la pantalla muerta.
 class _Vacio extends StatelessWidget {
-  final _Modo modo;
+  final ModoRepaso modo;
   final ResumenRepasos? resumen;
 
   const _Vacio({required this.modo, required this.resumen});
 
   @override
   Widget build(BuildContext context) {
-    final falladas = modo == _Modo.falladas;
+    final falladas = modo == ModoRepaso.falladas;
     final sinHistorial = resumen?.sinHistorial ?? true;
 
     final titulo = sinHistorial

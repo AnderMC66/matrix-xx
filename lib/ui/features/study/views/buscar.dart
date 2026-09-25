@@ -1,14 +1,10 @@
-import "dart:async";
-
 import "package:flutter/material.dart";
-import "package:matr_u/data/repositories/temario.dart";
 import "package:matr_u/domain/models/temario.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/features/study/view_models/catalogo.dart";
 import "package:matr_u/ui/features/study/views/curso.dart";
 import "package:matr_u/ui/features/study/views/temario.dart"
     show PantallaTemario;
-
-const _limite = 200;
 
 /// `/buscar` — encontrar un subtema por nombre o código.
 ///
@@ -18,52 +14,41 @@ const _limite = 200;
 /// retardo es el mismo — `Temario.buscar()` recorre 956 subtemas en cada
 /// llamada, y sin el debounce cada tecla dispara un recorrido completo.
 class PantallaBuscar extends StatefulWidget {
-  const PantallaBuscar({super.key});
+  /// El modelo de vista, inyectable. Si no llega, la pantalla construye el
+  /// suyo con los repositorios de produccion.
+  final ModeloBuscar? modelo;
+
+  const PantallaBuscar({super.key, this.modelo});
 
   @override
   State<PantallaBuscar> createState() => _PantallaBuscarState();
 }
 
 class _PantallaBuscarState extends State<PantallaBuscar> {
-  final _repo = RepositorioTemario();
-  final _controlador = TextEditingController();
-  Timer? _debounce;
+  late final ModeloBuscar _modelo = widget.modelo ?? ModeloBuscar();
+  late final bool _esMio = widget.modelo == null;
 
-  Temario? _temario;
-  List<Ubicacion> _resultados = const [];
-  String _consulta = "";
+  /// El controlador se queda en la vista: es estado del `TextField`, no del
+  /// modelo. El modelo recibe el texto ya escrito y decide que hacer con el.
+  final _controlador = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _repo.cargar().then((t) {
-      if (mounted) setState(() => _temario = t);
-    });
+    _modelo.cargar();
   }
 
   @override
   void dispose() {
-    _debounce?.cancel();
     _controlador.dispose();
+    if (_esMio) _modelo.dispose();
     super.dispose();
   }
 
-  void _alEscribir(String texto) {
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 200), () {
-      final temario = _temario;
-      setState(() {
-        _consulta = texto;
-        _resultados = temario == null || texto.trim().isEmpty
-            ? const []
-            : temario.buscar(texto, limite: _limite);
-      });
-    });
-  }
-
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _modelo,
+    builder: (context, _) => Scaffold(
       appBar: AppBar(title: const Text("Buscar en el temario")),
       body: Column(
         children: [
@@ -71,7 +56,7 @@ class _PantallaBuscarState extends State<PantallaBuscar> {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: TextField(
               controller: _controlador,
-              onChanged: _alEscribir,
+              onChanged: _modelo.escribir,
               autofocus: true,
               textInputAction: TextInputAction.search,
               decoration: InputDecoration(
@@ -83,7 +68,7 @@ class _PantallaBuscarState extends State<PantallaBuscar> {
                         icon: const Icon(Icons.close, size: 18),
                         onPressed: () {
                           _controlador.clear();
-                          _alEscribir("");
+                          _modelo.escribir("");
                         },
                       ),
                 border: OutlineInputBorder(
@@ -93,18 +78,18 @@ class _PantallaBuscarState extends State<PantallaBuscar> {
               ),
             ),
           ),
-          if (_consulta.trim().isNotEmpty)
+          if (_modelo.consulta.trim().isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  _resultados.isEmpty
+                  _modelo.resultados.isEmpty
                       ? "Sin resultados."
-                      : _resultados.length >= _limite
-                      ? "Más de $_limite resultados. Afina la búsqueda."
-                      : "${_resultados.length} "
-                            "${_resultados.length == 1 ? "resultado" : "resultados"}.",
+                      : _modelo.resultados.length >= ModeloBuscar.limite
+                      ? "Más de $ModeloBuscar.limite resultados. Afina la búsqueda."
+                      : "${_modelo.resultados.length} "
+                            "${_modelo.resultados.length == 1 ? "resultado" : "resultados"}.",
                   style: context.textos.bodySmall!.copyWith(
                     color: context.esquema.onSurfaceVariant,
                   ),
@@ -112,22 +97,22 @@ class _PantallaBuscarState extends State<PantallaBuscar> {
               ),
             ),
           Expanded(
-            child: _consulta.trim().isEmpty
-                ? _EstadoVacio(temario: _temario)
-                : _resultados.isEmpty
+            child: _modelo.consulta.trim().isEmpty
+                ? _EstadoVacio(temario: _modelo.temario)
+                : _modelo.resultados.isEmpty
                 ? const _SinResultados()
                 : ListView.separated(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                    itemCount: _resultados.length,
+                    itemCount: _modelo.resultados.length,
                     separatorBuilder: (_, _) => const Divider(height: 1),
                     itemBuilder: (context, i) =>
-                        _FilaResultado(resultado: _resultados[i]),
+                        _FilaResultado(resultado: _modelo.resultados[i]),
                   ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _FilaResultado extends StatelessWidget {

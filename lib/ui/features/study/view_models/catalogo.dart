@@ -9,6 +9,8 @@
 /// cuanto se crea el modelo y el único fallo posible es que falte un asset.
 library;
 
+import "dart:async";
+
 import "package:matr_u/data/repositories/preguntas.dart";
 import "package:matr_u/data/repositories/temario.dart";
 import "package:matr_u/data/repositories/vinculos.dart";
@@ -81,4 +83,65 @@ class ModeloCurso extends VistaModelo {
   /// Las preguntas del curso, para abrir una tanda.
   Future<List<Pregunta>> preguntas() async =>
       (await _banco.cargar()).deCurso(curso.slug);
+}
+
+/// El modelo de `/buscar`.
+///
+/// El **debounce vive aqui**, y no en la vista, porque es una decision sobre
+/// cuando se hace el trabajo y no sobre como se pinta: `Temario.buscar`
+/// recorre los 956 subtemas normalizando tildes en cada llamada, y sin
+/// esperar a que el dedo pare, cada tecla dispara un recorrido entero.
+///
+/// Tenerlo aqui ademas lo hace probable sin widgets: antes habia que teclear
+/// en un `TextField` de verdad y adelantar el reloj del test.
+class ModeloBuscar extends VistaModelo {
+  /// Cuanto se espera desde la ultima tecla.
+  static const espera = Duration(milliseconds: 200);
+
+  /// Cuantos resultados se pintan como mucho.
+  static const limite = 200;
+
+  late final RepositorioTemario _temario = _temarioDado ?? RepositorioTemario();
+  final RepositorioTemario? _temarioDado;
+
+  ModeloBuscar({RepositorioTemario? temario}) : _temarioDado = temario;
+
+  Timer? _debounce;
+  Temario? _cargado;
+
+  String _consulta = "";
+  String get consulta => _consulta;
+
+  List<Ubicacion> _resultados = const [];
+  List<Ubicacion> get resultados => _resultados;
+
+  /// `true` hasta que el temario esta en memoria.
+  bool get cargando => _cargado == null;
+
+  /// El temario, o `null` mientras carga. El estado vacio lo usa para enseñar
+  /// cuantos cursos hay antes de que se escriba nada.
+  Temario? get temario => _cargado;
+
+  Future<void> cargar() async {
+    _cargado = await _temario.cargar();
+    avisar();
+  }
+
+  void escribir(String texto) {
+    _debounce?.cancel();
+    _debounce = Timer(espera, () {
+      _consulta = texto;
+      final temario = _cargado;
+      _resultados = temario == null || texto.trim().isEmpty
+          ? const []
+          : temario.buscar(texto, limite: limite);
+      avisar();
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
 }

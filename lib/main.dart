@@ -8,6 +8,7 @@ import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
 import "package:matr_u/ui/core/widgets/ios.dart";
 import "package:matr_u/ui/features/auth/views/entrar.dart";
+import "package:matr_u/ui/features/dashboard/view_models/inicio.dart";
 import "package:matr_u/ui/features/dashboard/views/inicio.dart";
 import "package:matr_u/ui/features/dashboard/views/progreso.dart";
 import "package:matr_u/ui/features/practice/views/practica.dart";
@@ -204,9 +205,16 @@ class _ArranqueState extends State<Arranque> {
           return _NoArranco(error: snapshot.error!, alReintentar: _reintentar);
         }
         // La sesión inyectada baja también a la portada: es su hijo, no su
-        // reemplazo, y sin pasarla `PantallaInicio` construiría `Sesion()`
-        // por su cuenta y volvería a tocar `Supabase.instance.client`.
-        return PantallaInicio(sesion: widget.sesion);
+        // reemplazo, y sin pasarla el modelo construiría `Sesion()` por su
+        // cuenta y volvería a tocar `Supabase.instance.client`.
+        //
+        // Se le pasa ya dentro de su modelo de vista. En producción
+        // `widget.sesion` es nulo y el modelo se arma solo.
+        return PantallaInicio(
+          modelo: widget.sesion == null
+              ? null
+              : ModeloInicio(sesion: widget.sesion),
+        );
       },
     );
   }

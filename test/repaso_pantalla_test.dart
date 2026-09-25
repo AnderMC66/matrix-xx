@@ -22,6 +22,7 @@ import "package:matr_u/data/repositories/progreso.dart";
 import "package:matr_u/data/repositories/repaso.dart";
 import "package:matr_u/data/repositories/sesion.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/features/practice/view_models/practica_adaptativa.dart";
 import "package:matr_u/ui/features/practice/view_models/repaso.dart";
 import "package:matr_u/ui/features/practice/views/practica_adaptativa.dart";
 import "package:matr_u/ui/features/practice/views/repaso.dart";
@@ -313,10 +314,12 @@ void main() {
         montar(
           tester,
           PantallaPracticaAdaptativa(
-            cursoSlug: curso,
-            repaso: RepositorioRepaso(cliente: cliente),
-            progreso: RepositorioProgreso(cliente: cliente),
-            sesion: Sesion(cliente: cliente),
+            modelo: ModeloAdaptativa(
+              cursoSlug: curso,
+              repaso: RepositorioRepaso(cliente: cliente),
+              progreso: RepositorioProgreso(cliente: cliente),
+              sesion: Sesion(cliente: cliente),
+            ),
           ),
         );
 

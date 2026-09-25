@@ -9,7 +9,8 @@ import "package:matr_u/domain/models/simulacro.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
 import "package:matr_u/ui/core/widgets/formula.dart";
-import "package:matr_u/ui/features/practice/views/practica.dart" show FiguraPregunta;
+import "package:matr_u/ui/features/practice/views/practica.dart"
+    show FiguraPregunta;
 
 /// `/simulacros` — los simulacros publicados, y el intento a medias si lo hay.
 class PantallaSimulacro extends StatefulWidget {

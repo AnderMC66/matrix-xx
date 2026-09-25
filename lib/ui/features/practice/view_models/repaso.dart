@@ -19,16 +19,25 @@ typedef DatosRepaso = (List<Pregunta> preguntas, ResumenRepasos? resumen);
 
 /// El modelo de vista de `/repaso`.
 class ModeloRepaso extends VistaModelo {
-  final RepositorioRepaso _repositorio;
-  final Sesion _sesion;
+  // Los repositorios son `late`, no del constructor, y no es un detalle: se
+  // construyen la PRIMERA VEZ que se usan. Cada uno resuelve
+  // `Supabase.instance.client`, asi que armarlos en la lista de
+  // inicializacion hace que crear el modelo reviente en cuanto Supabase no
+  // este listo — que es justo lo que pasa mientras `Arranque` todavia
+  // inicializa, y lo que rompio tres tests de `arranque_test`.
+  late final RepositorioRepaso _repositorio = _repoDado ?? RepositorioRepaso();
+  late final Sesion _sesion = _sesionDada ?? Sesion();
+
+  final RepositorioRepaso? _repoDado;
+  final Sesion? _sesionDada;
 
   /// Repositorio y sesión inyectables, como en todo el proyecto: los dos
   /// resuelven `Supabase.instance.client` en su constructor, y sin esta
   /// costura el modelo no se podría construir en un test. En producción nadie
   /// los pasa.
   ModeloRepaso({RepositorioRepaso? repositorio, Sesion? sesion})
-    : _repositorio = repositorio ?? RepositorioRepaso(),
-      _sesion = sesion ?? Sesion();
+    : _repoDado = repositorio,
+      _sesionDada = sesion;
 
   bool get hayCuenta => _sesion.hayCuenta;
 

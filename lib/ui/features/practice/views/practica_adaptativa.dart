@@ -1,15 +1,12 @@
 import "package:flutter/gestures.dart";
 import "package:flutter/material.dart";
-import "package:matr_u/data/repositories/preguntas.dart";
-import "package:matr_u/data/repositories/progreso.dart";
-import "package:matr_u/data/repositories/repaso.dart";
-import "package:matr_u/data/repositories/sesion.dart";
-import "package:matr_u/data/repositories/temario.dart";
 import "package:matr_u/domain/models/preguntas.dart";
 import "package:matr_u/domain/models/progreso.dart";
 import "package:matr_u/domain/models/temario.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/core/vista_modelo.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
+import "package:matr_u/ui/features/practice/view_models/practica_adaptativa.dart";
 import "package:matr_u/ui/features/practice/views/practica.dart";
 
 /// La misma pantalla, con su propia barra, para cuando se empuja como ruta.
@@ -19,25 +16,14 @@ import "package:matr_u/ui/features/practice/views/practica.dart";
 /// palabra por palabra en `inicio.dart` y en `practica.dart`; vive aquí, que
 /// es donde vive la pantalla que envuelve.
 class AdaptativaConBarra extends StatelessWidget {
-  final RepositorioRepaso? repaso;
-  final RepositorioProgreso? progreso;
-  final Sesion? sesion;
+  final ModeloAdaptativa? modelo;
 
-  const AdaptativaConBarra({
-    super.key,
-    this.repaso,
-    this.progreso,
-    this.sesion,
-  });
+  const AdaptativaConBarra({super.key, this.modelo});
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text("Práctica adaptativa")),
-    body: PantallaPracticaAdaptativa(
-      repaso: repaso,
-      progreso: progreso,
-      sesion: sesion,
-    ),
+    body: PantallaPracticaAdaptativa(modelo: modelo),
   );
 }
 
@@ -50,22 +36,15 @@ class AdaptativaConBarra extends StatelessWidget {
 /// [PantallaPracticaAdaptativa.cursoSlug] la acota a un curso; `null` mezcla
 /// todo el banco — mismo contrato que el parámetro `?curso=` de la web.
 class PantallaPracticaAdaptativa extends StatefulWidget {
+  /// El modelo de vista, inyectable. Si no llega, la pantalla construye el
+  /// suyo con los repositorios de producción.
+  final ModeloAdaptativa? modelo;
+
+  /// El curso al que se acota. Solo se usa cuando no llega [modelo]: quien
+  /// inyecta uno ya le ha dicho a cuál.
   final String? cursoSlug;
 
-  /// Repositorios y sesión inyectables, igual que en `PantallaHorario`. Los
-  /// tres resuelven `Supabase.instance.client` en su constructor. En
-  /// producción nadie los pasa.
-  final RepositorioRepaso? repaso;
-  final RepositorioProgreso? progreso;
-  final Sesion? sesion;
-
-  const PantallaPracticaAdaptativa({
-    super.key,
-    this.cursoSlug,
-    this.repaso,
-    this.progreso,
-    this.sesion,
-  });
+  const PantallaPracticaAdaptativa({super.key, this.cursoSlug, this.modelo});
 
   @override
   State<PantallaPracticaAdaptativa> createState() =>
@@ -74,164 +53,96 @@ class PantallaPracticaAdaptativa extends StatefulWidget {
 
 class _PantallaPracticaAdaptativaState
     extends State<PantallaPracticaAdaptativa> {
-  late final _repaso = widget.repaso ?? RepositorioRepaso();
-  late final _progreso = widget.progreso ?? RepositorioProgreso();
-  late final _sesion = widget.sesion ?? Sesion();
-
-  Future<_Datos>? _carga;
+  late final ModeloAdaptativa _modelo =
+      widget.modelo ?? ModeloAdaptativa(cursoSlug: widget.cursoSlug);
+  late final bool _esMio = widget.modelo == null;
 
   @override
   void initState() {
     super.initState();
-    if (_sesion.hayCuenta) _carga = _pedir();
-  }
-
-  Future<_Datos> _pedir() async {
-    final temario = await RepositorioTemario().cargar();
-    final curso = widget.cursoSlug == null
-        ? null
-        : temario.curso(widget.cursoSlug!);
-
-    // Las dos peticiones de red a la vez, y con ellas la carga del banco:
-    // ninguna depende de otra, y en fila eran dos latencias sumadas más la
-    // lectura de los assets. Misma razón que en Progreso, Inicio, Simulacro y
-    // Repaso.
-    //
-    // El RPC trabaja con el código del curso (`FIS`), la pantalla con su
-    // slug (`fisica`), que es lo que usa el resto de la app.
-    final resultados = await Future.wait([
-      _repaso.recomendadas(cursoCodigo: curso?.codigo, limite: 20),
-      widget.cursoSlug == null
-          ? _progreso.cursosDesatendidos()
-          : Future.value(const <CursoDesatendido>[]),
-      // Cuánto cubre el banco, para no felicitar al alumno por dominar un
-      // curso del que apenas hay preguntas. Sale del APK, no del servidor.
-      RepositorioPreguntas().cargar(),
-    ]);
-    final preguntas = resultados[0] as List<Pregunta>;
-    final desatendidos = resultados[1] as List<CursoDesatendido>;
-    final banco = resultados[2] as Banco;
-    final conteo = banco.conteoPorSubtema();
-    var cubiertos = 0;
-    for (final tema in curso?.temas ?? const <Tema>[]) {
-      for (final sub in tema.subtemas) {
-        if ((conteo[sub.codigo] ?? 0) > 0) cubiertos++;
-      }
-    }
-
-    return _Datos(
-      curso: curso,
-      preguntas: preguntas,
-      desatendidos: desatendidos,
-      enElBanco: curso == null ? banco.total : banco.deCurso(curso.slug).length,
-      subtemasCubiertos: cubiertos,
-      subtemasTotales: curso?.totalSubtemas ?? 0,
-    );
+    _modelo.cargar();
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (!_sesion.hayCuenta) {
-      return const Aviso(
-        icono: Icons.lock_outline,
-        titulo: "La práctica adaptativa necesita tu cuenta",
-        detalle:
-            "Elige las preguntas según tu historial de respuestas, que vive "
-            "en el servidor.\n\nUsa el botón de entrar, arriba a la derecha.",
-      );
-    }
+  void dispose() {
+    if (_esMio) _modelo.dispose();
+    super.dispose();
+  }
 
-    return FutureBuilder<_Datos>(
-      future: _carga,
-      builder: (context, snap) {
-        if (snap.hasError) {
-          return Aviso(
-            icono: Icons.cloud_off_outlined,
-            titulo: "No se pudo cargar",
-            detalle: "${snap.error}",
-          );
-        }
-        if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _modelo,
+    builder: (context, _) {
+      if (!_modelo.hayCuenta) {
+        return const Aviso(
+          icono: Icons.lock_outline,
+          titulo: "La práctica adaptativa necesita tu cuenta",
+          detalle:
+              "Elige las preguntas según tu historial de respuestas, que vive "
+              "en el servidor.\n\nUsa el botón de entrar, arriba a la derecha.",
+        );
+      }
 
-        final datos = snap.data!;
-        final curso = datos.curso;
+      return SegunEstado<DatosAdaptativa>(
+        estado: _modelo.datos,
+        tituloDelFallo: "No se pudo cargar",
+        alReintentar: _modelo.cargar,
+        cuandoListo: (datos) {
+          final curso = datos.curso;
 
-        return ListView(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          children: [
-            Text(
-              curso != null
-                  ? "${curso.nombre}, a tu medida"
-                  : "Lo que más te conviene ahora",
-              style: context.textos.headlineSmall!.copyWith(
-                fontWeight: FontWeight.w700,
-                color: context.esquema.onSurface,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              "Elegimos las preguntas por ti: empiezan por los subtemas "
-              "donde peor vas, y lo que ya dominas no vuelve a salir.",
-              style: context.textos.bodyMedium!.copyWith(
-                color: context.esquema.onSurfaceVariant,
-              ),
-            ),
-            if (curso == null && datos.desatendidos.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              _AvisoMasFlojo(curso: datos.desatendidos.first),
-            ],
-            const SizedBox(height: 22),
-            if (datos.preguntas.isEmpty)
-              _NadaPendiente(
-                curso: curso,
-                enElBanco: datos.enElBanco,
-                subtemasCubiertos: datos.subtemasCubiertos,
-                subtemasTotales: datos.subtemasTotales,
-              )
-            else
-              _EmpezarSesion(curso: curso, preguntas: datos.preguntas),
-            if (curso != null) ...[
-              const SizedBox(height: 16),
-              Center(
-                child: TextButton(
-                  onPressed: () => Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (_) => const PantallaPracticaAdaptativa(),
-                    ),
-                  ),
-                  child: const Text("Practicar de todos los cursos"),
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            children: [
+              Text(
+                curso != null
+                    ? "${curso.nombre}, a tu medida"
+                    : "Lo que más te conviene ahora",
+                style: context.textos.headlineSmall!.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: context.esquema.onSurface,
                 ),
               ),
+              const SizedBox(height: 6),
+              Text(
+                "Elegimos las preguntas por ti: empiezan por los subtemas "
+                "donde peor vas, y lo que ya dominas no vuelve a salir.",
+                style: context.textos.bodyMedium!.copyWith(
+                  color: context.esquema.onSurfaceVariant,
+                ),
+              ),
+              if (curso == null && datos.desatendidos.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _AvisoMasFlojo(curso: datos.desatendidos.first),
+              ],
+              const SizedBox(height: 22),
+              if (datos.preguntas.isEmpty)
+                _NadaPendiente(
+                  curso: curso,
+                  enElBanco: datos.enElBanco,
+                  subtemasCubiertos: datos.subtemasCubiertos,
+                  subtemasTotales: datos.subtemasTotales,
+                )
+              else
+                _EmpezarSesion(curso: curso, preguntas: datos.preguntas),
+              if (curso != null) ...[
+                const SizedBox(height: 16),
+                Center(
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => const PantallaPracticaAdaptativa(),
+                      ),
+                    ),
+                    child: const Text("Practicar de todos los cursos"),
+                  ),
+                ),
+              ],
             ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _Datos {
-  final Curso? curso;
-  final List<Pregunta> preguntas;
-  final List<CursoDesatendido> desatendidos;
-
-  /// Cuántas preguntas tiene el banco del APK para este curso (o en total).
-  final int enElBanco;
-
-  /// Cuántos subtemas del curso tienen al menos una pregunta, y cuántos hay.
-  final int subtemasCubiertos;
-  final int subtemasTotales;
-
-  const _Datos({
-    required this.curso,
-    required this.preguntas,
-    required this.desatendidos,
-    required this.enElBanco,
-    required this.subtemasCubiertos,
-    required this.subtemasTotales,
-  });
+          );
+        },
+      );
+    },
+  );
 }
 
 /// «Tu curso más flojo ahora es X», con X pulsable.

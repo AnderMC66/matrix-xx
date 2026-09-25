@@ -23,6 +23,7 @@ import "package:matr_u/data/repositories/progreso.dart";
 import "package:matr_u/data/repositories/repaso.dart";
 import "package:matr_u/data/repositories/sesion.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/features/dashboard/view_models/inicio.dart";
 import "package:matr_u/ui/features/dashboard/views/inicio.dart";
 import "package:supabase/supabase.dart";
 
@@ -169,10 +170,12 @@ void main() {
       MaterialApp(
         theme: construirTema(),
         home: PantallaInicio(
-          sesion: Sesion(cliente: cliente),
-          progreso: RepositorioProgreso(cliente: cliente),
-          repasos: RepositorioRepaso(cliente: cliente),
-          horario: RepositorioHorario(cliente: cliente),
+          modelo: ModeloInicio(
+            sesion: Sesion(cliente: cliente),
+            progreso: RepositorioProgreso(cliente: cliente),
+            repasos: RepositorioRepaso(cliente: cliente),
+            horario: RepositorioHorario(cliente: cliente),
+          ),
         ),
       ),
     );

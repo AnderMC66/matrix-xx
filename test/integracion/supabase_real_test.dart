@@ -41,12 +41,12 @@
 // escritura real de esta suite se corre aparte, no aquí.
 //
 // ignore_for_file: avoid_print
-import "package:matr_u/config.dart";
-import "package:matr_u/datos/practica.dart";
-import "package:matr_u/datos/preguntas.dart" show EtiquetaLetra, Letra;
-import "package:matr_u/datos/progreso.dart";
-import "package:matr_u/datos/repaso.dart";
-import "package:matr_u/datos/simulacro.dart";
+import "package:matr_u/core/config/config.dart";
+import "package:matr_u/data/models/practica.dart";
+import "package:matr_u/data/models/preguntas.dart" show EtiquetaLetra, Letra;
+import "package:matr_u/data/models/progreso.dart";
+import "package:matr_u/data/models/repaso.dart";
+import "package:matr_u/data/models/simulacro.dart";
 import "package:supabase/supabase.dart";
 import "package:test/test.dart";
 

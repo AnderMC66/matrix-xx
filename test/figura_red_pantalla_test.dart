@@ -47,9 +47,9 @@ import "dart:convert";
 import "package:flutter/material.dart";
 import "package:flutter/services.dart" show rootBundle;
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/datos/figuras_rotas.dart";
-import "package:matr_u/pantallas/figura_red.dart";
-import "package:matr_u/tema.dart";
+import "package:matr_u/data/models/figuras_rotas.dart";
+import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/features/practice/views/figura_red.dart";
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

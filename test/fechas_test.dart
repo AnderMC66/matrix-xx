@@ -12,7 +12,7 @@
 // suite tiene que pasar igual en la máquina de Arequipa y en la de un CI en
 // UTC.
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/fechas.dart";
+import "package:matr_u/core/utils/fechas.dart";
 
 void main() {
   group("formatos", () {

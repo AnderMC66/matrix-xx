@@ -16,7 +16,7 @@
 // causas de fallo que imprime `medir_formulas_test` son exactamente
 // `\sqrt` sin grupo, `\frac` mal cerrado y `\vec` sin argumento.
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/matematicas/formula.dart";
+import "package:matr_u/core/utils/matematicas/formula.dart";
 
 void main() {
   group("legibilizar", () {

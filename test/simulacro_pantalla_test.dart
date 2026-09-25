@@ -20,10 +20,10 @@ import "dart:convert";
 import "package:flutter/material.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:http/http.dart" as http;
-import "package:matr_u/datos/sesion.dart";
-import "package:matr_u/datos/simulacro.dart";
-import "package:matr_u/pantallas/simulacro.dart";
-import "package:matr_u/tema.dart";
+import "package:matr_u/data/models/sesion.dart";
+import "package:matr_u/data/models/simulacro.dart";
+import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/features/practice/views/simulacro.dart";
 import "package:supabase/supabase.dart";
 
 const _idPropio = "11111111-1111-1111-1111-111111111111";

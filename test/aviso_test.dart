@@ -7,7 +7,7 @@
 // que correr, que es la única pista útil que da esa pantalla.
 import "package:flutter/material.dart";
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/widgets/aviso.dart";
+import "package:matr_u/ui/core/widgets/aviso.dart";
 
 Widget _envolver(Widget hijo) => MaterialApp(home: Scaffold(body: hijo));
 

@@ -28,12 +28,12 @@ import "dart:convert";
 import "package:flutter/material.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:http/http.dart" as http;
-import "package:matr_u/datos/preguntas.dart";
-import "package:matr_u/datos/sesion.dart";
-import "package:matr_u/datos/temario.dart";
-import "package:matr_u/datos/teoria.dart";
+import "package:matr_u/data/models/preguntas.dart";
+import "package:matr_u/data/models/sesion.dart";
+import "package:matr_u/data/models/temario.dart";
+import "package:matr_u/data/models/teoria.dart";
 import "package:matr_u/main.dart";
-import "package:matr_u/tema.dart";
+import "package:matr_u/ui/core/theme/tema.dart";
 import "package:supabase/supabase.dart";
 
 class _ClienteMudo extends http.BaseClient {

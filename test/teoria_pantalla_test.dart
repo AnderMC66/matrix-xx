@@ -14,9 +14,9 @@
 // niveles, sus encabezados sin markdown y sus títulos numerados.
 import "package:flutter/material.dart";
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/datos/teoria.dart";
-import "package:matr_u/pantallas/teoria.dart";
-import "package:matr_u/tema.dart";
+import "package:matr_u/data/models/teoria.dart";
+import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/features/study/views/teoria.dart";
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

@@ -17,7 +17,7 @@
 // con la quinta fantasma. Aquí se mira el contenido, y sobre todo el caso que
 // el banco actual no contiene.
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/datos/preguntas.dart";
+import "package:matr_u/data/models/preguntas.dart";
 
 void main() {
   group("alternativasDesde", () {

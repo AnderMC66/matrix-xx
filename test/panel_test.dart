@@ -8,8 +8,8 @@
 // test fija es que la conveniencia clasifica los tres roles como la base
 // los clasifica.
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/datos/panel.dart";
-import "package:matr_u/datos/preguntas.dart" show Letra;
+import "package:matr_u/data/models/panel.dart";
+import "package:matr_u/data/models/preguntas.dart" show Letra;
 
 void main() {
   group("esStaff", () {

@@ -17,11 +17,11 @@ import "dart:convert";
 import "package:flutter/material.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:http/http.dart" as http;
-import "package:matr_u/datos/horario.dart";
-import "package:matr_u/datos/sesion.dart";
-import "package:matr_u/datos/temario.dart";
-import "package:matr_u/pantallas/horario.dart";
-import "package:matr_u/tema.dart";
+import "package:matr_u/data/models/horario.dart";
+import "package:matr_u/data/models/sesion.dart";
+import "package:matr_u/data/models/temario.dart";
+import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/features/schedule/views/horario.dart";
 import "package:supabase/supabase.dart";
 
 const _idPropio = "11111111-1111-1111-1111-111111111111";

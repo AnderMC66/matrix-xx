@@ -22,7 +22,7 @@ import "dart:math" as math;
 
 import "package:flutter/material.dart";
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/tema.dart";
+import "package:matr_u/ui/core/theme/tema.dart";
 
 /// Luminancia relativa según WCAG 2.1.
 double _luminancia(Color c) {

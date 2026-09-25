@@ -40,15 +40,15 @@ import "dart:io";
 import "package:flutter/material.dart";
 import "package:flutter/services.dart";
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/datos/preguntas.dart";
-import "package:matr_u/datos/temario.dart";
-import "package:matr_u/datos/teoria.dart";
-import "package:matr_u/pantallas/buscar.dart";
-import "package:matr_u/pantallas/curso.dart";
-import "package:matr_u/pantallas/temario.dart";
-import "package:matr_u/pantallas/teoria.dart";
-import "package:matr_u/tema.dart";
-import "package:matr_u/widgets/aviso.dart";
+import "package:matr_u/data/models/preguntas.dart";
+import "package:matr_u/data/models/temario.dart";
+import "package:matr_u/data/models/teoria.dart";
+import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/core/widgets/aviso.dart";
+import "package:matr_u/ui/features/study/views/buscar.dart";
+import "package:matr_u/ui/features/study/views/curso.dart";
+import "package:matr_u/ui/features/study/views/temario.dart";
+import "package:matr_u/ui/features/study/views/teoria.dart";
 
 /// La Roboto que trae el SDK, o `null` si no está donde se espera.
 ///

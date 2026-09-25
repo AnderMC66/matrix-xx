@@ -2,7 +2,7 @@
 // de cálculo que ya mordió una vez en el cronómetro del simulacro
 // (`simulacro_test.dart`), así que se prueba con el mismo cuidado.
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/datos/horario.dart";
+import "package:matr_u/data/models/horario.dart";
 
 void main() {
   group("proximaOcurrencia", () {

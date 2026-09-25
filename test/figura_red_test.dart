@@ -14,7 +14,7 @@
 // como test permanente porque el archivo vive en `MATRIX-U/public/preguntas/`
 // y esta suite no depende del repo web.
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/config.dart";
+import "package:matr_u/core/config/config.dart";
 
 void main() {
   group("resolución de URL", () {

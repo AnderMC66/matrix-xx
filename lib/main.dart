@@ -1,22 +1,21 @@
 import "dart:async";
 
 import "package:flutter/material.dart";
+import "package:matr_u/core/config/config.dart";
+import "package:matr_u/data/models/figuras_rotas.dart";
+import "package:matr_u/data/models/sesion.dart";
+import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/core/widgets/aviso.dart";
+import "package:matr_u/ui/core/widgets/ios.dart";
+import "package:matr_u/ui/features/auth/views/entrar.dart";
+import "package:matr_u/ui/features/dashboard/views/inicio.dart";
+import "package:matr_u/ui/features/dashboard/views/progreso.dart";
+import "package:matr_u/ui/features/practice/views/practica.dart";
+import "package:matr_u/ui/features/practice/views/repaso.dart";
+import "package:matr_u/ui/features/practice/views/simulacro.dart";
+import "package:matr_u/ui/features/study/views/buscar.dart";
+import "package:matr_u/ui/features/study/views/teoria.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
-
-import "config.dart";
-import "datos/figuras_rotas.dart";
-import "datos/sesion.dart";
-import "pantallas/buscar.dart";
-import "pantallas/entrar.dart";
-import "pantallas/inicio.dart";
-import "pantallas/practica.dart";
-import "pantallas/progreso.dart";
-import "pantallas/repaso.dart";
-import "pantallas/simulacro.dart";
-import "pantallas/teoria.dart";
-import "tema.dart";
-import "widgets/aviso.dart";
-import "widgets/ios.dart";
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();

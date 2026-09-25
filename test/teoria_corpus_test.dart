@@ -24,8 +24,8 @@
 // ignore_for_file: avoid_print
 
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/datos/markdown_teoria.dart";
-import "package:matr_u/datos/teoria.dart";
+import "package:matr_u/data/models/markdown_teoria.dart";
+import "package:matr_u/data/models/teoria.dart";
 
 final _figura = RegExp(r"!\[[^\]]*\]\([^)]*\)");
 final _tituloSinClasificar = RegExp(r"^\*\*[^*]+\*\*$");

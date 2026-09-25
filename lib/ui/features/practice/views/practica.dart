@@ -1,45 +1,55 @@
 import "package:flutter/material.dart";
 import "package:matr_u/core/config/config.dart";
 import "package:matr_u/data/repositories/practica.dart";
-import "package:matr_u/data/repositories/preguntas.dart";
 import "package:matr_u/data/repositories/sesion.dart";
 import "package:matr_u/domain/models/practica.dart";
 import "package:matr_u/domain/models/preguntas.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/core/vista_modelo.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
 import "package:matr_u/ui/core/widgets/formula.dart";
 import "package:matr_u/ui/core/widgets/nota.dart";
+import "package:matr_u/ui/features/practice/view_models/practica.dart";
 import "package:matr_u/ui/features/practice/views/figura_red.dart";
 import "package:matr_u/ui/features/practice/views/practica_adaptativa.dart";
 
 /// `/practica` — los cursos con preguntas, ordenados por cuántas tienen.
 class PantallaPractica extends StatefulWidget {
-  const PantallaPractica({super.key});
+  /// El modelo de vista, inyectable.
+  final ModeloPractica? modelo;
+
+  const PantallaPractica({super.key, this.modelo});
 
   @override
   State<PantallaPractica> createState() => _PantallaPracticaState();
 }
 
 class _PantallaPracticaState extends State<PantallaPractica> {
-  final _repo = RepositorioPreguntas();
-  late final Future<Banco> _banco = _repo.cargar();
+  late final ModeloPractica _modelo = widget.modelo ?? ModeloPractica();
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<Banco>(
-      future: _banco,
-      builder: (context, snap) {
-        if (snap.hasError) {
-          return Aviso.contenidoLocal(
-            titulo: "No se pudo cargar el banco",
-            error: snap.error!,
-          );
-        }
-        if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  void initState() {
+    super.initState();
+    _modelo.cargar();
+  }
 
-        final banco = snap.data!;
+  @override
+  void dispose() {
+    _modelo.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _modelo,
+    builder: (context, _) => SegunEstado<Banco>(
+      estado: _modelo.banco,
+      tituloDelFallo: "No se pudo cargar el banco",
+      cuandoFallo: (error) => Aviso.contenidoLocal(
+        titulo: "No se pudo cargar el banco",
+        error: error,
+      ),
+      cuandoListo: (banco) {
         final cursos = banco.cursos();
 
         return ListView.separated(
@@ -83,8 +93,8 @@ class _PantallaPracticaState extends State<PantallaPractica> {
           },
         );
       },
-    );
-  }
+    ),
+  );
 }
 
 /// Acceso a `/practica/adaptativa`: elige las preguntas por ti en vez de
@@ -157,6 +167,9 @@ class PantallaPracticaSubtema extends StatefulWidget {
   final String codigo;
   final String nombre;
 
+  /// El modelo de esta pantalla, inyectable.
+  final ModeloPracticaSubtema? modelo;
+
   /// Se los pasa a la tanda que abre. No los usa ella —el banco sale de los
   /// assets—, pero `SesionPractica` sí, y sin poder atravesarla esta pantalla
   /// no se puede probar hasta el final. En producción nadie los pasa.
@@ -167,6 +180,7 @@ class PantallaPracticaSubtema extends StatefulWidget {
     super.key,
     required this.codigo,
     required this.nombre,
+    this.modelo,
     this.repositorio,
     this.sesion,
   });
@@ -177,48 +191,56 @@ class PantallaPracticaSubtema extends StatefulWidget {
 }
 
 class _PantallaPracticaSubtemaState extends State<PantallaPracticaSubtema> {
-  late final Future<List<Pregunta>> _preguntas = RepositorioPreguntas()
-      .cargar()
-      .then((banco) => banco.deSubtema(widget.codigo));
+  late final ModeloPracticaSubtema _modelo =
+      widget.modelo ?? ModeloPracticaSubtema(codigo: widget.codigo);
+
+  @override
+  void initState() {
+    super.initState();
+    _modelo.cargar();
+  }
+
+  @override
+  void dispose() {
+    _modelo.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: Text(widget.nombre, style: context.textos.bodyLarge)),
-    body: FutureBuilder<List<Pregunta>>(
-      future: _preguntas,
-      builder: (context, snap) {
-        if (snap.hasError) {
-          return Aviso.contenidoLocal(
-            titulo: "No se pudo cargar el banco",
-            error: snap.error!,
-          );
-        }
-        if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    body: ListenableBuilder(
+      listenable: _modelo,
+      builder: (context, _) => SegunEstado<List<Pregunta>>(
+        estado: _modelo.preguntas,
+        tituloDelFallo: "No se pudo cargar el banco",
+        cuandoFallo: (error) => Aviso.contenidoLocal(
+          titulo: "No se pudo cargar el banco",
+          error: error,
+        ),
+        cuandoListo: (preguntas) {
+          if (preguntas.isEmpty) {
+            // Pasa a menudo y no es un fallo: 750 de los 956 subtemas del
+            // sílabo no tienen ninguna pregunta todavía. Decirlo con el código
+            // delante evita que se lea como un error de la app.
+            return Aviso(
+              icono: Icons.inbox_outlined,
+              titulo: "Todavía no hay preguntas de este subtema",
+              detalle:
+                  "${widget.codigo} está en el sílabo, pero el banco aún no lo "
+                  "cubre. La cobertura crece subtema a subtema.",
+            );
+          }
 
-        final preguntas = snap.data!;
-        if (preguntas.isEmpty) {
-          // Pasa a menudo y no es un fallo: 750 de los 956 subtemas del
-          // sílabo no tienen ninguna pregunta todavía. Decirlo con el código
-          // delante evita que se lea como un error de la app.
-          return Aviso(
-            icono: Icons.inbox_outlined,
-            titulo: "Todavía no hay preguntas de este subtema",
-            detalle:
-                "${widget.codigo} está en el sílabo, pero el banco aún no lo "
-                "cubre. La cobertura crece subtema a subtema.",
+          return _PortadaSubtema(
+            codigo: widget.codigo,
+            nombre: widget.nombre,
+            preguntas: preguntas,
+            repositorio: widget.repositorio,
+            sesion: widget.sesion,
           );
-        }
-
-        return _PortadaSubtema(
-          codigo: widget.codigo,
-          nombre: widget.nombre,
-          preguntas: preguntas,
-          repositorio: widget.repositorio,
-          sesion: widget.sesion,
-        );
-      },
+        },
+      ),
     ),
   );
 }
@@ -350,6 +372,10 @@ class SesionPractica extends StatefulWidget {
   /// repaso, cuyo calendario acaba de moverse).
   final String etiquetaSalida;
 
+  /// El modelo de la tanda, inyectable. Si no llega se construye con
+  /// [repositorio] y [sesion].
+  final ModeloSesionPractica? modelo;
+
   /// Repositorio y sesión inyectables, igual que en `PantallaHorario`.
   ///
   /// `RepositorioPractica()` y `Sesion()` resuelven `Supabase.instance.client`
@@ -364,6 +390,7 @@ class SesionPractica extends StatefulWidget {
     required this.titulo,
     required this.preguntas,
     this.etiquetaSalida = "Volver a los cursos",
+    this.modelo,
     this.repositorio,
     this.sesion,
   });
@@ -373,99 +400,27 @@ class SesionPractica extends StatefulWidget {
 }
 
 class _SesionPracticaState extends State<SesionPractica> {
-  late final _repo = widget.repositorio ?? RepositorioPractica();
-  late final _sesion = widget.sesion ?? Sesion();
+  late final ModeloSesionPractica _modelo =
+      widget.modelo ??
+      ModeloSesionPractica(
+        preguntas: widget.preguntas,
+        repositorio: widget.repositorio,
+        sesion: widget.sesion,
+      );
 
-  int _indice = 0;
-  Letra? _marcada;
-  Correccion? _correccion;
-  bool _enviando = false;
-  String? _error;
-
-  int _aciertos = 0;
-  bool _terminada = false;
-
-  /// Cuándo se mostró la pregunta actual, para medir el tiempo que el RPC
-  /// guarda en `respuestas.segundos`. Se reinicia en cada avance.
-  DateTime _mostradaEn = DateTime.now();
-
-  Pregunta get _pregunta => widget.preguntas[_indice];
-
-  /// **Salir a mitad de tanda también la cierra.**
-  ///
-  /// `finalizar()` solo se llamaba al pasar de la última pregunta, y esa es la
-  /// forma menos frecuente de terminar una práctica: lo normal es responder
-  /// cinco de veinte y volver atrás. El intento quedaba abierto en `intentos`
-  /// para siempre —nadie lo vuelve a tocar, porque la siguiente tanda
-  /// construye un `RepositorioPractica` nuevo y abre otro—, así que sus
-  /// totales nunca se consolidaban y la tabla acumulaba una fila huérfana por
-  /// cada abandono. No era visible en ninguna pantalla, que es justo por lo
-  /// que había durado.
-  ///
-  /// Va sin `await` porque `dispose` es síncrono, y sin `unawaited` porque el
-  /// lint `unawaited_futures` solo mira dentro de funciones `async`. El fallo
-  /// se traga a propósito: la pantalla ya no existe, no hay a quién avisar, y
-  /// `finalizar_intento` es idempotente — la próxima vez que se cierre ese
-  /// intento (o nunca) da igual. Lo que no puede es tirar una excepción sin
-  /// capturar desde un `dispose`.
   @override
   void dispose() {
-    _repo.finalizar().catchError((_) {});
+    _modelo.dispose();
     super.dispose();
   }
 
-  Future<void> _responder() async {
-    final marcada = _marcada;
-    if (marcada == null || _correccion != null) return;
-
-    setState(() {
-      _enviando = true;
-      _error = null;
-    });
-
-    try {
-      final correccion = await _repo.responder(
-        codigoPregunta: _pregunta.codigo,
-        marcada: marcada,
-        segundos: DateTime.now().difference(_mostradaEn).inSeconds,
-      );
-      if (!mounted) return;
-      setState(() {
-        _correccion = correccion;
-        if (correccion.esCorrecta) _aciertos++;
-      });
-    } on ErrorPractica catch (e) {
-      if (mounted) setState(() => _error = e.mensaje);
-    } catch (e) {
-      if (mounted) {
-        setState(() => _error = "No se pudo enviar la respuesta. $e");
-      }
-    } finally {
-      if (mounted) setState(() => _enviando = false);
-    }
-  }
-
-  Future<void> _avanzar() async {
-    if (_indice + 1 >= widget.preguntas.length) {
-      // Cerrar el intento consolida el resumen del lado del servidor. Si falla
-      // no se le arruina el resumen al alumno: ya respondió todo.
-      try {
-        await _repo.finalizar();
-      } catch (_) {}
-      if (mounted) setState(() => _terminada = true);
-      return;
-    }
-    setState(() {
-      _indice++;
-      _marcada = null;
-      _correccion = null;
-      _error = null;
-      _mostradaEn = DateTime.now();
-    });
-  }
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _modelo,
+    builder: (context, _) => _contenido(context),
+  );
+
+  Widget _contenido(BuildContext context) {
     if (widget.preguntas.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: Text(widget.titulo)),
@@ -477,11 +432,11 @@ class _SesionPracticaState extends State<SesionPractica> {
       );
     }
 
-    if (_terminada) {
+    if (_modelo.terminada) {
       return Scaffold(
         appBar: AppBar(title: Text(widget.titulo)),
         body: _Resumen(
-          aciertos: _aciertos,
+          aciertos: _modelo.aciertos,
           total: widget.preguntas.length,
           etiquetaSalida: widget.etiquetaSalida,
           alSalir: () => Navigator.of(context).pop(),
@@ -489,7 +444,7 @@ class _SesionPracticaState extends State<SesionPractica> {
       );
     }
 
-    final correccion = _correccion;
+    final correccion = _modelo.correccion;
 
     return Scaffold(
       appBar: AppBar(
@@ -497,7 +452,7 @@ class _SesionPracticaState extends State<SesionPractica> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),
           child: LinearProgressIndicator(
-            value: (_indice + 1) / widget.preguntas.length,
+            value: (_modelo.indice + 1) / widget.preguntas.length,
             minHeight: 4,
             backgroundColor: context.esquema.outlineVariant,
           ),
@@ -510,7 +465,7 @@ class _SesionPracticaState extends State<SesionPractica> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "${_indice + 1} de ${widget.preguntas.length}",
+                "${_modelo.indice + 1} de ${widget.preguntas.length}",
                 style: context.textos.labelMedium!.copyWith(
                   fontWeight: FontWeight.w600,
                   color: context.esquema.onSurfaceVariant,
@@ -525,7 +480,7 @@ class _SesionPracticaState extends State<SesionPractica> {
               // sobra, y ahi si se recorta.
               Expanded(
                 child: Text(
-                  _pregunta.subtemaNombre,
+                  _modelo.pregunta.subtemaNombre,
                   textAlign: TextAlign.end,
                   style: context.textos.bodySmall!.copyWith(
                     color: context.esquema.onSurfaceVariant,
@@ -536,30 +491,30 @@ class _SesionPracticaState extends State<SesionPractica> {
             ],
           ),
           const SizedBox(height: 14),
-          TextoConFormulas(_pregunta.enunciado),
-          if (_pregunta.imagen != null) ...[
+          TextoConFormulas(_modelo.pregunta.enunciado),
+          if (_modelo.pregunta.imagen != null) ...[
             const SizedBox(height: 14),
-            FiguraPregunta(figura: _pregunta.imagen!),
+            FiguraPregunta(figura: _modelo.pregunta.imagen!),
           ],
           const SizedBox(height: 18),
 
-          for (final alt in _pregunta.alternativas)
+          for (final alt in _modelo.pregunta.alternativas)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: _Alternativa(
                 alternativa: alt,
-                marcada: _marcada == alt.letra,
+                marcada: _modelo.marcada == alt.letra,
                 correccion: correccion,
-                alPulsar: correccion != null || _enviando
+                alPulsar: correccion != null || _modelo.enviando
                     ? null
-                    : () => setState(() => _marcada = alt.letra),
+                    : () => _modelo.marcar(alt.letra),
               ),
             ),
 
-          if (_error != null) ...[
+          if (_modelo.error != null) ...[
             const SizedBox(height: 12),
-            Nota.error(texto: _error!),
-            if (!_sesion.hayCuenta) ...[
+            Nota.error(texto: _modelo.error!),
+            if (!_modelo.hayCuenta) ...[
               const SizedBox(height: 8),
               Text(
                 "La app no guarda las respuestas correctas a propósito: si "
@@ -578,12 +533,12 @@ class _SesionPracticaState extends State<SesionPractica> {
             // El reporte solo aparece con un intento abierto, igual que en la
             // web: sin sesión no hay a quién atribuirlo, y la tabla exige
             // `perfil_id`.
-            if (_repo.intentoId != null) ...[
+            if (_modelo.hayIntento) ...[
               const SizedBox(height: 12),
               _Reporte(
-                key: ValueKey(_pregunta.codigo),
-                repositorio: _repo,
-                codigoPregunta: _pregunta.codigo,
+                key: ValueKey(_modelo.pregunta.codigo),
+                repositorio: _modelo.repositorio,
+                codigoPregunta: _modelo.pregunta.codigo,
               ),
             ],
           ],
@@ -593,19 +548,19 @@ class _SesionPracticaState extends State<SesionPractica> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
           child: FilledButton(
-            onPressed: _enviando
+            onPressed: _modelo.enviando
                 ? null
                 : correccion != null
-                ? _avanzar
-                : (_marcada == null ? null : _responder),
+                ? _modelo.avanzar
+                : (_modelo.marcada == null ? null : _modelo.responder),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(48),
             ),
             child: Text(
-              _enviando
+              _modelo.enviando
                   ? "Comprobando…"
                   : correccion != null
-                  ? (_indice + 1 >= widget.preguntas.length
+                  ? (_modelo.indice + 1 >= widget.preguntas.length
                         ? "Ver resumen"
                         : "Siguiente")
                   : "Comprobar",

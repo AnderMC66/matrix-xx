@@ -13,6 +13,7 @@ import "dart:async";
 
 import "package:matr_u/data/repositories/preguntas.dart";
 import "package:matr_u/data/repositories/temario.dart";
+import "package:matr_u/data/repositories/teoria.dart";
 import "package:matr_u/data/repositories/vinculos.dart";
 import "package:matr_u/domain/models/preguntas.dart";
 import "package:matr_u/domain/models/temario.dart";
@@ -144,4 +145,25 @@ class ModeloBuscar extends VistaModelo {
     _debounce?.cancel();
     super.dispose();
   }
+}
+
+/// El modelo de la lista de cursos de teoría.
+///
+/// Es el más pequeño de la app —una lista y ya—, y existe por consistencia:
+/// que una pantalla del mismo grupo mantenga su `FutureBuilder` obliga a quien
+/// la lea a saber dos patrones en vez de uno.
+class ModeloTeoria extends VistaModelo {
+  late final RepositorioTeoria _repo = _repoDado ?? RepositorioTeoria();
+  final RepositorioTeoria? _repoDado;
+
+  ModeloTeoria({RepositorioTeoria? repositorio}) : _repoDado = repositorio;
+
+  Estado<List<CursoTeoria>> _cursos = const Inactivo();
+  Estado<List<CursoTeoria>> get cursos => _cursos;
+
+  Future<void> cargar() => pedir<List<CursoTeoria>>(
+    "cursos",
+    _repo.cursos,
+    (estado) => _cursos = estado,
+  );
 }

@@ -1,78 +1,87 @@
 import "package:flutter/material.dart";
 import "package:matr_u/core/config/config.dart";
-import "package:matr_u/data/repositories/teoria.dart";
 import "package:matr_u/domain/models/markdown_teoria.dart";
 import "package:matr_u/domain/models/teoria.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/core/vista_modelo.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
 import "package:matr_u/ui/core/widgets/formula.dart";
 import "package:matr_u/ui/features/practice/views/figura_red.dart";
+import "package:matr_u/ui/features/study/view_models/catalogo.dart";
 
 /// `/teoria` — los 15 cursos con teoría.
 class PantallaTeoria extends StatefulWidget {
-  const PantallaTeoria({super.key});
+  /// El modelo de vista, inyectable.
+  final ModeloTeoria? modelo;
+
+  const PantallaTeoria({super.key, this.modelo});
 
   @override
   State<PantallaTeoria> createState() => _PantallaTeoriaState();
 }
 
 class _PantallaTeoriaState extends State<PantallaTeoria> {
-  final _repo = RepositorioTeoria();
-  late final Future<List<CursoTeoria>> _cursos = _repo.cursos();
+  late final ModeloTeoria _modelo = widget.modelo ?? ModeloTeoria();
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<List<CursoTeoria>>(
-      future: _cursos,
-      builder: (context, snap) {
-        if (snap.hasError) {
-          return Aviso.contenidoLocal(
-            titulo: "No se pudo cargar la teoría",
-            error: snap.error!,
-          );
-        }
-        if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final cursos = snap.data!;
-        return ListView.separated(
-          padding: const EdgeInsets.all(16),
-          itemCount: cursos.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 8),
-          itemBuilder: (context, i) {
-            final curso = cursos[i];
-            return Card(
-              child: ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                title: Text(
-                  curso.nombre,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: context.esquema.onSurface,
-                  ),
-                ),
-                subtitle: Text(
-                  "${curso.conContenido} secciones",
-                  style: TextStyle(color: context.esquema.onSurfaceVariant),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: context.esquema.onSurfaceVariant,
-                ),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => PantallaCursoTeoria(curso: curso),
-                  ),
+  void initState() {
+    super.initState();
+    _modelo.cargar();
+  }
+
+  @override
+  void dispose() {
+    _modelo.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _modelo,
+    builder: (context, _) => SegunEstado<List<CursoTeoria>>(
+      estado: _modelo.cursos,
+      tituloDelFallo: "No se pudo cargar la teoría",
+      cuandoFallo: (error) => Aviso.contenidoLocal(
+        titulo: "No se pudo cargar la teoría",
+        error: error,
+      ),
+      cuandoListo: (cursos) => ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: cursos.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 8),
+        itemBuilder: (context, i) {
+          final curso = cursos[i];
+          return Card(
+            child: ListTile(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              title: Text(
+                curso.nombre,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: context.esquema.onSurface,
                 ),
               ),
-            );
-          },
-        );
-      },
-    );
-  }
+              subtitle: Text(
+                "${curso.conContenido} secciones",
+                style: TextStyle(color: context.esquema.onSurfaceVariant),
+              ),
+              trailing: Icon(
+                Icons.chevron_right,
+                color: context.esquema.onSurfaceVariant,
+              ),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PantallaCursoTeoria(curso: curso),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    ),
+  );
 }
 
 /// `/teoria/[curso]` — el índice de secciones de un curso.

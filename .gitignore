@@ -74,3 +74,7 @@ app.*.map.json
 /android/key.properties
 *.jks
 *.keystore
+
+# Enlaces simbolicos que crea `npx skills` para cada cliente: apuntan a
+# .agents/skills con rutas absolutas de esta maquina.
+.claude/skills/

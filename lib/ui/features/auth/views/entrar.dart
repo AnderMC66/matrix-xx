@@ -1,6 +1,6 @@
 import "package:flutter/material.dart";
-
-import "package:matr_u/data/models/sesion.dart";
+import "package:matr_u/data/repositories/sesion.dart";
+import "package:matr_u/domain/models/sesion.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/core/widgets/ios.dart";
 import "package:matr_u/ui/core/widgets/nota.dart";

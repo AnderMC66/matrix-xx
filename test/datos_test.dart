@@ -19,8 +19,9 @@ import "dart:convert";
 import "dart:io";
 
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/data/models/preguntas.dart";
-import "package:matr_u/data/models/temario.dart";
+import "package:matr_u/data/repositories/preguntas.dart";
+import "package:matr_u/data/repositories/temario.dart";
+import "package:matr_u/domain/models/preguntas.dart";
 
 void main() {
   // Los repositorios leen por `rootBundle`, que en un test necesita el

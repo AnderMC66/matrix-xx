@@ -1,11 +1,13 @@
 import "package:flutter/material.dart";
 import "package:matr_u/core/config/config.dart";
-import "package:matr_u/core/utils/matematicas/formula.dart";
-import "package:matr_u/data/models/practica.dart";
-import "package:matr_u/data/models/preguntas.dart";
-import "package:matr_u/data/models/sesion.dart";
+import "package:matr_u/data/repositories/practica.dart";
+import "package:matr_u/data/repositories/preguntas.dart";
+import "package:matr_u/data/repositories/sesion.dart";
+import "package:matr_u/domain/models/practica.dart";
+import "package:matr_u/domain/models/preguntas.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
+import "package:matr_u/ui/core/widgets/formula.dart";
 import "package:matr_u/ui/core/widgets/nota.dart";
 import "package:matr_u/ui/features/practice/views/figura_red.dart";
 import "package:matr_u/ui/features/practice/views/practica_adaptativa.dart";

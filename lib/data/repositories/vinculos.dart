@@ -1,6 +1,8 @@
-import "package:matr_u/data/models/preguntas.dart";
-import "package:matr_u/data/models/temario.dart";
-import "package:matr_u/data/models/teoria.dart";
+import "package:matr_u/data/repositories/preguntas.dart";
+import "package:matr_u/data/repositories/teoria.dart";
+import "package:matr_u/domain/models/temario.dart";
+import "package:matr_u/domain/models/teoria.dart";
+import "package:matr_u/domain/models/vinculos.dart";
 
 /// Puerto de `src/lib/vinculos.ts`: une las tres piezas que hasta ahora
 /// vivían aisladas — el temario oficial (19 cursos), la teoría importada
@@ -43,28 +45,6 @@ const _teoriaPorCurso = <String, String?>{
   "CIV": "civica",
   "CL": null,
 };
-
-/// Todo lo que hace falta para pintar la cabecera de un curso de un tirón.
-class ResumenCurso {
-  /// Preguntas del banco propio en este curso.
-  final int preguntas;
-
-  /// Subtemas del curso que tienen al menos una pregunta.
-  final int subtemasConPreguntas;
-
-  /// Secciones de teoría disponibles; 0 si el curso no tiene teoría.
-  final int teoria;
-
-  /// Slug del curso de teoría, para enlazar. `null` si no hay.
-  final String? teoriaSlug;
-
-  const ResumenCurso({
-    required this.preguntas,
-    required this.subtemasConPreguntas,
-    required this.teoria,
-    required this.teoriaSlug,
-  });
-}
 
 class RepositorioVinculos {
   final RepositorioTeoria _teoriaRepo;

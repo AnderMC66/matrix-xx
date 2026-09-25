@@ -7,10 +7,10 @@
 // desincroniza en silencio — el curso simplemente deja de ofrecer el botón
 // "Estudiar la teoría", sin ningún error.
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/data/models/preguntas.dart";
-import "package:matr_u/data/models/temario.dart";
-import "package:matr_u/data/models/teoria.dart";
-import "package:matr_u/data/models/vinculos.dart";
+import "package:matr_u/data/repositories/preguntas.dart";
+import "package:matr_u/data/repositories/temario.dart";
+import "package:matr_u/data/repositories/teoria.dart";
+import "package:matr_u/data/repositories/vinculos.dart";
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

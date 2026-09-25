@@ -23,7 +23,7 @@ import "package:flutter/material.dart";
 import "package:flutter_test/flutter_test.dart";
 import "package:http/http.dart" as http;
 import "package:matr_u/core/config/config.dart";
-import "package:matr_u/data/models/sesion.dart";
+import "package:matr_u/data/repositories/sesion.dart";
 import "package:matr_u/main.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/features/auth/views/entrar.dart";

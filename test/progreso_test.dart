@@ -5,7 +5,7 @@
 // respuesta fallada desplaza a otro con daño real, y la pantalla recomienda
 // repasar lo que no toca.
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/data/models/progreso.dart";
+import "package:matr_u/domain/models/progreso.dart";
 
 SubtemaDiagnostico _s({
   required int id,

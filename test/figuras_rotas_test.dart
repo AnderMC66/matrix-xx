@@ -8,7 +8,7 @@
 // señal de que el banco de contenido cambió y hay que volver a correr la
 // herramienta, no de que algo se rompió aquí.
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/data/models/figuras_rotas.dart";
+import "package:matr_u/data/repositories/figuras_rotas.dart";
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

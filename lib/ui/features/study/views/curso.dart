@@ -1,8 +1,8 @@
 import "package:flutter/material.dart";
-
-import "package:matr_u/data/models/preguntas.dart";
-import "package:matr_u/data/models/temario.dart";
-import "package:matr_u/data/models/vinculos.dart";
+import "package:matr_u/data/repositories/preguntas.dart";
+import "package:matr_u/data/repositories/vinculos.dart";
+import "package:matr_u/domain/models/temario.dart";
+import "package:matr_u/domain/models/vinculos.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
 import "package:matr_u/ui/core/widgets/nota.dart";

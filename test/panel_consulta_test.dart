@@ -11,8 +11,9 @@ import "dart:convert";
 
 import "package:flutter_test/flutter_test.dart";
 import "package:http/http.dart" as http;
-import "package:matr_u/data/models/panel.dart";
-import "package:matr_u/data/models/preguntas.dart" show Letra;
+import "package:matr_u/data/repositories/panel.dart";
+import "package:matr_u/domain/models/panel.dart";
+import "package:matr_u/domain/models/preguntas.dart" show Letra;
 import "package:supabase/supabase.dart";
 
 const _idPropio = "11111111-1111-1111-1111-111111111111";

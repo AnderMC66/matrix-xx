@@ -2,7 +2,7 @@ import "package:cached_network_image/cached_network_image.dart";
 import "package:flutter/material.dart";
 import "package:flutter_svg/flutter_svg.dart";
 
-import "package:matr_u/data/models/figuras_rotas.dart";
+import "package:matr_u/data/repositories/figuras_rotas.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
 
 /// Carga una figura desde el mismo sitio que sirve `matr_u`

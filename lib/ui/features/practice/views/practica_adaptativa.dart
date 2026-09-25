@@ -1,11 +1,13 @@
 import "package:flutter/gestures.dart";
 import "package:flutter/material.dart";
-
-import "package:matr_u/data/models/preguntas.dart";
-import "package:matr_u/data/models/progreso.dart";
-import "package:matr_u/data/models/repaso.dart";
-import "package:matr_u/data/models/sesion.dart";
-import "package:matr_u/data/models/temario.dart";
+import "package:matr_u/data/repositories/preguntas.dart";
+import "package:matr_u/data/repositories/progreso.dart";
+import "package:matr_u/data/repositories/repaso.dart";
+import "package:matr_u/data/repositories/sesion.dart";
+import "package:matr_u/data/repositories/temario.dart";
+import "package:matr_u/domain/models/preguntas.dart";
+import "package:matr_u/domain/models/progreso.dart";
+import "package:matr_u/domain/models/temario.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
 import "package:matr_u/ui/features/practice/views/practica.dart";

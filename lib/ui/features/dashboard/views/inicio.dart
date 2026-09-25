@@ -1,10 +1,13 @@
 import "dart:async";
 
 import "package:flutter/material.dart";
-import "package:matr_u/data/models/horario.dart";
-import "package:matr_u/data/models/progreso.dart";
-import "package:matr_u/data/models/repaso.dart";
-import "package:matr_u/data/models/sesion.dart";
+import "package:matr_u/data/repositories/horario.dart";
+import "package:matr_u/data/repositories/progreso.dart";
+import "package:matr_u/data/repositories/repaso.dart";
+import "package:matr_u/data/repositories/sesion.dart";
+import "package:matr_u/domain/models/horario.dart";
+import "package:matr_u/domain/models/progreso.dart";
+import "package:matr_u/domain/models/repaso.dart";
 import "package:matr_u/main.dart" show Armazon;
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";

@@ -5,7 +5,7 @@
 // error — da una fórmula partida en dos párrafos, que es peor porque parece
 // contenido.
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/data/models/markdown_teoria.dart";
+import "package:matr_u/domain/models/markdown_teoria.dart";
 
 void main() {
   group("separación en bloques", () {

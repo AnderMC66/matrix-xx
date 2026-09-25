@@ -2,8 +2,8 @@ import "dart:async";
 
 import "package:flutter/material.dart";
 import "package:matr_u/core/config/config.dart";
-import "package:matr_u/data/models/figuras_rotas.dart";
-import "package:matr_u/data/models/sesion.dart";
+import "package:matr_u/data/repositories/figuras_rotas.dart";
+import "package:matr_u/data/repositories/sesion.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
 import "package:matr_u/ui/core/widgets/ios.dart";

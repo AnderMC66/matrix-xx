@@ -2,12 +2,13 @@ import "dart:async";
 
 import "package:flutter/material.dart";
 import "package:matr_u/core/utils/fechas.dart";
-import "package:matr_u/core/utils/matematicas/formula.dart";
-import "package:matr_u/data/models/preguntas.dart";
-import "package:matr_u/data/models/sesion.dart";
-import "package:matr_u/data/models/simulacro.dart";
+import "package:matr_u/data/repositories/sesion.dart";
+import "package:matr_u/data/repositories/simulacro.dart";
+import "package:matr_u/domain/models/preguntas.dart";
+import "package:matr_u/domain/models/simulacro.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
+import "package:matr_u/ui/core/widgets/formula.dart";
 import "package:matr_u/ui/features/practice/views/practica.dart" show FiguraPregunta;
 
 /// `/simulacros` — los simulacros publicados, y el intento a medias si lo hay.

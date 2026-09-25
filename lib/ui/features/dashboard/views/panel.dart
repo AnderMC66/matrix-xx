@@ -1,11 +1,12 @@
 import "package:flutter/material.dart";
 import "package:matr_u/core/utils/fechas.dart";
-import "package:matr_u/core/utils/matematicas/formula.dart";
-import "package:matr_u/data/models/panel.dart";
-import "package:matr_u/data/models/preguntas.dart" show EtiquetaLetra;
-import "package:matr_u/data/models/sesion.dart";
+import "package:matr_u/data/repositories/panel.dart";
+import "package:matr_u/data/repositories/sesion.dart";
+import "package:matr_u/domain/models/panel.dart";
+import "package:matr_u/domain/models/preguntas.dart" show EtiquetaLetra;
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
+import "package:matr_u/ui/core/widgets/formula.dart";
 import "package:matr_u/ui/features/practice/views/figura_red.dart";
 
 /// `/panel` — portada del panel de docente/admin.

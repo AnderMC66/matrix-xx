@@ -1,10 +1,11 @@
 import "dart:async";
 
 import "package:flutter/material.dart";
-
-import "package:matr_u/data/models/horario.dart";
-import "package:matr_u/data/models/sesion.dart";
-import "package:matr_u/data/models/temario.dart";
+import "package:matr_u/data/repositories/horario.dart";
+import "package:matr_u/data/repositories/sesion.dart";
+import "package:matr_u/data/repositories/temario.dart";
+import "package:matr_u/domain/models/horario.dart";
+import "package:matr_u/domain/models/temario.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
 

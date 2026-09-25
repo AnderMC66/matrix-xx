@@ -31,9 +31,13 @@ dos verdades que se separan.
 ## 2. El idioma es el español
 
 Comentarios, documentación, mensajes de commit, nombres de clases, variables y
-archivos. `RepositorioProgreso`, no `ProgressRepository`. `lib/datos/`, no
-`lib/data/` — salvo donde la estructura de carpetas sigue una guía externa,
-que es el único caso en que gana el inglés.
+archivos. `RepositorioProgreso`, no `ProgressRepository`; `ErrorHorario`, no
+`ScheduleException`.
+
+La única excepción son **los nombres de las carpetas de `lib/`** —`data`,
+`domain`, `ui`, `repositories`—, porque ahí manda la guía de arquitectura de
+Flutter y desviarse de sus nombres hace que deje de reconocerse la estructura.
+El contenido de esos archivos sigue en español.
 
 No es preferencia estética: quien mantiene esto lee español, y un repo mestizo
 obliga a traducir mentalmente en cada archivo.
@@ -76,23 +80,31 @@ cualquiera con `unzip`.
 
 ## 5. Arquitectura: lo que hay de verdad
 
-`lib/` sigue la estructura de la
+`lib/` sigue la
 [guía de arquitectura de Flutter](.agents/skills/flutter-apply-architecture-best-practices/SKILL.md),
-instalada como skill del repo. **Pero la sigue a medias, y conviene decirlo
-antes de que alguien asuma lo que no hay:**
+instalada como skill del repo:
 
 ```
 lib/
-  core/config|utils/          ← no está en la guía
-  data/models/                ← modelos Y los 11 RepositorioX, juntos
+  core/config|utils/          ← no está en la guía: config y fechas, sueltas
+  data/
+    repositories/             ← los 11 RepositorioX, y Sesion
+    services/                 ← Catalogo, que envuelve el bundle de assets
+  domain/models/              ← los modelos y sus enums
   ui/core/theme|widgets/
   ui/features/<f>/views/      ← sin view_models/ al lado
 ```
 
-Lo que **falta** respecto a la guía: `data/repositories/`, `data/services/`,
-`domain/models/`, y sobre todo **MVVM**. No hay un solo `ChangeNotifier` en
-las 13 891 líneas, ni contenedor de inyección. Las vistas guardan su estado a
-mano (`Future<…>? _carga` + `setState`).
+**No hay `data/models/`, y es a propósito.** La guía los separa de
+`domain/models/` porque supone que el repositorio transforma el modelo crudo
+de la API en uno limpio. Aquí no hay ese paso: el JSON de PostgREST y el de
+los assets se parsea directo al modelo de dominio. Inventar una capa de
+modelos de API que solo se copiaría a sí misma sería ceremonia, no diseño.
+
+**Lo que falta es el MVVM.** No hay un solo `ChangeNotifier` en el proyecto,
+ni contenedor de inyección. Las vistas guardan su estado a mano
+(`Future<…>? _carga` + `setState`), y por eso la carpeta se llama `views/` sin
+un `view_models/` al lado.
 
 Mientras eso siga así, **la regla es esta**:
 
@@ -109,10 +121,37 @@ llevaban meses ahí.
 Quien complete la migración a MVVM debe mantener la propiedad que esto
 compra: **toda pantalla se monta en un test sin tocar la red.**
 
+### La dirección de las dependencias se comprueba
+
+Poner las capas en carpetas no separa nada: basta un `import` para que un
+modelo empiece a saber de widgets, y el compilador no dice ni una palabra
+porque importar «hacia fuera» es Dart válido.
+
+`test/capas_test.dart` lo comprueba en cada `flutter test`:
+
+| Capa | Puede importar | Nunca |
+|---|---|---|
+| `domain/` | nada del proyecto | `data/`, `ui/`, `core/` |
+| `data/` | `domain/`, `core/` | `ui/` |
+| `core/` | nada del proyecto | todo lo demás |
+| `ui/` | lo que necesite | — |
+
+Y dos reglas más, que son las que de verdad se rompen solas:
+
+- **`Repositorio*` solo existe bajo `data/repositories/`.** El camino fácil es
+  añadirlo al lado del modelo que devuelve, «que es donde se usa».
+- **Solo `data/` toca `Supabase.instance` y `rootBundle`.** Son las dos
+  fronteras externas de la app. Si `ui/` las cruza directamente, esa pantalla
+  vuelve a ser imposible de montar en un test.
+
+Esa comprobación ya encontró una: `formula.dart` vivía en `core/utils/` e
+importaba el tema. No era una utilidad — es un `StatelessWidget`. Está en
+`ui/core/widgets/`.
+
 ## 6. Tests
 
 - `flutter analyze` **limpio**. Cero errores, cero avisos.
-- `flutter test` **en verde** antes de cada commit. Hoy son 416, con 6
+- `flutter test` **en verde** antes de cada commit. Hoy son 421, con 6
   saltados a propósito (los de `test/integracion/`, que piden credenciales
   reales, y el de desbordes si no encuentra Roboto).
 - Un arreglo de fallo **llega con el test que falla sin él**, y se comprueba

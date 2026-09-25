@@ -42,11 +42,11 @@
 //
 // ignore_for_file: avoid_print
 import "package:matr_u/core/config/config.dart";
-import "package:matr_u/data/models/practica.dart";
-import "package:matr_u/data/models/preguntas.dart" show EtiquetaLetra, Letra;
-import "package:matr_u/data/models/progreso.dart";
-import "package:matr_u/data/models/repaso.dart";
-import "package:matr_u/data/models/simulacro.dart";
+import "package:matr_u/data/repositories/practica.dart";
+import "package:matr_u/data/repositories/progreso.dart";
+import "package:matr_u/data/repositories/repaso.dart";
+import "package:matr_u/data/repositories/simulacro.dart";
+import "package:matr_u/domain/models/preguntas.dart" show EtiquetaLetra, Letra;
 import "package:supabase/supabase.dart";
 import "package:test/test.dart";
 

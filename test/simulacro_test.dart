@@ -5,7 +5,7 @@
 // —el instante de inicio y la cuenta atrás—, porque un error ahí no se ve como
 // un fallo sino como un alumno al que se le acabó el tiempo antes de tiempo.
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/data/models/simulacro.dart";
+import "package:matr_u/domain/models/simulacro.dart";
 import "package:matr_u/ui/features/practice/views/simulacro.dart";
 
 void main() {

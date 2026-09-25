@@ -1,10 +1,11 @@
 import "package:flutter/material.dart";
 import "package:matr_u/core/config/config.dart";
-import "package:matr_u/core/utils/matematicas/formula.dart";
-import "package:matr_u/data/models/markdown_teoria.dart";
-import "package:matr_u/data/models/teoria.dart";
+import "package:matr_u/data/repositories/teoria.dart";
+import "package:matr_u/domain/models/markdown_teoria.dart";
+import "package:matr_u/domain/models/teoria.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
+import "package:matr_u/ui/core/widgets/formula.dart";
 import "package:matr_u/ui/features/practice/views/figura_red.dart";
 
 /// `/teoria` — los 15 cursos con teoría.

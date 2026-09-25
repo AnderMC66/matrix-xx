@@ -1,5 +1,4 @@
-import "package:matr_u/data/models/catalogo.dart";
-import "package:matr_u/data/models/temario.dart";
+
 
 /// Puerto de `src/lib/preguntas.ts`: el banco de preguntas.
 ///
@@ -22,6 +21,7 @@ import "package:matr_u/data/models/temario.dart";
 /// siempre por el RPC `responder_pregunta`, que es quien conoce la clave —
 /// exactamente igual que para un alumno con sesión en la web, donde la columna
 /// `clave` está revocada para el rol `authenticated`.
+library;
 
 enum Letra { a, b, c, d, e }
 
@@ -41,12 +41,6 @@ Letra? letraDesde(String texto) {
 }
 
 enum Dificultad { facil, medio, dificil }
-
-Dificultad _dificultadDesde(String? texto) => switch (texto) {
-  "facil" => Dificultad.facil,
-  "dificil" => Dificultad.dificil,
-  _ => Dificultad.medio,
-};
 
 /// Figura de una pregunta (diagramas de geometría, gráficos de física…).
 ///
@@ -165,6 +159,17 @@ class Banco {
 
   const Banco._(this.preguntas, this._porCodigo, this.sonEjemplos);
 
+  /// Indexa el banco a partir de sus preguntas. Misma razon que
+  /// [Temario.indexando]: el indice sale de `preguntas` y de nada mas.
+  factory Banco.indexando(
+    List<Pregunta> preguntas, {
+    required bool sonEjemplos,
+  }) => Banco._(
+    preguntas,
+    {for (final p in preguntas) p.codigo: p},
+    sonEjemplos,
+  );
+
   int get total => preguntas.length;
 
   /// Índice por código, no un `firstWhere` lineal: armar una tanda de repaso
@@ -225,72 +230,6 @@ class Banco {
       conteo[p.subtemaCodigo] = (conteo[p.subtemaCodigo] ?? 0) + 1;
     }
     return conteo;
-  }
-}
-
-class RepositorioPreguntas {
-  final _catalogo = Catalogo.instancia;
-  final RepositorioTemario _temario;
-
-  RepositorioPreguntas({RepositorioTemario? temario})
-    : _temario = temario ?? RepositorioTemario();
-
-  Banco? _cargado;
-
-  Future<Banco> cargar() async {
-    final yaEsta = _cargado;
-    if (yaEsta != null) return yaEsta;
-
-    final temario = await _temario.cargar();
-    final nombres = await _catalogo.indice("preguntas");
-
-    // `_indice.json` es el índice mismo, no un archivo del banco; y los demás
-    // `_*.json` son los ejemplos de desarrollo, que solo entran si no hay
-    // ningún archivo real. Misma regla que `cargar()` en la web.
-    final candidatos = nombres.where((n) => n != "_indice.json").toList();
-    final reales = candidatos.where((n) => !n.startsWith("_")).toList();
-    final sonEjemplos = reales.isEmpty;
-    final archivos = (sonEjemplos ? candidatos : reales)..sort();
-
-    final preguntas = <Pregunta>[];
-    for (final archivo in archivos) {
-      final doc =
-          await _catalogo.archivo("preguntas", archivo) as Map<String, dynamic>;
-      final prefijo = doc["prefijo"] as String;
-      final ano = doc["anoExamen"] as int;
-
-      for (final crudo
-          in (doc["preguntas"] as List).cast<Map<String, dynamic>>()) {
-        final subtema = crudo["subtema"] as String;
-        final ubicacion = temario.ubicacion(subtema);
-        // El generador del repo web ya reporta esto como error; aquí basta
-        // con no inventar una ubicación.
-        if (ubicacion == null) continue;
-
-        final numero = (crudo["numero"] as int).toString().padLeft(3, "0");
-        preguntas.add(
-          Pregunta(
-            codigo: "$prefijo-$ano-$numero",
-            enunciado: crudo["enunciado"] as String? ?? "",
-            imagen: Figura.desde(crudo["imagen"] as Map<String, dynamic>?),
-            dificultad: _dificultadDesde(crudo["dificultad"] as String?),
-            alternativas: alternativasDesde(
-              (crudo["alternativas"] as Map?)?.cast<String, dynamic>() ??
-                  const {},
-            ),
-            subtemaCodigo: subtema,
-            subtemaNombre: ubicacion.subtema.nombre,
-            temaNombre: ubicacion.tema.nombre,
-            cursoNombre: ubicacion.curso.nombre,
-            cursoSlug: ubicacion.curso.slug,
-          ),
-        );
-      }
-    }
-
-    return _cargado = Banco._(preguntas, {
-      for (final p in preguntas) p.codigo: p,
-    }, sonEjemplos);
   }
 }
 

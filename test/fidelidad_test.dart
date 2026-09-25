@@ -10,8 +10,8 @@
 // Cuando el contenido del repo web crezca, estas cifras suben: actualízalas
 // corriendo la sincronización y leyendo el fallo, que dice el número nuevo.
 import "package:flutter_test/flutter_test.dart";
-import "package:matr_u/data/models/preguntas.dart";
-import "package:matr_u/data/models/temario.dart";
+import "package:matr_u/data/repositories/preguntas.dart";
+import "package:matr_u/data/repositories/temario.dart";
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

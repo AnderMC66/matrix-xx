@@ -20,6 +20,7 @@ import "package:flutter_test/flutter_test.dart";
 import "package:http/http.dart" as http;
 import "package:matr_u/data/repositories/sesion.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/features/auth/view_models/entrar.dart";
 import "package:matr_u/ui/features/auth/views/entrar.dart";
 import "package:supabase/supabase.dart";
 
@@ -174,7 +175,7 @@ void main() {
         theme: construirTema(),
         home: Scaffold(
           body: PantallaEntrar(
-            sesion: Sesion(cliente: cliente),
+            modelo: ModeloEntrar(sesion: Sesion(cliente: cliente)),
             alEntrar: () => entro = true,
           ),
         ),

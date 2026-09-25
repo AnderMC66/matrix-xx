@@ -1,54 +1,39 @@
 import "package:flutter/material.dart";
 import "package:matr_u/data/repositories/sesion.dart";
-import "package:matr_u/domain/models/sesion.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/core/widgets/ios.dart";
 import "package:matr_u/ui/core/widgets/nota.dart";
+import "package:matr_u/ui/features/auth/view_models/entrar.dart";
 
 /// `/entrar` — acceso y registro en una sola pantalla, como en la web.
 class PantallaEntrar extends StatefulWidget {
-  /// Se llama cuando ya hay sesión, para que el armazón vuelva a construirse.
+  /// Se llama cuando ya hay sesion, para que el armazon vuelva a construirse.
   final VoidCallback alEntrar;
 
-  /// Sesión inyectable, igual que en `PantallaHorario` y `SesionPractica`.
-  /// `Sesion()` resuelve `Supabase.instance.client` en su constructor, así que
-  /// sin esta costura la pantalla no se puede montar en un test. En producción
-  /// nadie la pasa.
-  final Sesion? sesion;
+  /// El modelo de vista, inyectable. Si no llega, la pantalla construye el
+  /// suyo con la sesion de produccion.
+  final ModeloEntrar? modelo;
 
-  const PantallaEntrar({super.key, required this.alEntrar, this.sesion});
+  const PantallaEntrar({super.key, required this.alEntrar, this.modelo});
 
   @override
   State<PantallaEntrar> createState() => _PantallaEntrarState();
 }
 
 class _PantallaEntrarState extends State<PantallaEntrar> {
-  late final _sesion = widget.sesion ?? Sesion();
+  late final ModeloEntrar _modelo = widget.modelo ?? ModeloEntrar();
 
-  bool _registrando = false;
-  bool _enviando = false;
-  String? _error;
-  String? _aviso;
-
+  /// Los tres campos se quedan aqui: son estado del `TextField`, y
+  /// duplicarlos en el modelo obligaria a mantener los dos lados en
+  /// sincronia para no ganar nada.
   final _correo = TextEditingController();
   final _contrasena = TextEditingController();
   final _nombre = TextEditingController();
 
-  List<AreaPostulacion>? _areas;
-  int? _area;
-
   @override
   void initState() {
     super.initState();
-    // Las áreas solo hacen falta al registrarse; se piden una vez y en
-    // segundo plano, para que un fallo de red no bloquee el formulario de
-    // entrar, que es el camino del 90 % de las visitas.
-    _sesion
-        .areas()
-        .then((a) {
-          if (mounted) setState(() => _areas = a);
-        })
-        .catchError((_) {});
+    _modelo.cargarAreas();
   }
 
   @override
@@ -56,89 +41,28 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
     _correo.dispose();
     _contrasena.dispose();
     _nombre.dispose();
+    _modelo.dispose();
     super.dispose();
   }
 
-  Future<void> _enviar() async {
-    setState(() {
-      _enviando = true;
-      _error = null;
-      _aviso = null;
-    });
-
-    try {
-      if (_registrando) {
-        final faltaConfirmar = await _sesion.registrarse(
-          correo: _correo.text,
-          contrasena: _contrasena.text,
-          nombre: _nombre.text,
-          areaPostulacionId: _area,
-        );
-        if (!mounted) return;
-        if (faltaConfirmar) {
-          setState(() {
-            _aviso =
-                "Cuenta creada. Te enviamos un correo de confirmación: "
-                "ábrelo para poder entrar.";
-          });
-          return;
-        }
-      } else {
-        await _sesion.entrar(_correo.text, _contrasena.text);
-      }
-      if (mounted) widget.alEntrar();
-    } on ErrorSesion catch (e) {
-      if (mounted) setState(() => _error = e.mensaje);
-    } catch (e) {
-      if (mounted) setState(() => _error = "No se pudo conectar. $e");
-    } finally {
-      if (mounted) setState(() => _enviando = false);
-    }
-  }
-
-  /// Manda el correo de recuperación.
-  ///
-  /// **El acuse es el mismo exista la cuenta o no**, y no por descuido: el
-  /// servidor de auth responde igual en los dos casos a propósito, y si esta
-  /// pantalla distinguiera «no hay cuenta con ese correo» de «te lo mandamos»,
-  /// sería un comprobador de quién está registrado aquí que cualquiera podría
-  /// usar sin tener cuenta.
-  Future<void> _recuperar() async {
-    setState(() {
-      _enviando = true;
-      _error = null;
-      _aviso = null;
-    });
-
-    try {
-      await _sesion.recuperarContrasena(_correo.text);
-      if (mounted) {
-        setState(() {
-          _aviso =
-              "Si hay una cuenta con ese correo, le acaba de llegar un "
-              "enlace para poner una contraseña nueva. Ábrelo desde este "
-              "mismo teléfono: te devuelve a la app.";
-        });
-      }
-    } on ErrorSesion catch (e) {
-      if (mounted) setState(() => _error = e.mensaje);
-    } catch (e) {
-      if (mounted) setState(() => _error = "No se pudo conectar. $e");
-    } finally {
-      if (mounted) setState(() => _enviando = false);
-    }
-  }
+  void _enviar() => _modelo.enviar(
+    correo: _correo.text,
+    contrasena: _contrasena.text,
+    nombre: _nombre.text,
+    alEntrar: widget.alEntrar,
+  );
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _modelo,
     // `AutofillGroup` envuelve el formulario entero: es lo que permite al
     // gestor del sistema rellenar correo y contraseña de una sola vez.
-    return AutofillGroup(
+    builder: (context, _) => AutofillGroup(
       child: ListView(
         padding: const EdgeInsets.only(bottom: 40),
         children: [
           const SizedBox(height: 24),
-          _Marca(registrando: _registrando),
+          _Marca(registrando: _modelo.registrando),
           const SizedBox(height: 28),
 
           // ---- El formulario, como un grupo de iOS -------------------------
@@ -150,7 +74,7 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
           GrupoInset(
             sangriaSeparador: 52,
             filas: [
-              if (_registrando)
+              if (_modelo.registrando)
                 CampoIOS(
                   controlador: _nombre,
                   etiqueta: "Nombre",
@@ -170,29 +94,29 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
                 etiqueta: "Contraseña",
                 icono: Icons.lock_outline,
                 oculto: true,
-                alEnviar: _enviando ? null : _enviar,
+                alEnviar: _modelo.enviando ? null : _enviar,
                 // `newPassword` al registrarse para que el gestor ofrezca
                 // generar una; `password` al entrar para que ofrezca la
                 // guardada.
-                autocompletar: _registrando
+                autocompletar: _modelo.registrando
                     ? const [AutofillHints.newPassword]
                     : const [AutofillHints.password],
               ),
             ],
           ),
 
-          if (_registrando && _areas != null) ...[
+          if (_modelo.registrando && _modelo.areas != null) ...[
             const SizedBox(height: 20),
             GrupoInset(
               titulo: "Área de postulación",
               filas: [
-                for (final a in _areas!)
+                for (final a in _modelo.areas!)
                   FilaInset(
                     titulo: a.nombre,
                     // Marca de verificación en vez de un desplegable: con
                     // cinco opciones, un `Dropdown` esconde cuatro detrás de
                     // un toque. Es el patrón de selección de iOS.
-                    alFinal: _area == a.id
+                    alFinal: _modelo.area == a.id
                         ? Icon(
                             Icons.check,
                             size: 20,
@@ -200,21 +124,21 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
                           )
                         : null,
                     onTap: () =>
-                        setState(() => _area = _area == a.id ? null : a.id),
+                        _modelo.elegirArea(_modelo.area == a.id ? null : a.id),
                   ),
               ],
             ),
           ],
 
           // ---- Avisos -----------------------------------------------------
-          if (_error case final e?) ...[
+          if (_modelo.error case final e?) ...[
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Nota.error(texto: e, icono: Icons.error_outline),
             ),
           ],
-          if (_aviso case final a?) ...[
+          if (_modelo.aviso case final a?) ...[
             const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -232,22 +156,20 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
             child: Column(
               children: [
                 BotonPrincipal(
-                  texto: _registrando ? "Crear cuenta" : "Entrar",
-                  cargando: _enviando,
+                  texto: _modelo.registrando ? "Crear cuenta" : "Entrar",
+                  cargando: _modelo.enviando,
                   onPressed: _enviar,
                 ),
                 const SizedBox(height: 10),
                 BotonSecundario(
-                  texto: _registrando
+                  texto: _modelo.registrando
                       ? "Ya tengo cuenta"
                       : "No tengo cuenta, quiero registrarme",
-                  onPressed: _enviando
+                  onPressed: _modelo.enviando
                       ? null
-                      : () => setState(() {
-                          _registrando = !_registrando;
-                          _error = null;
-                          _aviso = null;
-                        }),
+                      : () => _modelo.cambiarModo(
+                          registrando: !_modelo.registrando,
+                        ),
                 ),
               ],
             ),
@@ -255,11 +177,13 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
 
           // Solo al entrar: quien se está registrando todavía no tiene
           // contraseña que olvidar, y el enlace ahí solo sería ruido.
-          if (!_registrando) ...[
+          if (!_modelo.registrando) ...[
             const SizedBox(height: 4),
             Center(
               child: TextButton(
-                onPressed: _enviando ? null : _recuperar,
+                onPressed: _modelo.enviando
+                    ? null
+                    : () => _modelo.recuperar(_correo.text),
                 style: TextButton.styleFrom(
                   foregroundColor: context.esquema.onSurfaceVariant,
                 ),
@@ -278,7 +202,7 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Text(
-              _registrando
+              _modelo.registrando
                   ? "Al crear la cuenta guardas tu progreso, tus repasos y tus "
                         "simulacros en el servidor."
                   : "La respuesta correcta la resuelve el servidor, no la app: "
@@ -289,8 +213,8 @@ class _PantallaEntrarState extends State<PantallaEntrar> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
 }
 
 /// La cabecera: logotipo, *Large Title* y subtítulo.

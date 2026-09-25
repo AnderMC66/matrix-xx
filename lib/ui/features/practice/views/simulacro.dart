@@ -2,77 +2,55 @@ import "dart:async";
 
 import "package:flutter/material.dart";
 import "package:matr_u/core/utils/fechas.dart";
-import "package:matr_u/data/repositories/sesion.dart";
 import "package:matr_u/data/repositories/simulacro.dart";
 import "package:matr_u/domain/models/preguntas.dart";
 import "package:matr_u/domain/models/simulacro.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/core/vista_modelo.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
 import "package:matr_u/ui/core/widgets/formula.dart";
+import "package:matr_u/ui/features/practice/view_models/simulacro.dart";
 import "package:matr_u/ui/features/practice/views/practica.dart"
     show FiguraPregunta;
 
 /// `/simulacros` — los simulacros publicados, y el intento a medias si lo hay.
 class PantallaSimulacro extends StatefulWidget {
-  /// Repositorio y sesión inyectables, igual que en `PantallaHorario`.
+  /// El modelo de vista, inyectable.
   ///
-  /// Los dos resuelven `Supabase.instance.client` en su constructor, así que
-  /// sin esta costura la pantalla no se puede montar en un test. Baja también
-  /// a las tarjetas y a la sesión de examen: si se quedara aquí, el primer
-  /// hijo que construyera el suyo volvería a romperlo. En producción nadie
-  /// los pasa.
-  final RepositorioSimulacro? repositorio;
-  final Sesion? sesion;
+  /// Su repositorio baja tambien a las tarjetas, a la sesion de examen y al
+  /// resultado: si se quedara aqui, el primer hijo que construyera el suyo
+  /// volveria a tocar `Supabase.instance.client`. En produccion nadie lo pasa.
+  final ModeloSimulacro? modelo;
 
-  const PantallaSimulacro({super.key, this.repositorio, this.sesion});
+  const PantallaSimulacro({super.key, this.modelo});
 
   @override
   State<PantallaSimulacro> createState() => _PantallaSimulacroState();
 }
 
 class _PantallaSimulacroState extends State<PantallaSimulacro> {
-  late final _repo = widget.repositorio ?? RepositorioSimulacro();
-  late final _sesion = widget.sesion ?? Sesion();
-
-  Future<(List<SimulacroResumen>, Intento?, List<Intento>)>? _carga;
+  late final ModeloSimulacro _modelo = widget.modelo ?? ModeloSimulacro();
 
   @override
   void initState() {
     super.initState();
-    _recargar();
-  }
-
-  /// Las tres a la vez, como en Progreso y en Inicio.
-  ///
-  /// Un registro `(await a, await b, await c)` parece paralelo y no lo es: Dart
-  /// evalúa los campos en orden, así que eran tres viajes encadenados contra
-  /// Supabase para pintar una pantalla cuyos tres datos no dependen entre sí.
-  /// Esta pestaña se rehace cada vez que se entra —es de las que leen del
-  /// servidor, ver `main.dart`—, así que esas tres latencias se pagaban
-  /// enteras en cada visita.
-  Future<(List<SimulacroResumen>, Intento?, List<Intento>)> _pedir() async {
-    final resultados = await Future.wait([
-      _repo.publicados(),
-      _repo.intentoEnCurso(),
-      _repo.historial(),
-    ]);
-    return (
-      resultados[0] as List<SimulacroResumen>,
-      resultados[1] as Intento?,
-      resultados[2] as List<Intento>,
-    );
-  }
-
-  void _recargar() {
-    if (!_sesion.hayCuenta) return;
-    setState(() {
-      _carga = _pedir();
-    });
+    _modelo.cargar();
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (!_sesion.hayCuenta) {
+  void dispose() {
+    _modelo.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _modelo,
+    builder: (context, _) => _contenido(context),
+  );
+
+  Widget _contenido(BuildContext context) {
+    if (!_modelo.hayCuenta) {
       return const Aviso(
         icono: Icons.lock_outline,
         titulo: "El simulacro necesita tu cuenta",
@@ -83,22 +61,12 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
       );
     }
 
-    return FutureBuilder<(List<SimulacroResumen>, Intento?, List<Intento>)>(
-      future: _carga,
-      builder: (context, snap) {
-        if (snap.hasError) {
-          return Aviso(
-            icono: Icons.cloud_off_outlined,
-            titulo: "No se pudieron cargar los simulacros",
-            detalle: "${snap.error}",
-            accion: ("Reintentar", _recargar),
-          );
-        }
-        if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final (simulacros, enCurso, historial) = snap.data!;
+    return SegunEstado<DatosSimulacro>(
+      estado: _modelo.datos,
+      tituloDelFallo: "No se pudieron cargar los simulacros",
+      alReintentar: _modelo.cargar,
+      cuandoListo: (datos) {
+        final (simulacros, enCurso, historial) = datos;
         if (simulacros.isEmpty) {
           return const Aviso(
             icono: Icons.inbox_outlined,
@@ -113,8 +81,8 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
             if (enCurso != null) ...[
               _IntentoEnCurso(
                 intento: enCurso,
-                alVolver: _recargar,
-                repositorio: _repo,
+                alVolver: _modelo.cargar,
+                repositorio: _modelo.repositorio,
               ),
               const SizedBox(height: 16),
             ],
@@ -124,8 +92,8 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
                 child: _TarjetaSimulacro(
                   simulacro: s,
                   bloqueado: enCurso != null,
-                  alVolver: _recargar,
-                  repositorio: _repo,
+                  alVolver: _modelo.cargar,
+                  repositorio: _modelo.repositorio,
                 ),
               ),
             if (historial.isNotEmpty) ...[
@@ -142,7 +110,7 @@ class _PantallaSimulacroState extends State<PantallaSimulacro> {
               for (final intento in historial)
                 _FilaHistorial(
                   intento: intento,
-                  repositorio: _repo,
+                  repositorio: _modelo.repositorio,
                   nombre: simulacros
                       .where((s) => s.id == intento.simulacroId)
                       .map((s) => s.nombre)
@@ -463,201 +431,79 @@ class SesionSimulacro extends StatefulWidget {
   /// Inyectable, por lo mismo que en [PantallaSimulacro].
   final RepositorioSimulacro? repositorio;
 
-  const SesionSimulacro({super.key, required this.intentoId, this.repositorio});
+  /// El modelo del examen, inyectable. Si no llega se arma con [intentoId] y
+  /// [repositorio].
+  final ModeloSesionSimulacro? modelo;
+
+  const SesionSimulacro({
+    super.key,
+    required this.intentoId,
+    this.repositorio,
+    this.modelo,
+  });
 
   @override
   State<SesionSimulacro> createState() => _SesionSimulacroState();
 }
 
-enum _Guardado { guardando, guardado, error }
-
 class _SesionSimulacroState extends State<SesionSimulacro> {
-  late final _repo = widget.repositorio ?? RepositorioSimulacro();
+  late final ModeloSesionSimulacro _modelo =
+      widget.modelo ??
+      ModeloSesionSimulacro(
+        intentoId: widget.intentoId,
+        repositorio: widget.repositorio,
+      );
 
-  List<PreguntaSimulacro>? _preguntas;
-  SimulacroResumen? _simulacro;
-  String? _errorCarga;
-
-  int _indice = 0;
-  final _respuestas = <int, Letra>{};
-  final _estado = <int, _Guardado>{};
-
-  /// La última letra elegida por pregunta. Sirve para descartar el resultado
-  /// de un guardado que llegó tarde: si el alumno ya cambió de alternativa
-  /// mientras el envío anterior seguía en vuelo, ese resultado no debe pisar
-  /// la elección más reciente.
-  final _ultimaLetra = <int, Letra>{};
-
-  DateTime? _limite;
-  Duration _restante = Duration.zero;
-  Timer? _reloj;
-  bool _finalizando = false;
+  /// Ya se empujo la ruta del resultado. Sin esto, el aviso del modelo llega
+  /// mas de una vez —el cronometro sigue latiendo— y se apilarian dos.
+  bool _yendo = false;
 
   @override
   void initState() {
     super.initState();
-    _cargar();
+    // El modelo NO navega: publica que el examen termino, y esto lo lleva al
+    // resultado. Un modelo que sabe de `Navigator` deja de poder probarse sin
+    // arbol de widgets, y este es justo el que mas falta hace probar solo.
+    _modelo.addListener(_siTermino);
+    _modelo.cargar();
   }
 
   @override
   void dispose() {
-    _reloj?.cancel();
+    _modelo.removeListener(_siTermino);
+    _modelo.dispose();
     super.dispose();
   }
 
-  Future<void> _cargar() async {
-    try {
-      final intento = await _repo.intento(widget.intentoId);
-      if (!mounted) return;
-      if (intento == null) {
-        setState(() => _errorCarga = "Este intento no existe o no es tuyo.");
-        return;
-      }
-      // Ya cerrado: no hay sesión que retomar, al resultado.
-      if (!intento.enCurso) {
-        _irAlResultado(intento.id);
-        return;
-      }
-
-      final simulacro = await _repo.simulacro(intento.simulacroId);
-      final preguntas = await _repo.preguntasDe(intento);
-      if (!mounted) return;
-
-      // El plazo sale de `iniciado_en` + `duracion_minutos`, ambos del
-      // servidor. El reloj del dispositivo solo decide cómo se ve la cuenta
-      // atrás: quien rechaza una respuesta tardía es Postgres, desde
-      // `20260827120000_cronometro_en_servidor.sql`. Un móvil con la hora
-      // corrida muestra mal el cronómetro, pero no gana ni pierde tiempo.
-      final limite = intento.iniciadoEn.add(
-        Duration(minutes: simulacro?.duracionMinutos ?? 0),
-      );
-
-      setState(() {
-        _simulacro = simulacro;
-        _preguntas = preguntas;
-        _limite = limite;
-        for (final p in preguntas) {
-          if (p.respuestaPrevia case final l?) {
-            _respuestas[p.preguntaId] = l;
-            _ultimaLetra[p.preguntaId] = l;
-            _estado[p.preguntaId] = _Guardado.guardado;
-          }
-        }
-      });
-      _arrancarReloj();
-    } catch (e) {
-      if (mounted) setState(() => _errorCarga = "$e");
-    }
-  }
-
-  void _arrancarReloj() {
-    void tic() {
-      final limite = _limite;
-      if (limite == null) return;
-      final restante = limite.difference(DateTime.now().toUtc());
-      setState(
-        () => _restante = restante.isNegative ? Duration.zero : restante,
-      );
-      if (restante.isNegative || restante == Duration.zero) {
-        _reloj?.cancel();
-        _finalizar();
-      }
-    }
-
-    tic();
-    _reloj = Timer.periodic(const Duration(seconds: 1), (_) => tic());
-  }
-
-  /// Guarda una respuesta, reintentando hasta 3 veces con espera creciente.
-  ///
-  /// El plazo agotado NO se reintenta: no es un fallo de red, y machacar el
-  /// servidor tres veces para acabar diciéndole al alumno «revisa tu
-  /// conexión» cuando lo que pasó es que se acabó el examen sería mentirle.
-  /// Se cierra el intento, que es lo que el cronómetro iba a hacer igual.
-  Future<void> _guardar(int preguntaId, Letra letra) async {
-    setState(() => _estado[preguntaId] = _Guardado.guardando);
-
-    for (var intento = 0; intento < 3; intento++) {
-      try {
-        await _repo.responder(
-          intentoId: widget.intentoId,
-          preguntaId: preguntaId,
-          letra: letra,
-        );
-        if (!mounted) return;
-        if (_ultimaLetra[preguntaId] == letra) {
-          setState(() => _estado[preguntaId] = _Guardado.guardado);
-        }
-        return;
-      } on TiempoAgotado {
-        await _finalizar();
-        return;
-      } catch (_) {
-        if (intento < 2) {
-          await Future<void>.delayed(
-            Duration(milliseconds: 800 * (intento + 1)),
-          );
-        }
-      }
-    }
-
-    if (!mounted) return;
-    if (_ultimaLetra[preguntaId] == letra) {
-      setState(() => _estado[preguntaId] = _Guardado.error);
-    }
-  }
-
-  void _marcar(int preguntaId, Letra letra) {
-    setState(() {
-      _respuestas[preguntaId] = letra;
-      _ultimaLetra[preguntaId] = letra;
-    });
-    _guardar(preguntaId, letra);
-  }
-
-  Future<void> _finalizar() async {
-    if (_finalizando) return;
-    _finalizando = true;
-    _reloj?.cancel();
-
-    try {
-      await _repo.finalizar(widget.intentoId);
-    } catch (_) {
-      // Aunque el cierre explícito falle, se navega igual al resultado: si el
-      // intento ya estaba cerrado (doble pulsación, o el cronómetro justo
-      // después de un envío manual) `finalizar_intento` es idempotente y no
-      // hay nada que reintentar.
-    }
-    if (mounted) _irAlResultado(widget.intentoId);
-  }
-
-  void _irAlResultado(int intentoId) {
+  void _siTermino() {
+    final id = _modelo.irAlResultadoDe;
+    if (id == null || _yendo || !mounted) return;
+    _yendo = true;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) =>
-            PantallaResultado(intentoId: intentoId, repositorio: _repo),
+            PantallaResultado(intentoId: id, repositorio: _modelo.repositorio),
       ),
     );
   }
 
   Future<void> _confirmarFin() async {
-    final preguntas = _preguntas ?? const [];
-    final sinResponder = preguntas.length - _respuestas.length;
+    final sinResponder = _modelo.sinResponder;
 
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (contexto) => AlertDialog(
-        title: const Text("¿Finalizar el simulacro?"),
+        title: const Text("\u00bfFinalizar el simulacro?"),
         content: Text(
           sinResponder > 0
               ? "Te quedan $sinResponder preguntas sin responder. Al "
-                    "finalizar no podrás volver atrás."
-              : "Al finalizar no podrás volver atrás.",
+                    "finalizar no podr\u00e1s volver atr\u00e1s."
+              : "Al finalizar no podr\u00e1s volver atr\u00e1s.",
         ),
         actions: [
           // La salida segura va primero y es la que recibe el foco por
-          // defecto, como en el diálogo de la web: en algo irreversible, lo
-          // fácil de pulsar por accidente tiene que ser lo que no rompe nada.
+          // defecto, como en el di\u00e1logo de la web: en algo irreversible, lo
+          // f\u00e1cil de pulsar por accidente tiene que ser lo que no rompe nada.
           TextButton(
             onPressed: () => Navigator.of(contexto).pop(false),
             child: const Text("Seguir respondiendo"),
@@ -670,23 +516,28 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
       ),
     );
 
-    if (confirmado ?? false) await _finalizar();
+    if (confirmado ?? false) await _modelo.finalizar();
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (_errorCarga != null) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _modelo,
+    builder: (context, _) => _contenido(context),
+  );
+
+  Widget _contenido(BuildContext context) {
+    if (_modelo.errorCarga != null) {
       return Scaffold(
         appBar: AppBar(title: const Text("Simulacro")),
         body: Aviso(
           icono: Icons.error_outline,
           titulo: "No se pudo abrir el simulacro",
-          detalle: _errorCarga!,
+          detalle: _modelo.errorCarga!,
         ),
       );
     }
 
-    final preguntas = _preguntas;
+    final preguntas = _modelo.preguntas;
     if (preguntas == null) {
       return Scaffold(
         appBar: AppBar(title: const Text("Simulacro")),
@@ -704,9 +555,9 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
       );
     }
 
-    final actual = preguntas[_indice];
-    final marcada = _respuestas[actual.preguntaId];
-    final pocoTiempo = _restante.inMinutes < 5;
+    final actual = preguntas[_modelo.indice];
+    final marcada = _modelo.respuestas[actual.preguntaId];
+    final pocoTiempo = _modelo.restante.inMinutes < 5;
 
     return PopScope(
       // Salir con el gesto de atrás dejaría el examen corriendo sin que se
@@ -718,7 +569,7 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            _simulacro?.nombre ?? "Simulacro",
+            _modelo.simulacro?.nombre ?? "Simulacro",
             style: context.textos.bodyLarge,
           ),
           actions: [
@@ -741,7 +592,9 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
                   ),
                 ),
                 child: Text(
-                  _reloj == null ? "--:--" : formatearRestante(_restante),
+                  _modelo.restante == Duration.zero && _modelo.preguntas == null
+                      ? "--:--"
+                      : formatearRestante(_modelo.restante),
                   style: context.textos.labelLarge!.copyWith(
                     fontWeight: FontWeight.w700,
                     fontFeatures: const [FontFeature.tabularFigures()],
@@ -756,7 +609,7 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(4),
             child: LinearProgressIndicator(
-              value: _respuestas.length / preguntas.length,
+              value: _modelo.respuestas.length / preguntas.length,
               minHeight: 4,
               backgroundColor: context.esquema.outlineVariant,
             ),
@@ -769,14 +622,14 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  "${_indice + 1} de ${preguntas.length}",
+                  "${_modelo.indice + 1} de ${preguntas.length}",
                   style: context.textos.labelMedium!.copyWith(
                     fontWeight: FontWeight.w600,
                     color: context.esquema.onSurfaceVariant,
                   ),
                 ),
                 Text(
-                  "${_respuestas.length} respondidas",
+                  "${_modelo.respuestas.length} respondidas",
                   style: context.textos.bodySmall!.copyWith(
                     color: context.esquema.onSurfaceVariant,
                   ),
@@ -799,12 +652,12 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
                   marcada: marcada == alt.letra,
                   // Marcar guarda directo: no hay «Comprobar» porque no hay
                   // nada que revelar hasta que el examen se cierre.
-                  alPulsar: () => _marcar(actual.preguntaId, alt.letra),
+                  alPulsar: () => _modelo.marcar(actual.preguntaId, alt.letra),
                 ),
               ),
 
             const SizedBox(height: 6),
-            _EstadoGuardado(estado: _estado[actual.preguntaId]),
+            _EstadoGuardado(estado: _modelo.estado[actual.preguntaId]),
             const SizedBox(height: 20),
             const Divider(),
             const SizedBox(height: 12),
@@ -818,10 +671,10 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
             const SizedBox(height: 10),
             _Indice(
               preguntas: preguntas,
-              respuestas: _respuestas,
-              estado: _estado,
-              actual: _indice,
-              alElegir: (i) => setState(() => _indice = i),
+              respuestas: _modelo.respuestas,
+              estado: _modelo.estado,
+              actual: _modelo.indice,
+              alElegir: (i) => _modelo.irA(i),
             ),
           ],
         ),
@@ -832,21 +685,21 @@ class _SesionSimulacroState extends State<SesionSimulacro> {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _indice > 0
-                        ? () => setState(() => _indice--)
+                    onPressed: _modelo.indice > 0
+                        ? () => _modelo.irA(_modelo.indice - 1)
                         : null,
                     child: const Text("Anterior"),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: _indice < preguntas.length - 1
+                  child: _modelo.indice < preguntas.length - 1
                       ? FilledButton(
-                          onPressed: () => setState(() => _indice++),
+                          onPressed: () => _modelo.irA(_modelo.indice + 1),
                           child: const Text("Siguiente"),
                         )
                       : FilledButton(
-                          onPressed: _finalizando ? null : _confirmarFin,
+                          onPressed: _confirmarFin,
                           child: const Text("Finalizar"),
                         ),
                 ),
@@ -879,18 +732,18 @@ String formatearRestante(Duration d) {
 /// de que la anterior no se había guardado: un fallo real desaparecía de la
 /// vista aunque siguiera sin guardarse. La web arregló exactamente esto.
 class _EstadoGuardado extends StatelessWidget {
-  final _Guardado? estado;
+  final Guardado? estado;
   const _EstadoGuardado({required this.estado});
 
   @override
   Widget build(BuildContext context) => switch (estado) {
     null => const SizedBox.shrink(),
-    _Guardado.guardando => _Linea(
+    Guardado.guardando => _Linea(
       icono: Icons.sync,
       texto: "Guardando…",
       color: context.esquema.onSurfaceVariant,
     ),
-    _Guardado.guardado => _Linea(
+    Guardado.guardado => _Linea(
       icono: Icons.cloud_done_outlined,
       texto: "Guardada",
       color: context.colores.exito,
@@ -898,7 +751,7 @@ class _EstadoGuardado extends StatelessWidget {
     // `error`, no `primary`: esto es un fallo. Con el granate daban lo mismo
     // —la marca era el color del error— y al separarlos hay que decir cuál se
     // quería. Se quería este.
-    _Guardado.error => _Linea(
+    Guardado.error => _Linea(
       icono: Icons.cloud_off_outlined,
       texto: "No se pudo guardar. Vuelve a marcarla.",
       color: context.esquema.error,
@@ -926,7 +779,7 @@ class _Linea extends StatelessWidget {
 class _Indice extends StatelessWidget {
   final List<PreguntaSimulacro> preguntas;
   final Map<int, Letra> respuestas;
-  final Map<int, _Guardado> estado;
+  final Map<int, Guardado> estado;
   final int actual;
   final void Function(int) alElegir;
 
@@ -948,7 +801,7 @@ class _Indice extends StatelessWidget {
           numero: i + 1,
           esActual: i == actual,
           respondida: respuestas.containsKey(p.preguntaId),
-          fallo: estado[p.preguntaId] == _Guardado.error,
+          fallo: estado[p.preguntaId] == Guardado.error,
           alPulsar: () => alElegir(i),
         ),
     ],
@@ -1099,10 +952,14 @@ class PantallaResultado extends StatefulWidget {
   /// Inyectable, por lo mismo que en [PantallaSimulacro].
   final RepositorioSimulacro? repositorio;
 
+  /// El modelo, inyectable. Si no llega se arma con [intentoId].
+  final ModeloResultado? modelo;
+
   const PantallaResultado({
     super.key,
     required this.intentoId,
     this.repositorio,
+    this.modelo,
   });
 
   @override
@@ -1110,113 +967,99 @@ class PantallaResultado extends StatefulWidget {
 }
 
 class _PantallaResultadoState extends State<PantallaResultado> {
-  late final _repo = widget.repositorio ?? RepositorioSimulacro();
-  late final Future<(Intento, List<ResultadoPregunta>, PercentilSimulacro?)>
-  _carga = _cargar();
+  late final ModeloResultado _modelo =
+      widget.modelo ??
+      ModeloResultado(
+        intentoId: widget.intentoId,
+        repositorio: widget.repositorio,
+      );
 
-  /// El intento primero —las otras dos lo necesitan—, y después las dos
-  /// juntas.
-  ///
-  /// El desglose y el percentil no dependen entre sí, así que encadenarlos
-  /// sumaba una latencia de más justo cuando el alumno acaba de terminar un
-  /// examen de tres horas y quiere ver su nota. Misma corrección que ya
-  /// recibieron Progreso, Inicio, Simulacro, Repaso y Adaptativa; esta era la
-  /// última que quedaba en fila.
-  Future<(Intento, List<ResultadoPregunta>, PercentilSimulacro?)>
-  _cargar() async {
-    final intento = await _repo.intento(widget.intentoId);
-    // `ErrorSimulacro` y no una cadena suelta: lanzar un `String` deja fuera
-    // a cualquier `on Exception catch`, y el tipo ya existe para esto.
-    if (intento == null) {
-      throw const ErrorSimulacro("Este intento no existe o no es tuyo.");
-    }
-    final resultados = await Future.wait([
-      _repo.resultado(intento),
-      _repo.percentil(intento.id),
-    ]);
-    return (
-      intento,
-      resultados[0] as List<ResultadoPregunta>,
-      resultados[1] as PercentilSimulacro?,
-    );
+  @override
+  void initState() {
+    super.initState();
+    _modelo.cargar();
+  }
+
+  @override
+  void dispose() {
+    _modelo.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Resultado")),
-      body: FutureBuilder<(Intento, List<ResultadoPregunta>, PercentilSimulacro?)>(
-        future: _carga,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Aviso(
-              icono: Icons.error_outline,
-              titulo: "No se pudo cargar el resultado",
-              detalle: "${snap.error}",
+      body: ListenableBuilder(
+        listenable: _modelo,
+        builder: (context, _) => SegunEstado<DatosResultado>(
+          estado: _modelo.datos,
+          tituloDelFallo: "No se pudo cargar el resultado",
+          cuandoFallo: (error) => Aviso(
+            icono: Icons.error_outline,
+            titulo: "No se pudo cargar el resultado",
+            detalle: "$error",
+          ),
+          cuandoListo: (datos) {
+            final (intento, detalle, percentil) = datos;
+            final sinResponder = detalle.where((r) => r.sinResponder).length;
+
+            final porCurso = <String, List<ResultadoPregunta>>{};
+            for (final r in detalle) {
+              porCurso.putIfAbsent(r.cursoNombre, () => []).add(r);
+            }
+
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              children: [
+                Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        "${(intento.puntaje ?? 0).round()} %",
+                        style: context.textos.displayMedium!.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: context.esquema.primary,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        "${intento.correctas ?? 0} de "
+                        "${intento.totalPreguntas ?? detalle.length} correctas"
+                        "${sinResponder > 0 ? " · $sinResponder sin responder" : ""}",
+                        style: context.textos.bodyMedium!.copyWith(
+                          color: context.esquema.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+                if (percentil != null) _Percentil(datos: percentil),
+                const SizedBox(height: 24),
+                Text(
+                  "POR CURSO",
+                  style: context.textos.labelSmall!.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
+                    color: context.esquema.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                for (final e in porCurso.entries)
+                  _FilaCurso(curso: e.key, respuestas: e.value),
+                const SizedBox(height: 28),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(46),
+                  ),
+                  child: const Text("Volver a los simulacros"),
+                ),
+              ],
             );
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final (intento, detalle, percentil) = snap.data!;
-          final sinResponder = detalle.where((r) => r.sinResponder).length;
-
-          final porCurso = <String, List<ResultadoPregunta>>{};
-          for (final r in detalle) {
-            porCurso.putIfAbsent(r.cursoNombre, () => []).add(r);
-          }
-
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-            children: [
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      "${(intento.puntaje ?? 0).round()} %",
-                      style: context.textos.displayMedium!.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: context.esquema.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "${intento.correctas ?? 0} de "
-                      "${intento.totalPreguntas ?? detalle.length} correctas"
-                      "${sinResponder > 0 ? " · $sinResponder sin responder" : ""}",
-                      style: context.textos.bodyMedium!.copyWith(
-                        color: context.esquema.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 28),
-              if (percentil != null) _Percentil(datos: percentil),
-              const SizedBox(height: 24),
-              Text(
-                "POR CURSO",
-                style: context.textos.labelSmall!.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.8,
-                  color: context.esquema.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 12),
-              for (final e in porCurso.entries)
-                _FilaCurso(curso: e.key, respuestas: e.value),
-              const SizedBox(height: 28),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(46),
-                ),
-                child: const Text("Volver a los simulacros"),
-              ),
-            ],
-          );
-        },
+          },
+        ),
       ),
     );
   }

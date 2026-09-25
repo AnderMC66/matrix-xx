@@ -23,6 +23,7 @@ import "package:http/http.dart" as http;
 import "package:matr_u/data/repositories/sesion.dart";
 import "package:matr_u/data/repositories/simulacro.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/features/practice/view_models/simulacro.dart";
 import "package:matr_u/ui/features/practice/views/simulacro.dart";
 import "package:supabase/supabase.dart";
 
@@ -169,8 +170,10 @@ void main() {
         theme: construirTema(),
         home: Scaffold(
           body: PantallaSimulacro(
-            repositorio: RepositorioSimulacro(cliente: cliente),
-            sesion: Sesion(cliente: cliente),
+            modelo: ModeloSimulacro(
+              repositorio: RepositorioSimulacro(cliente: cliente),
+              sesion: Sesion(cliente: cliente),
+            ),
           ),
         ),
       ),

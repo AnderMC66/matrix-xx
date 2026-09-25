@@ -1,4 +1,3 @@
-
 /// Puerto de `src/app/cuenta/acciones.ts` + `src/components/diagnostico.tsx`.
 ///
 /// En la barra inferior esta pestaña se llama **Progreso** y en la web apunta

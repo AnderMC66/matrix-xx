@@ -1,4 +1,3 @@
-
 /// Todo lo que hace falta para pintar la cabecera de un curso de un tirón.
 class ResumenCurso {
   /// Preguntas del banco propio en este curso.

@@ -27,7 +27,6 @@ class PantallaTemario extends StatefulWidget {
 
 class _PantallaTemarioState extends State<PantallaTemario> {
   late final ModeloTemario _modelo = widget.modelo ?? ModeloTemario();
-  late final bool _esMio = widget.modelo == null;
 
   @override
   void initState() {
@@ -37,7 +36,7 @@ class _PantallaTemarioState extends State<PantallaTemario> {
 
   @override
   void dispose() {
-    if (_esMio) _modelo.dispose();
+    _modelo.dispose();
     super.dispose();
   }
 

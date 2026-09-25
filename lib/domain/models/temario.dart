@@ -1,4 +1,3 @@
-
 /// Puerto de `src/lib/temario.ts`: el temario oficial UNSA.
 ///
 /// Mismas reglas de codificación que la web, y esto no es un detalle estético:

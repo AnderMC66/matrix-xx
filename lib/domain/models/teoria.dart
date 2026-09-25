@@ -1,4 +1,3 @@
-
 /// Una sección de teoría: el nodo de un árbol, con su markdown.
 ///
 /// Réplica del modelo de `src/lib/teoria.ts`. Los campos salen tal cual de

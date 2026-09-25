@@ -45,8 +45,7 @@ class ModeloAdaptativa extends VistaModelo {
   late final RepositorioProgreso _progreso =
       _progresoDado ?? RepositorioProgreso();
   late final RepositorioTemario _temario = _temarioDado ?? RepositorioTemario();
-  late final RepositorioPreguntas _banco =
-      _bancoDado ?? RepositorioPreguntas();
+  late final RepositorioPreguntas _banco = _bancoDado ?? RepositorioPreguntas();
   late final Sesion _sesion = _sesionDada ?? Sesion();
 
   final RepositorioRepaso? _repasoDado;

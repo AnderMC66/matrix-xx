@@ -1,13 +1,9 @@
-import "dart:async";
-
 import "package:flutter/material.dart";
-import "package:matr_u/data/repositories/horario.dart";
-import "package:matr_u/data/repositories/sesion.dart";
-import "package:matr_u/data/repositories/temario.dart";
 import "package:matr_u/domain/models/horario.dart";
 import "package:matr_u/domain/models/temario.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
+import "package:matr_u/ui/features/schedule/view_models/horario.dart";
 
 const _duraciones = [30, 45, 60, 90, 120];
 
@@ -26,189 +22,58 @@ const _duraciones = [30, 45, 60, 90, 120];
 /// Estaba duplicado palabra por palabra en `inicio.dart` y en `progreso.dart`,
 /// que son los dos sitios desde donde se llega al horario.
 class HorarioConBarra extends StatelessWidget {
-  final RepositorioHorario? repositorio;
-  final Sesion? sesion;
+  final ModeloHorario? modelo;
 
-  const HorarioConBarra({super.key, this.repositorio, this.sesion});
+  const HorarioConBarra({super.key, this.modelo});
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text("Horario de estudio")),
-    body: PantallaHorario(repositorio: repositorio, sesion: sesion),
+    body: PantallaHorario(modelo: modelo),
   );
 }
 
 class PantallaHorario extends StatefulWidget {
-  /// Repositorio y sesión inyectables.
+  /// El modelo de vista, inyectable.
   ///
-  /// **No es ceremonia: es lo único que separa a esta pantalla de poder
-  /// probarse.** `RepositorioHorario()` y `Sesion()` resuelven
-  /// `Supabase.instance.client` en su constructor, así que construir el widget
-  /// fuera de una app con Supabase inicializado lanza «You must initialize the
-  /// supabase instance» antes de pintar nada. Medida la cobertura, ese patrón
-  /// es exactamente la frontera entre el 95 % de `datos/` y el 1 % de
-  /// `pantallas/`.
+  /// **No es ceremonia: es lo unico que separa a esta pantalla de poder
+  /// probarse.** Los repositorios que el modelo usa resuelven
+  /// `Supabase.instance.client`, asi que construirlos fuera de una app con
+  /// Supabase inicializado lanza «You must initialize the supabase instance»
+  /// antes de pintar nada.
   ///
-  /// En producción nadie los pasa y se construyen aquí, igual que antes.
-  final RepositorioHorario? repositorio;
-  final Sesion? sesion;
+  /// En produccion nadie lo pasa y se construye aqui, igual que antes.
+  final ModeloHorario? modelo;
 
-  const PantallaHorario({super.key, this.repositorio, this.sesion});
+  const PantallaHorario({super.key, this.modelo});
 
   @override
   State<PantallaHorario> createState() => _PantallaHorarioState();
 }
 
 class _PantallaHorarioState extends State<PantallaHorario> {
-  late final _repo = widget.repositorio ?? RepositorioHorario();
-  late final _sesion = widget.sesion ?? Sesion();
-
-  List<Curso> _cursos = const [];
-  List<BloqueHorario> _horario = const [];
-  bool _cargando = true;
-  String? _errorCarga;
-
-  String? _cursoElegido;
-  int _dia = 1;
-  TimeOfDay _hora = const TimeOfDay(hour: 17, minute: 0);
-  int _duracion = 60;
-
-  bool _guardando = false;
-  int? _eliminandoId;
-  String? _error;
-
-  Timer? _reloj;
-  ({BloqueHorario bloque, Duration faltan})? _proximoAviso;
+  late final ModeloHorario _modelo = widget.modelo ?? ModeloHorario();
 
   @override
   void initState() {
     super.initState();
-    if (_sesion.hayCuenta) _cargar();
+    _modelo.cargar();
   }
 
   @override
   void dispose() {
-    _reloj?.cancel();
+    _modelo.dispose();
     super.dispose();
   }
 
-  Future<void> _cargar() async {
-    try {
-      final temario = await RepositorioTemario().cargar();
-      final horario = await _repo.obtener();
-      if (!mounted) return;
-      setState(() {
-        _cursos = temario.cursos;
-        _cursoElegido = _cursos.firstOrNull?.codigo;
-        _horario = horario;
-        _cargando = false;
-      });
-      _arrancarReloj();
-    } catch (e) {
-      if (mounted) setState(() => _errorCarga = "$e");
-    }
-  }
-
-  /// Revisa cada 30 segundos si algún bloque empieza dentro de los próximos
-  /// 5 minutos, mientras esta pantalla esté abierta — exactamente lo que
-  /// hacía el temporizador de `notificador-horario.tsx` en el navegador.
-  void _arrancarReloj() {
-    void revisar() {
-      final proximo = proximoBloque(_horario, DateTime.now());
-      if (proximo == null) {
-        if (mounted) setState(() => _proximoAviso = null);
-        return;
-      }
-      final faltan = proximo.cuando.difference(DateTime.now());
-      if (mounted) {
-        setState(
-          () => _proximoAviso = faltan <= const Duration(minutes: 5)
-              ? (bloque: proximo.bloque, faltan: faltan)
-              : null,
-        );
-      }
-    }
-
-    revisar();
-    _reloj = Timer.periodic(const Duration(seconds: 30), (_) => revisar());
-  }
-
-  Future<void> _agregar() async {
-    final codigo = _cursoElegido;
-    if (codigo == null) return;
-
-    setState(() {
-      _guardando = true;
-      _error = null;
-    });
-
-    final horaTexto =
-        "${_hora.hour.toString().padLeft(2, "0")}:${_hora.minute.toString().padLeft(2, "0")}:00";
-
-    try {
-      final id = await _repo.crear(
-        cursoCodigo: codigo,
-        diaSemana: _dia,
-        horaInicio: horaTexto,
-        duracionMinutos: _duracion,
-      );
-      final curso = _cursos.firstWhere((c) => c.codigo == codigo);
-      if (!mounted) return;
-      setState(() {
-        _horario =
-            [
-              ..._horario,
-              BloqueHorario(
-                // El id REAL que devolvió Postgres. Antes aquí iba uno
-                // negativo «provisional hasta la próxima recarga», y esa
-                // recarga no existe: el horario solo se carga en `initState`.
-                // Con el id inventado, borrar un bloque recién creado mandaba
-                // el `delete` contra una fila que no existe —PostgREST no se
-                // queja— así que desaparecía de la pantalla y seguía en la
-                // base hasta la siguiente visita.
-                id: id,
-                cursoCodigo: curso.codigo,
-                cursoNombre: curso.nombre,
-                cursoSlug: curso.slug,
-                diaSemana: _dia,
-                horaInicio: horaTexto,
-                duracionMinutos: _duracion,
-              ),
-            ]..sort(
-              (a, b) => a.diaSemana != b.diaSemana
-                  ? a.diaSemana.compareTo(b.diaSemana)
-                  : a.horaInicio.compareTo(b.horaInicio),
-            );
-      });
-    } on ErrorHorario catch (e) {
-      if (mounted) setState(() => _error = e.mensaje);
-    } catch (e) {
-      if (mounted) setState(() => _error = "No se pudo guardar el bloque. $e");
-    } finally {
-      if (mounted) setState(() => _guardando = false);
-    }
-  }
-
-  Future<void> _eliminar(BloqueHorario b) async {
-    setState(() {
-      _error = null;
-      _eliminandoId = b.id;
-    });
-    try {
-      await _repo.eliminar(b.id);
-      if (mounted) {
-        setState(() => _horario = _horario.where((x) => x.id != b.id).toList());
-      }
-    } catch (e) {
-      if (mounted) setState(() => _error = "No se pudo eliminar el bloque. $e");
-    } finally {
-      if (mounted) setState(() => _eliminandoId = null);
-    }
-  }
-
   @override
-  Widget build(BuildContext context) {
-    if (!_sesion.hayCuenta) {
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _modelo,
+    builder: (context, _) => _contenido(context),
+  );
+
+  Widget _contenido(BuildContext context) {
+    if (!_modelo.hayCuenta) {
       return const Aviso(
         icono: Icons.lock_outline,
         titulo: "El horario necesita tu cuenta",
@@ -217,31 +82,22 @@ class _PantallaHorarioState extends State<PantallaHorario> {
             "dispositivo.\n\nUsa el botón de entrar, arriba a la derecha.",
       );
     }
-    if (_errorCarga != null) {
+    if (_modelo.errorCarga != null) {
       // Con «Reintentar», como el resto de la app: sin él, la única salida de
       // un fallo de red era salir de la pantalla y volver a entrar.
       return Aviso(
         icono: Icons.cloud_off_outlined,
         titulo: "No se pudo cargar el horario",
-        detalle: _errorCarga!,
-        accion: (
-          "Reintentar",
-          () {
-            setState(() {
-              _errorCarga = null;
-              _cargando = true;
-            });
-            _cargar();
-          },
-        ),
+        detalle: _modelo.errorCarga!,
+        accion: ("Reintentar", _modelo.cargar),
       );
     }
-    if (_cargando) {
+    if (_modelo.cargando) {
       return const Center(child: CircularProgressIndicator());
     }
 
     final porDia = <int, List<BloqueHorario>>{};
-    for (final b in _horario) {
+    for (final b in _modelo.horario) {
       porDia.putIfAbsent(b.diaSemana, () => []).add(b);
     }
 
@@ -263,27 +119,27 @@ class _PantallaHorarioState extends State<PantallaHorario> {
             color: context.esquema.onSurfaceVariant,
           ),
         ),
-        if (_proximoAviso case final a?) ...[
+        if (_modelo.proximoAviso case final a?) ...[
           const SizedBox(height: 16),
           _AvisoProximo(bloque: a.bloque, faltan: a.faltan),
         ],
         const SizedBox(height: 20),
         _FormularioBloque(
-          cursos: _cursos,
-          cursoElegido: _cursoElegido,
-          dia: _dia,
-          hora: _hora,
-          duracion: _duracion,
-          guardando: _guardando,
-          error: _error,
-          onCurso: (v) => setState(() => _cursoElegido = v),
-          onDia: (v) => setState(() => _dia = v),
-          onHora: (v) => setState(() => _hora = v),
-          onDuracion: (v) => setState(() => _duracion = v),
-          onAgregar: _agregar,
+          cursos: _modelo.cursos,
+          cursoElegido: _modelo.cursoElegido,
+          dia: _modelo.dia,
+          hora: _modelo.hora,
+          duracion: _modelo.duracion,
+          guardando: _modelo.guardando,
+          error: _modelo.error,
+          onCurso: _modelo.elegirCurso,
+          onDia: _modelo.elegirDia,
+          onHora: _modelo.elegirHora,
+          onDuracion: _modelo.elegirDuracion,
+          onAgregar: _modelo.agregar,
         ),
         const SizedBox(height: 26),
-        if (_horario.isEmpty)
+        if (_modelo.horario.isEmpty)
           const Aviso(
             icono: Icons.calendar_month_outlined,
             titulo: "Todavía no programaste ningún bloque",
@@ -295,8 +151,8 @@ class _PantallaHorarioState extends State<PantallaHorario> {
               _BloqueDia(
                 nombre: nombre,
                 bloques: bloques,
-                eliminandoId: _eliminandoId,
-                onEliminar: _eliminar,
+                eliminandoId: _modelo.eliminandoId,
+                onEliminar: _modelo.eliminar,
               ),
       ],
     );

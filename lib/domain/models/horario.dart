@@ -1,4 +1,3 @@
-
 /// Puerto de `src/lib/horario.ts` + `src/app/horario/acciones.ts`.
 ///
 /// Utilidades puras (`proximaOcurrencia`, `proximoBloque`, `formatearHora`)

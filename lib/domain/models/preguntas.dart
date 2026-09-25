@@ -1,5 +1,3 @@
-
-
 /// Puerto de `src/lib/preguntas.ts`: el banco de preguntas.
 ///
 /// **La diferencia de fondo con la web, y por qué existe.** Allí el módulo
@@ -164,11 +162,8 @@ class Banco {
   factory Banco.indexando(
     List<Pregunta> preguntas, {
     required bool sonEjemplos,
-  }) => Banco._(
-    preguntas,
-    {for (final p in preguntas) p.codigo: p},
-    sonEjemplos,
-  );
+  }) =>
+      Banco._(preguntas, {for (final p in preguntas) p.codigo: p}, sonEjemplos);
 
   int get total => preguntas.length;
 

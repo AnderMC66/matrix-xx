@@ -32,7 +32,6 @@ class PantallaProgreso extends StatefulWidget {
 
 class _PantallaProgresoState extends State<PantallaProgreso> {
   late final ModeloProgreso _modelo = widget.modelo ?? ModeloProgreso();
-  late final bool _esMio = widget.modelo == null;
 
   @override
   void initState() {
@@ -42,7 +41,7 @@ class _PantallaProgresoState extends State<PantallaProgreso> {
 
   @override
   void dispose() {
-    if (_esMio) _modelo.dispose();
+    _modelo.dispose();
     super.dispose();
   }
 

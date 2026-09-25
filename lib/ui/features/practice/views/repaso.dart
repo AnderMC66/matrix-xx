@@ -34,19 +34,23 @@ class PantallaRepaso extends StatefulWidget {
 class _PantallaRepasoState extends State<PantallaRepaso> {
   late final ModeloRepaso _modelo = widget.modelo ?? ModeloRepaso();
 
-  /// Solo se libera el que construyó esta pantalla. El inyectado es de quien
-  /// lo pasó —un test, casi siempre— y puede querer leerlo después.
-  late final bool _esMio = widget.modelo == null;
-
   @override
   void initState() {
     super.initState();
     _modelo.cargar();
   }
 
+  /// La pantalla libera el modelo SIEMPRE, tambien el inyectado.
+  ///
+  /// La primera version solo liberaba el que ella construia —«el inyectado es
+  /// de quien lo paso»— y eso dejo el temporizador de Horario vivo despues de
+  /// desmontar el arbol: «A Timer is still pending even after the widget tree
+  /// was disposed». Quien inyecta un modelo se lo esta entregando a esta
+  /// pantalla; leer sus campos despues sigue funcionando, lo unico que un
+  /// `ChangeNotifier` liberado no admite es que alguien se suscriba.
   @override
   void dispose() {
-    if (_esMio) _modelo.dispose();
+    _modelo.dispose();
     super.dispose();
   }
 

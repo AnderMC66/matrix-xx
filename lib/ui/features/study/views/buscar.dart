@@ -26,7 +26,6 @@ class PantallaBuscar extends StatefulWidget {
 
 class _PantallaBuscarState extends State<PantallaBuscar> {
   late final ModeloBuscar _modelo = widget.modelo ?? ModeloBuscar();
-  late final bool _esMio = widget.modelo == null;
 
   /// El controlador se queda en la vista: es estado del `TextField`, no del
   /// modelo. El modelo recibe el texto ya escrito y decide que hacer con el.
@@ -41,7 +40,7 @@ class _PantallaBuscarState extends State<PantallaBuscar> {
   @override
   void dispose() {
     _controlador.dispose();
-    if (_esMio) _modelo.dispose();
+    _modelo.dispose();
     super.dispose();
   }
 

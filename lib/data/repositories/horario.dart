@@ -1,5 +1,6 @@
 import "package:matr_u/domain/models/horario.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
+
 class ErrorHorario implements Exception {
   final String mensaje;
   const ErrorHorario(this.mensaje);

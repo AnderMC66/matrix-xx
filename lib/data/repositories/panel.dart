@@ -1,6 +1,7 @@
 import "package:matr_u/domain/models/panel.dart";
 import "package:matr_u/domain/models/preguntas.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
+
 Rol _rolDesde(String? texto) => switch (texto) {
   "docente" => Rol.docente,
   "admin" => Rol.admin,

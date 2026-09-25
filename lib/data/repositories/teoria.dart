@@ -1,5 +1,6 @@
 import "package:matr_u/data/services/catalogo.dart";
 import "package:matr_u/domain/models/teoria.dart";
+
 /// Carga perezosa de los 15 cursos con teoría.
 ///
 /// El listado se pide entero (son 15 archivos, ~5,4 MB) solo cuando se abre

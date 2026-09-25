@@ -2,6 +2,7 @@ import "package:matr_u/data/repositories/preguntas.dart";
 import "package:matr_u/domain/models/preguntas.dart";
 import "package:matr_u/domain/models/simulacro.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
+
 /// El servidor rechazó la respuesta porque el plazo del simulacro venció.
 ///
 /// Tiene su propio tipo porque **no es un fallo de red**: reintentarlo sería

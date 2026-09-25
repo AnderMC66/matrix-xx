@@ -1,5 +1,3 @@
-
-
 /// Puerto de `src/app/repaso/acciones.ts`.
 ///
 /// Todo lo de aquí cruza códigos que devuelve Postgres contra el banco local.

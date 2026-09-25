@@ -1,6 +1,7 @@
 import "package:matr_u/domain/models/practica.dart";
 import "package:matr_u/domain/models/preguntas.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
+
 class RepositorioPractica {
   final SupabaseClient _cliente;
 

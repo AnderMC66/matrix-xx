@@ -30,7 +30,6 @@ class PantallaCurso extends StatefulWidget {
 class _PantallaCursoState extends State<PantallaCurso> {
   late final ModeloCurso _modelo =
       widget.modelo ?? ModeloCurso(curso: widget.curso);
-  late final bool _esMio = widget.modelo == null;
 
   @override
   void initState() {
@@ -40,7 +39,7 @@ class _PantallaCursoState extends State<PantallaCurso> {
 
   @override
   void dispose() {
-    if (_esMio) _modelo.dispose();
+    _modelo.dispose();
     super.dispose();
   }
 

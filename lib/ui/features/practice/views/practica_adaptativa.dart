@@ -55,7 +55,6 @@ class _PantallaPracticaAdaptativaState
     extends State<PantallaPracticaAdaptativa> {
   late final ModeloAdaptativa _modelo =
       widget.modelo ?? ModeloAdaptativa(cursoSlug: widget.cursoSlug);
-  late final bool _esMio = widget.modelo == null;
 
   @override
   void initState() {
@@ -65,7 +64,7 @@ class _PantallaPracticaAdaptativaState
 
   @override
   void dispose() {
-    if (_esMio) _modelo.dispose();
+    _modelo.dispose();
     super.dispose();
   }
 

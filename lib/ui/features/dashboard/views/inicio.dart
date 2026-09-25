@@ -42,7 +42,6 @@ class PantallaInicio extends StatefulWidget {
 
 class _PantallaInicioState extends State<PantallaInicio> {
   late final ModeloInicio _modelo = widget.modelo ?? ModeloInicio();
-  late final bool _esMio = widget.modelo == null;
 
   @override
   void initState() {
@@ -52,7 +51,7 @@ class _PantallaInicioState extends State<PantallaInicio> {
 
   @override
   void dispose() {
-    if (_esMio) _modelo.dispose();
+    _modelo.dispose();
     super.dispose();
   }
 

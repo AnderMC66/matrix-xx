@@ -1,5 +1,6 @@
 import "package:matr_u/domain/models/progreso.dart";
 import "package:supabase_flutter/supabase_flutter.dart";
+
 class RepositorioProgreso {
   final SupabaseClient _cliente;
 

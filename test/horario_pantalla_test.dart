@@ -21,6 +21,7 @@ import "package:matr_u/data/repositories/horario.dart";
 import "package:matr_u/data/repositories/sesion.dart";
 import "package:matr_u/data/repositories/temario.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/features/schedule/view_models/horario.dart";
 import "package:matr_u/ui/features/schedule/views/horario.dart";
 import "package:supabase/supabase.dart";
 
@@ -154,8 +155,10 @@ void main() {
         theme: construirTema(),
         home: Scaffold(
           body: PantallaHorario(
-            repositorio: RepositorioHorario(cliente: cliente),
-            sesion: Sesion(cliente: cliente),
+            modelo: ModeloHorario(
+              repositorio: RepositorioHorario(cliente: cliente),
+              sesion: Sesion(cliente: cliente),
+            ),
           ),
         ),
       ),

@@ -5,8 +5,10 @@ import "package:matr_u/data/repositories/sesion.dart";
 import "package:matr_u/domain/models/panel.dart";
 import "package:matr_u/domain/models/preguntas.dart" show EtiquetaLetra;
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/core/vista_modelo.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
 import "package:matr_u/ui/core/widgets/formula.dart";
+import "package:matr_u/ui/features/dashboard/view_models/panel.dart";
 import "package:matr_u/ui/features/practice/views/figura_red.dart";
 
 /// `/panel` — portada del panel de docente/admin.
@@ -16,150 +18,137 @@ import "package:matr_u/ui/features/practice/views/figura_red.dart";
 /// materias la clave la determinó quien programó la aplicación resolviendo,
 /// no un profesor, y que conviene revisarlas antes de cobrar.
 class PantallaPanel extends StatefulWidget {
-  /// Repositorio inyectable, igual que en `PantallaHorario`.
-  /// `RepositorioPanel()` resuelve `Supabase.instance.client` en su
-  /// constructor. En producción nadie lo pasa.
-  final RepositorioPanel? repositorio;
+  /// El modelo, inyectable. Su repositorio baja a las tres subpantallas.
+  final ModeloPanel? modelo;
 
-  const PantallaPanel({super.key, this.repositorio});
+  const PantallaPanel({super.key, this.modelo});
 
   @override
   State<PantallaPanel> createState() => _PantallaPanelState();
 }
 
 class _PantallaPanelState extends State<PantallaPanel> {
-  late final _repo = widget.repositorio ?? RepositorioPanel();
-  Future<(Rol?, ResumenPanel?)>? _carga;
+  late final ModeloPanel _modelo = widget.modelo ?? ModeloPanel();
 
   @override
   void initState() {
     super.initState();
-    _recargar();
+    _modelo.cargar();
   }
 
-  void _recargar() {
-    setState(() {
-      _carga = _pedir();
-    });
-  }
-
-  Future<(Rol?, ResumenPanel?)> _pedir() async {
-    final rol = await _repo.rolActual();
-    if (!esStaff(rol)) return (rol, null);
-    return (rol, await _repo.resumen());
+  @override
+  void dispose() {
+    _modelo.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Panel")),
-      body: FutureBuilder<(Rol?, ResumenPanel?)>(
-        future: _carga,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Aviso(
-              icono: Icons.cloud_off_outlined,
-              titulo: "No se pudo abrir el panel",
-              detalle: "${snap.error}",
-              accion: ("Reintentar", _recargar),
-            );
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final (rol, resumen) = snap.data!;
+      body: ListenableBuilder(
+        listenable: _modelo,
+        builder: (context, _) => SegunEstado<DatosPanel>(
+          estado: _modelo.datos,
+          tituloDelFallo: "No se pudo abrir el panel",
+          alReintentar: _modelo.cargar,
+          cuandoListo: (datos) {
+            final (rol, resumen) = datos;
 
-          if (!esStaff(rol)) {
-            // Igual que `exigirStaff()`: sin sesión o sin rol de staff, no
-            // hay panel que enseñar.
-            return const Aviso(
-              icono: Icons.block,
-              titulo: "No tienes acceso al panel",
-              detalle: "Esta sección es solo para docentes y administradores.",
-            );
-          }
-          if (resumen == null) {
-            return Aviso(
-              icono: Icons.cloud_off_outlined,
-              titulo: "No se pudo leer el resumen",
-              accion: ("Reintentar", _recargar),
-            );
-          }
+            if (!esStaff(rol)) {
+              // Igual que `exigirStaff()`: sin sesión o sin rol de staff, no
+              // hay panel que enseñar.
+              return const Aviso(
+                icono: Icons.block,
+                titulo: "No tienes acceso al panel",
+                detalle:
+                    "Esta sección es solo para docentes y administradores.",
+              );
+            }
+            if (resumen == null) {
+              return Aviso(
+                icono: Icons.cloud_off_outlined,
+                titulo: "No se pudo leer el resumen",
+                accion: ("Reintentar", _modelo.cargar),
+              );
+            }
 
-          return RefreshIndicator(
-            onRefresh: () async => _recargar(),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-              children: [
-                Text(
-                  "Revisión y soporte",
-                  style: context.textos.headlineSmall!.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: context.esquema.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "Lo que hace falta mirar antes de que lo vea un alumno.",
-                  style: context.textos.bodyMedium!.copyWith(
-                    color: context.esquema.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _TarjetaPanel(
-                  titulo: "Sin auditar",
-                  cifra: resumen.sinAuditar,
-                  detalle: "Preguntas que ningún docente ha revisado todavía",
-                  destacada: resumen.sinAuditar > 0,
-                  onTap: () => _abrirRevision(context, "sin_auditar"),
-                ),
-                const SizedBox(height: 8),
-                _TarjetaPanel(
-                  titulo: "Reportes abiertos",
-                  cifra: resumen.reportesAbiertos,
-                  detalle: "Errores que reportaron los alumnos",
-                  destacada: resumen.reportesAbiertos > 0,
-                  onTap: () => _abrirReportes(context),
-                ),
-                const SizedBox(height: 8),
-                _TarjetaPanel(
-                  titulo: "En auditoría",
-                  cifra: resumen.enAuditoria,
-                  detalle: "Retiradas de circulación mientras se revisan",
-                  onTap: () => _abrirRevision(context, "en_auditoria"),
-                ),
-                const SizedBox(height: 8),
-                _TarjetaPanel(
-                  titulo: "Publicadas",
-                  cifra: resumen.publicadas,
-                  detalle: "Visibles para los alumnos ahora mismo",
-                  onTap: () => _abrirRevision(context, "publicada"),
-                ),
-                const SizedBox(height: 8),
-                _TarjetaPanel(
-                  titulo: "Retiradas",
-                  cifra: resumen.retiradas,
-                  detalle: "Fuera de circulación",
-                  onTap: () => _abrirRevision(context, "retirada"),
-                ),
-                if (rol == Rol.admin) ...[
-                  const SizedBox(height: 8),
-                  _TarjetaPanel(
-                    titulo: "Personas",
-                    cifra: resumen.personas,
-                    detalle: "Cuentas registradas y sus roles",
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            PantallaPanelUsuarios(repositorio: _repo),
-                      ),
+            return RefreshIndicator(
+              onRefresh: _modelo.cargar,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                children: [
+                  Text(
+                    "Revisión y soporte",
+                    style: context.textos.headlineSmall!.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: context.esquema.onSurface,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Lo que hace falta mirar antes de que lo vea un alumno.",
+                    style: context.textos.bodyMedium!.copyWith(
+                      color: context.esquema.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  _TarjetaPanel(
+                    titulo: "Sin auditar",
+                    cifra: resumen.sinAuditar,
+                    detalle: "Preguntas que ningún docente ha revisado todavía",
+                    destacada: resumen.sinAuditar > 0,
+                    onTap: () => _abrirRevision(context, "sin_auditar"),
+                  ),
+                  const SizedBox(height: 8),
+                  _TarjetaPanel(
+                    titulo: "Reportes abiertos",
+                    cifra: resumen.reportesAbiertos,
+                    detalle: "Errores que reportaron los alumnos",
+                    destacada: resumen.reportesAbiertos > 0,
+                    onTap: () => _abrirReportes(context),
+                  ),
+                  const SizedBox(height: 8),
+                  _TarjetaPanel(
+                    titulo: "En auditoría",
+                    cifra: resumen.enAuditoria,
+                    detalle: "Retiradas de circulación mientras se revisan",
+                    onTap: () => _abrirRevision(context, "en_auditoria"),
+                  ),
+                  const SizedBox(height: 8),
+                  _TarjetaPanel(
+                    titulo: "Publicadas",
+                    cifra: resumen.publicadas,
+                    detalle: "Visibles para los alumnos ahora mismo",
+                    onTap: () => _abrirRevision(context, "publicada"),
+                  ),
+                  const SizedBox(height: 8),
+                  _TarjetaPanel(
+                    titulo: "Retiradas",
+                    cifra: resumen.retiradas,
+                    detalle: "Fuera de circulación",
+                    onTap: () => _abrirRevision(context, "retirada"),
+                  ),
+                  if (rol == Rol.admin) ...[
+                    const SizedBox(height: 8),
+                    _TarjetaPanel(
+                      titulo: "Personas",
+                      cifra: resumen.personas,
+                      detalle: "Cuentas registradas y sus roles",
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => PantallaPanelUsuarios(
+                            repositorio: _modelo.repositorio,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-          );
-        },
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -167,14 +156,16 @@ class _PantallaPanelState extends State<PantallaPanel> {
   void _abrirRevision(BuildContext context, String filtro) =>
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) =>
-              PantallaPanelRevision(filtroInicial: filtro, repositorio: _repo),
+          builder: (_) => PantallaPanelRevision(
+            filtroInicial: filtro,
+            repositorio: _modelo.repositorio,
+          ),
         ),
       );
 
   void _abrirReportes(BuildContext context) => Navigator.of(context).push(
     MaterialPageRoute(
-      builder: (_) => PantallaPanelReportes(repositorio: _repo),
+      builder: (_) => PantallaPanelReportes(repositorio: _modelo.repositorio),
     ),
   );
 }
@@ -288,10 +279,14 @@ class PantallaPanelRevision extends StatefulWidget {
   /// pasa.
   final RepositorioPanel? repositorio;
 
+  /// El modelo, inyectable.
+  final ModeloPanelRevision? modelo;
+
   const PantallaPanelRevision({
     super.key,
     this.filtroInicial = "sin_auditar",
     this.repositorio,
+    this.modelo,
   });
 
   @override
@@ -299,94 +294,88 @@ class PantallaPanelRevision extends StatefulWidget {
 }
 
 class _PantallaPanelRevisionState extends State<PantallaPanelRevision> {
-  late final _repo = widget.repositorio ?? RepositorioPanel();
-  late String _filtro = widget.filtroInicial;
-  Future<List<PreguntaRevision>>? _carga;
+  late final ModeloPanelRevision _modelo =
+      widget.modelo ??
+      ModeloPanelRevision(
+        filtroInicial: widget.filtroInicial,
+        repositorio: widget.repositorio,
+      );
 
   @override
   void initState() {
     super.initState();
-    _recargar();
+    _modelo.cargar();
   }
 
-  void _recargar() => setState(() {
-    _carga = _repo.paraRevision(filtro: _filtro);
-  });
+  @override
+  void dispose() {
+    _modelo.dispose();
+    super.dispose();
+  }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text("Revisión")),
-    body: Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final (valor, etiqueta) in _filtrosRevision)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(etiqueta),
-                      selected: _filtro == valor,
-                      onSelected: (_) {
-                        if (_filtro == valor) return;
-                        _filtro = valor;
-                        _recargar();
-                      },
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _modelo,
+    builder: (context, _) => Scaffold(
+      appBar: AppBar(title: const Text("Revisión")),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final (valor, etiqueta) in _filtrosRevision)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(etiqueta),
+                        selected: _modelo.filtro == valor,
+                        onSelected: (_) => _modelo.cambiarFiltro(valor),
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: FutureBuilder<List<PreguntaRevision>>(
-            future: _carga,
-            builder: (context, snap) {
-              if (snap.hasError) {
-                return Aviso(
-                  icono: Icons.cloud_off_outlined,
-                  titulo: "No se pudieron cargar las preguntas",
-                  detalle: "${snap.error}",
-                  accion: ("Reintentar", _recargar),
+          Expanded(
+            child: SegunEstado<List<PreguntaRevision>>(
+              estado: _modelo.preguntas,
+              tituloDelFallo: "No se pudieron cargar las preguntas",
+              alReintentar: _modelo.cargar,
+              cuandoListo: (preguntas) {
+                if (preguntas.isEmpty) {
+                  return const Aviso(
+                    icono: Icons.check_circle_outline,
+                    titulo: "Nada por aquí",
+                    detalle: "No hay preguntas con este filtro.",
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: preguntas.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 14),
+                  // La `Key` por id es lo que impide que el estado de una
+                  // ficha se quede pegado a la pregunta siguiente. Sin ella,
+                  // Flutter reutiliza el `State` por posición: al dictaminar la
+                  // primera, la lista se recarga, y el «Marcada como publicada»
+                  // —y el `_enviando`— aparecían sobre la pregunta NUEVA que
+                  // caía en ese hueco, que nadie había tocado. Es el mismo
+                  // motivo por el que `_Reporte`, en practica.dart, lleva
+                  // `ValueKey(_pregunta.codigo)`.
+                  itemBuilder: (context, i) => _FichaPregunta(
+                    key: ValueKey(preguntas[i].id),
+                    pregunta: preguntas[i],
+                    onDictaminada: _modelo.cargar,
+                    repositorio: _modelo.repositorio,
+                  ),
                 );
-              }
-              if (!snap.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final preguntas = snap.data!;
-              if (preguntas.isEmpty) {
-                return const Aviso(
-                  icono: Icons.check_circle_outline,
-                  titulo: "Nada por aquí",
-                  detalle: "No hay preguntas con este filtro.",
-                );
-              }
-              return ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: preguntas.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 14),
-                // La `Key` por id es lo que impide que el estado de una
-                // ficha se quede pegado a la pregunta siguiente. Sin ella,
-                // Flutter reutiliza el `State` por posición: al dictaminar la
-                // primera, la lista se recarga, y el «Marcada como publicada»
-                // —y el `_enviando`— aparecían sobre la pregunta NUEVA que
-                // caía en ese hueco, que nadie había tocado. Es el mismo
-                // motivo por el que `_Reporte`, en practica.dart, lleva
-                // `ValueKey(_pregunta.codigo)`.
-                itemBuilder: (context, i) => _FichaPregunta(
-                  key: ValueKey(preguntas[i].id),
-                  pregunta: preguntas[i],
-                  onDictaminada: _recargar,
-                  repositorio: _repo,
-                ),
-              );
-            },
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }
@@ -716,94 +705,85 @@ class PantallaPanelReportes extends StatefulWidget {
   /// pasa.
   final RepositorioPanel? repositorio;
 
-  const PantallaPanelReportes({super.key, this.repositorio});
+  /// El modelo, inyectable.
+  final ModeloPanelReportes? modelo;
+
+  const PantallaPanelReportes({super.key, this.repositorio, this.modelo});
 
   @override
   State<PantallaPanelReportes> createState() => _PantallaPanelReportesState();
 }
 
 class _PantallaPanelReportesState extends State<PantallaPanelReportes> {
-  late final _repo = widget.repositorio ?? RepositorioPanel();
-  String _filtro = "abierto";
-  Future<List<ReporteStaff>>? _carga;
+  late final ModeloPanelReportes _modelo =
+      widget.modelo ?? ModeloPanelReportes(repositorio: widget.repositorio);
 
   @override
   void initState() {
     super.initState();
-    _recargar();
-  }
-
-  void _recargar() {
-    setState(() {
-      _carga = _repo.reportes(_filtro);
-    });
+    _modelo.cargar();
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text("Reportes")),
-    body: Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (final (valor, etiqueta) in _filtrosReporte)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
-                      label: Text(etiqueta),
-                      selected: _filtro == valor,
-                      onSelected: (_) {
-                        if (_filtro == valor) return;
-                        _filtro = valor;
-                        _recargar();
-                      },
+  void dispose() {
+    _modelo.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _modelo,
+    builder: (context, _) => Scaffold(
+      appBar: AppBar(title: const Text("Reportes")),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final (valor, etiqueta) in _filtrosReporte)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(etiqueta),
+                        selected: _modelo.filtro == valor,
+                        onSelected: (_) => _modelo.cambiarFiltro(valor),
+                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: FutureBuilder<List<ReporteStaff>>(
-            future: _carga,
-            builder: (context, snap) {
-              if (snap.hasError) {
-                return Aviso(
-                  icono: Icons.cloud_off_outlined,
-                  titulo: "No se pudieron cargar los reportes",
-                  detalle: "${snap.error}",
-                  accion: ("Reintentar", _recargar),
+          Expanded(
+            child: SegunEstado<List<ReporteStaff>>(
+              estado: _modelo.reportes,
+              tituloDelFallo: "No se pudieron cargar los reportes",
+              alReintentar: _modelo.cargar,
+              cuandoListo: (reportes) {
+                if (reportes.isEmpty) {
+                  return const Aviso(
+                    icono: Icons.inbox_outlined,
+                    titulo: "Nada por aquí",
+                  );
+                }
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: reportes.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  itemBuilder: (context, i) => _FichaReporte(
+                    key: ValueKey(reportes[i].id),
+                    reporte: reportes[i],
+                    onDictaminado: _modelo.cargar,
+                    repositorio: _modelo.repositorio,
+                  ),
                 );
-              }
-              if (!snap.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final reportes = snap.data!;
-              if (reportes.isEmpty) {
-                return const Aviso(
-                  icono: Icons.inbox_outlined,
-                  titulo: "Nada por aquí",
-                );
-              }
-              return ListView.separated(
-                padding: const EdgeInsets.all(16),
-                itemCount: reportes.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 12),
-                itemBuilder: (context, i) => _FichaReporte(
-                  key: ValueKey(reportes[i].id),
-                  reporte: reportes[i],
-                  onDictaminado: _recargar,
-                  repositorio: _repo,
-                ),
-              );
-            },
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     ),
   );
 }
@@ -960,84 +940,85 @@ class PantallaPanelUsuarios extends StatefulWidget {
   final RepositorioPanel? repositorio;
   final Sesion? sesion;
 
-  const PantallaPanelUsuarios({super.key, this.repositorio, this.sesion});
+  /// El modelo, inyectable.
+  final ModeloPanelUsuarios? modelo;
+
+  const PantallaPanelUsuarios({
+    super.key,
+    this.repositorio,
+    this.sesion,
+    this.modelo,
+  });
 
   @override
   State<PantallaPanelUsuarios> createState() => _PantallaPanelUsuariosState();
 }
 
 class _PantallaPanelUsuariosState extends State<PantallaPanelUsuarios> {
-  late final _repo = widget.repositorio ?? RepositorioPanel();
-  late final _sesion = widget.sesion ?? Sesion();
-
-  // No es `late final`: para que «Reintentar» sirva de algo, la petición tiene
-  // que poder rehacerse.
-  Future<List<Persona>>? _carga;
+  late final ModeloPanelUsuarios _modelo =
+      widget.modelo ??
+      ModeloPanelUsuarios(
+        repositorio: widget.repositorio,
+        sesion: widget.sesion,
+      );
 
   @override
   void initState() {
     super.initState();
-    _recargar();
-  }
-
-  void _recargar() {
-    setState(() {
-      _carga = _repo.personas();
-    });
+    _modelo.cargar();
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text("Personas")),
-    body: FutureBuilder<List<Persona>>(
-      future: _carga,
-      builder: (context, snap) {
-        if (snap.hasError) {
-          return Aviso(
-            icono: Icons.cloud_off_outlined,
-            titulo: "No se pudieron cargar las personas",
-            detalle: "${snap.error}",
-            accion: ("Reintentar", _recargar),
-          );
-        }
-        if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final personas = snap.data!;
-        if (personas.isEmpty) {
-          return const Aviso(
-            icono: Icons.people_outline,
-            titulo: "No hay cuentas registradas",
-          );
-        }
-        return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          itemCount: personas.length + 1,
-          separatorBuilder: (_, _) => const Divider(height: 1),
-          itemBuilder: (context, i) {
-            if (i == 0) {
-              return Padding(
-                padding: EdgeInsets.only(bottom: 12),
-                child: Text(
-                  "Un docente puede revisar preguntas y resolver reportes. Un "
-                  "admin puede además cambiar roles. El último administrador "
-                  "no se puede degradar.",
-                  style: context.textos.bodySmall!.copyWith(
-                    color: context.esquema.onSurfaceVariant,
-                  ),
-                ),
-              );
-            }
-            final p = personas[i - 1];
-            return _FilaPersona(
-              key: ValueKey(p.id),
-              persona: p,
-              esUnoMismo: p.id == _sesion.usuario?.id,
-              repositorio: _repo,
+  void dispose() {
+    _modelo.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _modelo,
+    builder: (context, _) => Scaffold(
+      appBar: AppBar(title: const Text("Personas")),
+      body: SegunEstado<List<Persona>>(
+        estado: _modelo.personas,
+        tituloDelFallo: "No se pudieron cargar las personas",
+        alReintentar: _modelo.cargar,
+        cuandoListo: (personas) {
+          if (personas.isEmpty) {
+            return const Aviso(
+              icono: Icons.people_outline,
+              titulo: "No hay cuentas registradas",
             );
-          },
-        );
-      },
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+            itemCount: personas.length + 1,
+            separatorBuilder: (_, _) => const Divider(height: 1),
+            itemBuilder: (context, i) {
+              if (i == 0) {
+                return Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    "Un docente puede revisar preguntas y resolver reportes. Un "
+                    "admin puede además cambiar roles. El último administrador "
+                    "no se puede degradar.",
+                    style: context.textos.bodySmall!.copyWith(
+                      color: context.esquema.onSurfaceVariant,
+                    ),
+                  ),
+                );
+              }
+              final p = personas[i - 1];
+              return _FilaPersona(
+                key: ValueKey(p.id),
+                persona: p,
+                esUnoMismo: p.id == _modelo.idPropio,
+                repositorio: _modelo.repositorio,
+              );
+            },
+          );
+        },
+      ),
     ),
   );
 }

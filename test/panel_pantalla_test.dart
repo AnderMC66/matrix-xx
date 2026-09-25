@@ -18,6 +18,7 @@ import "package:flutter_test/flutter_test.dart";
 import "package:http/http.dart" as http;
 import "package:matr_u/data/repositories/panel.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/features/dashboard/view_models/panel.dart";
 import "package:matr_u/ui/features/dashboard/views/panel.dart";
 import "package:supabase/supabase.dart";
 
@@ -139,7 +140,9 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: construirTema(),
-        home: PantallaPanel(repositorio: RepositorioPanel(cliente: cliente)),
+        home: PantallaPanel(
+          modelo: ModeloPanel(repositorio: RepositorioPanel(cliente: cliente)),
+        ),
       ),
     );
     await asentar(tester);

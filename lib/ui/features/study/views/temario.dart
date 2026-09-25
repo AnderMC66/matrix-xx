@@ -1,9 +1,9 @@
 import "package:flutter/material.dart";
-import "package:matr_u/data/repositories/preguntas.dart";
-import "package:matr_u/data/repositories/temario.dart";
 import "package:matr_u/domain/models/temario.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/core/vista_modelo.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
+import "package:matr_u/ui/features/study/view_models/catalogo.dart";
 import "package:matr_u/ui/features/study/views/curso.dart";
 
 /// `/temario` — el sílabo oficial, curso por curso.
@@ -15,38 +15,46 @@ import "package:matr_u/ui/features/study/views/curso.dart";
 /// diseño de escritorio, pero se gana que el nombre completo de un curso
 /// largo («Educación Cívica») nunca se corta.
 class PantallaTemario extends StatefulWidget {
-  const PantallaTemario({super.key});
+  /// El modelo de vista, inyectable. Si no llega, la pantalla construye el
+  /// suyo con los repositorios de produccion.
+  final ModeloTemario? modelo;
+
+  const PantallaTemario({super.key, this.modelo});
 
   @override
   State<PantallaTemario> createState() => _PantallaTemarioState();
 }
 
 class _PantallaTemarioState extends State<PantallaTemario> {
-  late final Future<(Temario, int)> _carga = _cargar();
+  late final ModeloTemario _modelo = widget.modelo ?? ModeloTemario();
+  late final bool _esMio = widget.modelo == null;
 
-  Future<(Temario, int)> _cargar() async {
-    final temario = await RepositorioTemario().cargar();
-    final banco = await RepositorioPreguntas().cargar();
-    return (temario, banco.total);
+  @override
+  void initState() {
+    super.initState();
+    _modelo.cargar();
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Temario oficial")),
-      body: FutureBuilder<(Temario, int)>(
-        future: _carga,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Aviso.contenidoLocal(
-              titulo: "No se pudo cargar el temario",
-              error: snap.error!,
-            );
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final (temario, preguntas) = snap.data!;
+  void dispose() {
+    if (_esMio) _modelo.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text("Temario oficial")),
+    body: ListenableBuilder(
+      listenable: _modelo,
+      builder: (context, _) => SegunEstado<DatosTemario>(
+        estado: _modelo.datos,
+        tituloDelFallo: "No se pudo cargar el temario",
+        cuandoFallo: (error) => Aviso.contenidoLocal(
+          titulo: "No se pudo cargar el temario",
+          error: error,
+        ),
+        cuandoListo: (datos) {
+          final (temario, preguntas) = datos;
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -79,8 +87,8 @@ class _PantallaTemarioState extends State<PantallaTemario> {
           );
         },
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _FilaCifras extends StatelessWidget {

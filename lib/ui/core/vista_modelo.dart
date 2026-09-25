@@ -144,6 +144,14 @@ class SegunEstado<T> extends StatelessWidget {
   final String tituloDelFallo;
   final VoidCallback? alReintentar;
 
+  /// Un aviso de fallo propio, en vez del de red que sale por defecto.
+  ///
+  /// Lo usan las pantallas de catalogo: lo suyo no es que el servidor no
+  /// conteste —no hablan con el servidor— sino que falto un asset, y para eso
+  /// hay `Aviso.contenidoLocal`, que dice que archivo y que herramienta lo
+  /// trae. Un «reintentar» ahi no arregla nada.
+  final Widget Function(Object error)? cuandoFallo;
+
   const SegunEstado({
     super.key,
     required this.estado,
@@ -151,12 +159,14 @@ class SegunEstado<T> extends StatelessWidget {
     required this.tituloDelFallo,
     this.cuandoInactivo,
     this.alReintentar,
+    this.cuandoFallo,
   });
 
   @override
   Widget build(BuildContext context) => switch (estado) {
     Inactivo<T>() => cuandoInactivo?.call() ?? const SizedBox.shrink(),
     Cargando<T>() => const Center(child: CircularProgressIndicator()),
+    Fallo<T>(:final error) when cuandoFallo != null => cuandoFallo!(error),
     Fallo<T>(:final error) => Aviso(
       icono: Icons.cloud_off_outlined,
       titulo: tituloDelFallo,

@@ -5,7 +5,8 @@ import "package:matr_u/data/repositories/temario.dart";
 import "package:matr_u/domain/models/temario.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
 import "package:matr_u/ui/features/study/views/curso.dart";
-import "package:matr_u/ui/features/study/views/temario.dart" show PantallaTemario;
+import "package:matr_u/ui/features/study/views/temario.dart"
+    show PantallaTemario;
 
 const _limite = 200;
 

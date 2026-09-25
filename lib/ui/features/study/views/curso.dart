@@ -1,12 +1,11 @@
 import "package:flutter/material.dart";
-import "package:matr_u/data/repositories/preguntas.dart";
-import "package:matr_u/data/repositories/vinculos.dart";
 import "package:matr_u/domain/models/temario.dart";
-import "package:matr_u/domain/models/vinculos.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/core/vista_modelo.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
 import "package:matr_u/ui/core/widgets/nota.dart";
 import "package:matr_u/ui/features/practice/views/practica.dart";
+import "package:matr_u/ui/features/study/view_models/catalogo.dart";
 import "package:matr_u/ui/features/study/views/teoria.dart";
 
 /// `/curso/[slug]` — el destino común de Buscar y Temario.
@@ -17,24 +16,37 @@ import "package:matr_u/ui/features/study/views/teoria.dart";
 /// de arriba son lo primero que se ve, no un adorno al final.
 class PantallaCurso extends StatefulWidget {
   final Curso curso;
-  const PantallaCurso({super.key, required this.curso});
+
+  /// El modelo de vista, inyectable. Si no llega, la pantalla construye el
+  /// suyo para [curso].
+  final ModeloCurso? modelo;
+
+  const PantallaCurso({super.key, required this.curso, this.modelo});
 
   @override
   State<PantallaCurso> createState() => _PantallaCursoState();
 }
 
 class _PantallaCursoState extends State<PantallaCurso> {
-  final _vinculos = RepositorioVinculos();
-  late final Future<(ResumenCurso, Map<String, int>)> _carga = _cargar();
+  late final ModeloCurso _modelo =
+      widget.modelo ?? ModeloCurso(curso: widget.curso);
+  late final bool _esMio = widget.modelo == null;
 
-  Future<(ResumenCurso, Map<String, int>)> _cargar() async {
-    final resumen = await _vinculos.resumenDeCurso(widget.curso);
-    final banco = await RepositorioPreguntas().cargar();
-    return (resumen, banco.conteoPorSubtema());
+  @override
+  void initState() {
+    super.initState();
+    _modelo.cargar();
   }
 
+  @override
+  void dispose() {
+    if (_esMio) _modelo.dispose();
+    super.dispose();
+  }
+
+  /// El modelo devuelve el curso de teoria; empujar la ruta es cosa de aqui.
   Future<void> _irATeoria() async {
-    final teoria = await _vinculos.teoriaDeCurso(widget.curso.codigo);
+    final teoria = await _modelo.teoria();
     if (teoria == null || !mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => PantallaCursoTeoria(curso: teoria)),
@@ -42,105 +54,103 @@ class _PantallaCursoState extends State<PantallaCurso> {
   }
 
   Future<void> _irAPractica() async {
-    final banco = await RepositorioPreguntas().cargar();
+    final preguntas = await _modelo.preguntas();
     if (!mounted) return;
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => SesionPractica(
-          titulo: widget.curso.nombre,
-          preguntas: banco.deCurso(widget.curso.slug),
-        ),
+        builder: (_) =>
+            SesionPractica(titulo: _modelo.curso.nombre, preguntas: preguntas),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final curso = widget.curso;
+    final curso = _modelo.curso;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(curso.nombre, style: context.textos.bodyLarge),
       ),
-      body: FutureBuilder<(ResumenCurso, Map<String, int>)>(
-        future: _carga,
-        builder: (context, snap) {
-          if (snap.hasError) {
-            return Aviso.contenidoLocal(
-              titulo: "No se pudo cargar el curso",
-              error: snap.error!,
-            );
-          }
-          if (!snap.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final (resumen, conteo) = snap.data!;
+      body: ListenableBuilder(
+        listenable: _modelo,
+        builder: (context, _) => SegunEstado<DatosCurso>(
+          estado: _modelo.datos,
+          tituloDelFallo: "No se pudo cargar el curso",
+          cuandoFallo: (error) => Aviso.contenidoLocal(
+            titulo: "No se pudo cargar el curso",
+            error: error,
+          ),
+          cuandoListo: (datos) {
+            final (resumen, conteo) = datos;
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-            children: [
-              Text(
-                curso.areaNombre,
-                style: context.textos.labelSmall!.copyWith(
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.6,
-                  color: context.esquema.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                curso.nombre,
-                style: context.textos.headlineMedium!.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: context.esquema.onSurface,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                "${curso.temas.length} temas · ${curso.totalSubtemas} subtemas · ${curso.codigo}",
-                style: context.textos.bodySmall!.copyWith(
-                  color: context.esquema.onSurfaceVariant,
-                ),
-              ),
-              if (curso.nota case final nota? when nota.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Nota(texto: nota),
-              ],
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  if (resumen.teoriaSlug != null)
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _irATeoria,
-                        child: Text("Teoría · ${resumen.teoria} secciones"),
-                      ),
-                    ),
-                  if (resumen.teoriaSlug != null && resumen.preguntas > 0)
-                    const SizedBox(width: 10),
-                  if (resumen.preguntas > 0)
-                    Expanded(
-                      child: FilledButton(
-                        onPressed: _irAPractica,
-                        child: Text("Practicar · ${resumen.preguntas}"),
-                      ),
-                    ),
-                ],
-              ),
-              if (resumen.preguntas > 0) ...[
-                const SizedBox(height: 8),
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              children: [
                 Text(
-                  "${resumen.subtemasConPreguntas} de ${curso.totalSubtemas} subtemas tienen preguntas.",
+                  curso.areaNombre,
+                  style: context.textos.labelSmall!.copyWith(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.6,
+                    color: context.esquema.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  curso.nombre,
+                  style: context.textos.headlineMedium!.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: context.esquema.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "${curso.temas.length} temas · ${curso.totalSubtemas} subtemas · ${curso.codigo}",
                   style: context.textos.bodySmall!.copyWith(
                     color: context.esquema.onSurfaceVariant,
                   ),
                 ),
+                if (curso.nota case final nota? when nota.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Nota(texto: nota),
+                ],
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    if (resumen.teoriaSlug != null)
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _irATeoria,
+                          child: Text("Teoría · ${resumen.teoria} secciones"),
+                        ),
+                      ),
+                    if (resumen.teoriaSlug != null && resumen.preguntas > 0)
+                      const SizedBox(width: 10),
+                    if (resumen.preguntas > 0)
+                      Expanded(
+                        child: FilledButton(
+                          onPressed: _irAPractica,
+                          child: Text("Practicar · ${resumen.preguntas}"),
+                        ),
+                      ),
+                  ],
+                ),
+                if (resumen.preguntas > 0) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    "${resumen.subtemasConPreguntas} de ${curso.totalSubtemas} subtemas tienen preguntas.",
+                    style: context.textos.bodySmall!.copyWith(
+                      color: context.esquema.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 26),
+                for (final tema in curso.temas)
+                  _Tema(tema: tema, conteo: conteo),
               ],
-              const SizedBox(height: 26),
-              for (final tema in curso.temas) _Tema(tema: tema, conteo: conteo),
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

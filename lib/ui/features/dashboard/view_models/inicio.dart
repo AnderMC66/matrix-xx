@@ -45,8 +45,7 @@ class ModeloInicio extends VistaModelo {
   late final RepositorioProgreso _progreso =
       _progresoDado ?? RepositorioProgreso();
   late final RepositorioRepaso _repasos = _repasosDados ?? RepositorioRepaso();
-  late final RepositorioHorario _horario =
-      _horarioDado ?? RepositorioHorario();
+  late final RepositorioHorario _horario = _horarioDado ?? RepositorioHorario();
 
   final Sesion? _sesionDada;
   final RepositorioProgreso? _progresoDado;

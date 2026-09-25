@@ -24,6 +24,7 @@ import "package:matr_u/data/repositories/progreso.dart";
 import "package:matr_u/data/repositories/repaso.dart";
 import "package:matr_u/data/repositories/sesion.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/features/dashboard/view_models/progreso.dart";
 import "package:matr_u/ui/features/dashboard/views/progreso.dart";
 import "package:supabase/supabase.dart";
 
@@ -187,10 +188,12 @@ void main() {
         theme: construirTema(),
         home: Scaffold(
           body: PantallaProgreso(
-            progreso: RepositorioProgreso(cliente: cliente),
-            repasos: RepositorioRepaso(cliente: cliente),
-            horario: RepositorioHorario(cliente: cliente),
-            sesion: Sesion(cliente: cliente),
+            modelo: ModeloProgreso(
+              progreso: RepositorioProgreso(cliente: cliente),
+              repasos: RepositorioRepaso(cliente: cliente),
+              horario: RepositorioHorario(cliente: cliente),
+              sesion: Sesion(cliente: cliente),
+            ),
           ),
         ),
       ),

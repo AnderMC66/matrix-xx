@@ -1,15 +1,13 @@
 import "package:flutter/material.dart";
 import "package:matr_u/core/utils/fechas.dart";
-import "package:matr_u/data/repositories/horario.dart";
-import "package:matr_u/data/repositories/progreso.dart";
-import "package:matr_u/data/repositories/repaso.dart";
-import "package:matr_u/data/repositories/sesion.dart";
 import "package:matr_u/domain/models/horario.dart";
 import "package:matr_u/domain/models/progreso.dart";
 import "package:matr_u/domain/models/repaso.dart";
 import "package:matr_u/ui/core/theme/tema.dart";
+import "package:matr_u/ui/core/vista_modelo.dart";
 import "package:matr_u/ui/core/widgets/aviso.dart";
 import "package:matr_u/ui/core/widgets/nota.dart";
+import "package:matr_u/ui/features/dashboard/view_models/progreso.dart";
 import "package:matr_u/ui/features/dashboard/views/panel.dart";
 import "package:matr_u/ui/features/practice/views/practica.dart";
 import "package:matr_u/ui/features/schedule/views/horario.dart";
@@ -22,201 +20,126 @@ import "package:matr_u/ui/features/schedule/views/horario.dart";
 /// perdiendo puntos— y solo después el desglose completo por curso. Lo que
 /// decide el puntaje es saber qué repasar mañana, no el promedio.
 class PantallaProgreso extends StatefulWidget {
-  /// Repositorios y sesión inyectables, igual que en `PantallaHorario`.
-  ///
-  /// Todos resuelven `Supabase.instance.client` en su constructor, así que sin
-  /// esta costura la pantalla no se puede montar en un test. En producción
-  /// nadie los pasa.
-  final RepositorioProgreso? progreso;
-  final RepositorioRepaso? repasos;
-  final RepositorioHorario? horario;
-  final Sesion? sesion;
+  /// El modelo de vista, inyectable. Si no llega, la pantalla construye el
+  /// suyo con los repositorios de producción.
+  final ModeloProgreso? modelo;
 
-  const PantallaProgreso({
-    super.key,
-    this.progreso,
-    this.repasos,
-    this.horario,
-    this.sesion,
-  });
+  const PantallaProgreso({super.key, this.modelo});
 
   @override
   State<PantallaProgreso> createState() => _PantallaProgresoState();
 }
 
-typedef _Datos = (
-  Perfil?,
-  Racha?,
-  ResumenRepasos?,
-  List<BloqueHorario>,
-  Diagnostico,
-  List<ReporteResuelto>,
-);
-
 class _PantallaProgresoState extends State<PantallaProgreso> {
-  late final _repo = widget.progreso ?? RepositorioProgreso();
-  late final _repasos = widget.repasos ?? RepositorioRepaso();
-  late final _horario = widget.horario ?? RepositorioHorario();
-  late final _sesion = widget.sesion ?? Sesion();
-
-  Future<_Datos>? _carga;
+  late final ModeloProgreso _modelo = widget.modelo ?? ModeloProgreso();
+  late final bool _esMio = widget.modelo == null;
 
   @override
   void initState() {
     super.initState();
-    _recargar();
-  }
-
-  void _recargar() {
-    if (!_sesion.hayCuenta) return;
-    setState(() {
-      _carga = _pedir();
-    });
-  }
-
-  /// Las seis peticiones salen A LA VEZ, no una detrás de otra.
-  ///
-  /// Escrito como seis `await` seguidos, cada una esperaba a que terminara la
-  /// anterior: seis viajes de ida y vuelta encadenados contra Supabase para
-  /// pintar una pantalla cuyos seis datos no dependen entre sí. En el wifi de
-  /// casa se nota poco; en los datos móviles con los que se estudia en el
-  /// micro, son seis latencias sumadas cada vez que se abre Progreso.
-  ///
-  /// `Future.wait` las lanza juntas y espera a la más lenta, así que el coste
-  /// pasa de la suma al máximo. Si alguna falla, `Future.wait` propaga el
-  /// error igual que antes y el `FutureBuilder` enseña su aviso con
-  /// «Reintentar».
-  Future<_Datos> _pedir() async {
-    final resultados = await Future.wait([
-      _repo.perfil(),
-      _repo.racha(),
-      _repasos.resumen(),
-      _horario.obtener(),
-      _repo.diagnostico(),
-      _repo.reportesResueltos(),
-    ]);
-
-    return (
-      resultados[0] as Perfil?,
-      resultados[1] as Racha?,
-      resultados[2] as ResumenRepasos?,
-      resultados[3] as List<BloqueHorario>,
-      resultados[4] as Diagnostico,
-      resultados[5] as List<ReporteResuelto>,
-    );
+    _modelo.cargar();
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (!_sesion.hayCuenta) {
-      return const Aviso(
-        icono: Icons.lock_outline,
-        titulo: "Tu progreso necesita tu cuenta",
-        detalle:
-            "La racha, el diagnóstico y los repasos se calculan sobre tu "
-            "historial de respuestas.\n\n"
-            "Usa el botón de entrar, arriba a la derecha.",
-      );
-    }
-
-    return FutureBuilder<_Datos>(
-      future: _carga,
-      builder: (context, snap) {
-        if (snap.hasError) {
-          return Aviso(
-            icono: Icons.cloud_off_outlined,
-            titulo: "No se pudo cargar tu progreso",
-            detalle: "${snap.error}",
-            accion: ("Reintentar", _recargar),
-          );
-        }
-        if (!snap.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final (perfil, racha, repasos, horario, diagnostico, reportes) =
-            snap.data!;
-
-        return RefreshIndicator(
-          onRefresh: () async => _recargar(),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-            children: [
-              _Cabecera(perfil: perfil, correo: _repo.usuario?.email),
-              if (perfil == null) ...[
-                const SizedBox(height: 16),
-                const Nota(
-                  texto:
-                      "Tu usuario existe pero no tiene perfil: el disparador "
-                      "`al_crear_usuario` no se ejecutó.",
-                ),
-              ],
-              if (perfil != null && perfil.esStaff) ...[
-                const SizedBox(height: 16),
-                _PanelStaff(rol: perfil.rol),
-              ],
-              if (reportes.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                _Reportes(
-                  reportes: reportes,
-                  alMarcar: () async {
-                    // Si el RPC falla, no hay nada que decirle al alumno: el
-                    // acuse de «ya lo vi» no es información suya, y el aviso
-                    // seguirá ahí la próxima vez, que es exactamente lo
-                    // correcto. Sin el `catch`, un fallo de red aquí sale como
-                    // excepción sin capturar desde un `onPressed`.
-                    try {
-                      await _repo.marcarReportesVistos();
-                    } catch (_) {
-                      return;
-                    }
-                    // Y sin `mounted`, volver atrás mientras el RPC estaba en
-                    // vuelo llamaba a `setState` sobre un estado ya desechado.
-                    if (mounted) _recargar();
-                  },
-                ),
-              ],
-              const SizedBox(height: 22),
-              // **El `IntrinsicHeight` no es decorativo: sin él esta pantalla
-              // no se pinta.**
-              //
-              // `CrossAxisAlignment.stretch` en un `Row` estira a los hijos
-              // hasta la altura que le dé su padre, y el padre aquí es un
-              // `ListView`, que ofrece altura ilimitada. `RenderFlex` traduce
-              // eso a `BoxConstraints.tightFor(height: Infinity)` y salta la
-              // aserción de constraints: caja roja en depuración, y las dos
-              // tarjetas —la racha y los repasos— sin dibujar.
-              //
-              // `inicio.dart` ya lo hacía bien con su rejilla de accesos; esta
-              // se quedó sin la envoltura. No lo vio nadie porque hasta la
-              // auditoría del 2026-09-16 esta pantalla no se podía montar en
-              // un test —construía sus repositorios dentro del estado— y
-              // `desborde_test.dart`, que es justo quien busca esto, no la
-              // alcanzaba. El primer test que la montó lo encontró en el
-              // primer intento.
-              IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(child: _TarjetaRacha(racha: racha)),
-                    const SizedBox(width: 10),
-                    Expanded(child: _TarjetaRepasos(resumen: repasos)),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              _ProximoBloque(horario: horario),
-              const SizedBox(height: 28),
-              _SeccionDiagnostico(diagnostico: diagnostico),
-              const SizedBox(height: 32),
-              const Divider(),
-              _EliminarCuenta(alEliminar: _recargar, sesion: _sesion),
-            ],
-          ),
-        );
-      },
-    );
+  void dispose() {
+    if (_esMio) _modelo.dispose();
+    super.dispose();
   }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: _modelo,
+    builder: (context, _) {
+      if (!_modelo.hayCuenta) {
+        return const Aviso(
+          icono: Icons.lock_outline,
+          titulo: "Tu progreso necesita tu cuenta",
+          detalle:
+              "La racha, el diagnóstico y los repasos se calculan sobre tu "
+              "historial de respuestas.\n\n"
+              "Usa el botón de entrar, arriba a la derecha.",
+        );
+      }
+
+      return SegunEstado<DatosProgreso>(
+        estado: _modelo.datos,
+        tituloDelFallo: "No se pudo cargar tu progreso",
+        alReintentar: _modelo.cargar,
+        cuandoListo: (datos) {
+          final (perfil, racha, repasos, horario, diagnostico, reportes) =
+              datos;
+
+          return RefreshIndicator(
+            onRefresh: _modelo.cargar,
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              children: [
+                _Cabecera(perfil: perfil, correo: _modelo.correo),
+                if (perfil == null) ...[
+                  const SizedBox(height: 16),
+                  const Nota(
+                    texto:
+                        "Tu usuario existe pero no tiene perfil: el disparador "
+                        "`al_crear_usuario` no se ejecutó.",
+                  ),
+                ],
+                if (perfil != null && perfil.esStaff) ...[
+                  const SizedBox(height: 16),
+                  _PanelStaff(rol: perfil.rol),
+                ],
+                if (reportes.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _Reportes(
+                    reportes: reportes,
+                    // El `try` y el `mounted` que habia aqui se fueron al
+                    // modelo: el primero porque tragarse el fallo del acuse es
+                    // una decision de logica, y el segundo porque un
+                    // `ChangeNotifier` liberado ya no avisa a nadie.
+                    alMarcar: _modelo.marcarReportesVistos,
+                  ),
+                ],
+                const SizedBox(height: 22),
+                // **El `IntrinsicHeight` no es decorativo: sin él esta pantalla
+                // no se pinta.**
+                //
+                // `CrossAxisAlignment.stretch` en un `Row` estira a los hijos
+                // hasta la altura que le dé su padre, y el padre aquí es un
+                // `ListView`, que ofrece altura ilimitada. `RenderFlex` traduce
+                // eso a `BoxConstraints.tightFor(height: Infinity)` y salta la
+                // aserción de constraints: caja roja en depuración, y las dos
+                // tarjetas —la racha y los repasos— sin dibujar.
+                //
+                // `inicio.dart` ya lo hacía bien con su rejilla de accesos; esta
+                // se quedó sin la envoltura. No lo vio nadie porque hasta la
+                // auditoría del 2026-09-16 esta pantalla no se podía montar en
+                // un test —construía sus repositorios dentro del estado— y
+                // `desborde_test.dart`, que es justo quien busca esto, no la
+                // alcanzaba. El primer test que la montó lo encontró en el
+                // primer intento.
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: _TarjetaRacha(racha: racha)),
+                      const SizedBox(width: 10),
+                      Expanded(child: _TarjetaRepasos(resumen: repasos)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _ProximoBloque(horario: horario),
+                const SizedBox(height: 28),
+                _SeccionDiagnostico(diagnostico: diagnostico),
+                const SizedBox(height: 32),
+                const Divider(),
+                _EliminarCuenta(modelo: _modelo),
+              ],
+            ),
+          );
+        },
+      );
+    },
+  );
 }
 
 class _Cabecera extends StatelessWidget {
@@ -985,24 +908,19 @@ class _Marcador extends StatelessWidget {
 /// pide confirmación escribiendo, no solo pulsando —es lo único irreversible
 /// de toda la app, y un diálogo de dos botones se acepta por inercia.
 class _EliminarCuenta extends StatefulWidget {
-  /// Se llama cuando la cuenta ya no existe, para que el armazón vuelva al
-  /// estado de "sin sesión".
-  final VoidCallback alEliminar;
-
-  /// La misma sesión que ya tiene la pantalla. Se pasa en vez de construir
-  /// otra: `Sesion()` resuelve `Supabase.instance.client`, y este widget se
-  /// pinta siempre — al final de Progreso—, así que montar la pantalla en un
+  /// El mismo modelo que ya tiene la pantalla. Se pasa en vez de construir
+  /// una `Sesion`: esa resuelve `Supabase.instance.client`, y este widget se
+  /// pinta siempre —al final de Progreso—, así que montar la pantalla en un
   /// test reventaba aquí aunque todo lo demás estuviera inyectado.
-  final Sesion sesion;
+  final ModeloProgreso modelo;
 
-  const _EliminarCuenta({required this.alEliminar, required this.sesion});
+  const _EliminarCuenta({required this.modelo});
 
   @override
   State<_EliminarCuenta> createState() => _EliminarCuentaState();
 }
 
 class _EliminarCuentaState extends State<_EliminarCuenta> {
-  late final _sesion = widget.sesion;
   bool _borrando = false;
 
   Future<void> _confirmar() async {
@@ -1013,14 +931,15 @@ class _EliminarCuentaState extends State<_EliminarCuenta> {
     if (!(seguro ?? false) || !mounted) return;
 
     setState(() => _borrando = true);
-    try {
-      await _sesion.eliminarCuenta();
-      if (mounted) widget.alEliminar();
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _borrando = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("$e")));
+    final error = await widget.modelo.eliminarCuenta();
+    if (!mounted) return;
+    if (error == null) {
+      await widget.modelo.cargar();
+      return;
     }
+    setState(() => _borrando = false);
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text("$error")));
   }
 
   @override
